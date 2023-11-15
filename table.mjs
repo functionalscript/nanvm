@@ -1,16 +1,23 @@
 const size = v => {
     let r = 0n
-    while (v > 1) {
+    while (v > 0) {
         v >>= 1n
         r++
     }
-    return r + v
+    return r
 }
 
-const bits = a => b => {
+const bits = ([acc, total], [a, b]) => {
     const ab = a * b
     const v = 1n << ab
-    return [`${a}x${b}`, ab, v.toString('16'), size(v - 1n)]
+    total += v
+    acc.push({
+        type: `${a}x${b}`,
+        size: ab, num: v.toString('16'),
+        total: total.toString('16'),
+        'total size': size(total - 1n)
+    })
+    return [acc, total]
 }
 
 console.table([
@@ -24,4 +31,4 @@ console.table([
     [8n, 6n],
     [9n, 5n],
     [10n, 5n],
-].map(([a, b]) => bits(a)(b)))
+].reduce(bits, [[], 0n])[0])
