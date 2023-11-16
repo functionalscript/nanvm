@@ -40,6 +40,13 @@ const print = name => x => {
 
 print('JSON')(json)
 
+const stringIndex = ['stringIndex', 1n, 32n]
+
+print('JSON Extended')([
+    ...json,
+    stringIndex,
+])
+
 print('FunctionalScript')([
     ...json,
     ['undefined', 0n, 0n],
@@ -54,5 +61,11 @@ print('FunctionalScript')([
     ['string9', 9n, 5n],
     ['string10', 10n, 5n],
     ['bigInt', 1n, 51n],
-    ['stringIndex', 1n, 51n],
+    stringIndex,
 ])
+
+console.log({ a: 0, [-1]: 1 })
+console.log({ a: 0, [0]: 1 })
+console.log({ a: 0, [2 ** 32 - 2]: 1 })
+console.log({ a: 0, [2 ** 32 - 1]: 1 })
+console.log({ a: 0, [2 ** 32]: 1 })
