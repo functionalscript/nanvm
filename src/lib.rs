@@ -1,150 +1,65 @@
-use std::{rc::Rc, collections::{BTreeMap, HashMap}};
-
 #[derive(Debug)]
 #[repr(transparent)]
 struct Value(u64);
 
-type Obj = [u64];
+#[derive(Debug, Clone, Copy)]
+struct Check {
+    mask: u64,
+    flag: u64,
+}
 
-// 0x7FF00000_00000000 -> +Inf
-// ...                 -> reserved 2^51 - 1
-// 0x7FF80000_00000000 -> NaN
-// ...                 -> reserved 2^51 - 1
-// 0xFFF00000_00000000 -> -Inf
-// ...                 -> reserved 2^52 - 1
-// total reserved: 2^53 - 3
-
-// 0x7FF0: 00: +Inf, bool
-// 0x7FF8: 01: NaN, string
-// 0xFFF0: 10: -Inf, array
-// 0xFFF8: 11: null, object
-
-// 0x7FF0: +Inf, null, bool. Future: undefined
-// 0x7FF1: string
-// 0x7FF2: object
-// 0x7FF3: array
-// 0x7FF4: Future: bigint
-// 0x7FF5: Future: Uint8Array
-// 0x7FF6: Future: Date
-// 0x7FF7: Future:
-// 0x7FF8: NaN
-// ...
-// 0xFFF0: -Inf
-// ...
-// 0xFFF8:
-// ...
-
-// String
-// 10x5: 50 bits (base32)
-//  9x5: 45 bits (base32)
-//  8x6: 48 bits (base64)
-//  7x7: 49 bits (base128 ASCII)
-//  6x8: 48 bits
-//  5x9: 45 bits
-// 4x12: 48 bits
-// 3x16: 48 bits
-// 2x16: 32 bits
-// 1x16: 32 bits
-
-const NAN: u64 = 0x7FF80000_00000000;
-const FALSE: u64 = 0x7FF00000_00000001;
-const TRUE: u64 = 0x7FF00000_00000002;
-const PTR: u64 = 0xFFFF0000_00000000;
-
-impl Value {
-    fn number(v: f64) -> Self {
-        Self(if v.is_nan() { NAN } else { v.to_bits() })
+impl Check {
+    #[inline(always)]
+    const fn some(mask: u64, flag: u64) -> Self {
+        Self { mask, flag }
     }
-    fn ptr(v: Rc<Dynamic>) -> Self {
-        let v = Rc::into_raw(v);
-        assert_eq!(v as u64 & PTR, 0);
-        Self((v as u64) | PTR)
+    #[inline(always)]
+    const fn all(mask: u64) -> Self {
+        Self::some(mask, mask)
     }
-    const fn null() -> Self {
-        Self(PTR)
-    }
-    const fn bool(v: bool) -> Self {
-        Self(if v { TRUE } else { FALSE })
-    }
-    fn unpack(&self) -> Unpacked {
-        match self.0 {
-            TRUE => Unpacked::Bool(true),
-            FALSE => Unpacked::Bool(false),
-            PTR => Unpacked::Null,
-            v => {
-                if v & PTR == PTR {
-                    Unpacked::Ptr(unsafe { &mut *((v & !PTR) as *mut Dynamic) })
-                } else {
-                    Unpacked::Number(f64::from_bits(v))
-                }
-            }
-        }
+    #[inline(always)]
+    const fn is(self, value: u64) -> bool {
+        (value & self.mask) == self.flag
     }
 }
 
-impl Drop for Value {
-    fn drop(&mut self) {
-        match self.unpack() {
-            Unpacked::Ptr(p) => { unsafe { Rc::from_raw(p) }; },
-            _ => (),
-        };
-    }
-}
+// compatible with `f64`
+const INFINITY: u64 = 0x7FF0_0000_0000_0000;
+const NAN: u64 = 0x7FF8_0000_0000_0000;
+const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
-#[derive(Debug)]
-enum Unpacked<'a> {
-    Number(f64),
-    Null,
-    Ptr(&'a mut Dynamic),
-    String(&'a [u16]),
-    Bool(bool),
-}
+// not compatible with `f64`
+const NAF: u64 = 0xFFF8_0000_0000_0000;
 
-type String16 = Rc<[u16]>;
+const IS_NAF: Check = Check::all(NAF);
 
-#[derive(Debug)]
-struct Object {
-    /// We can't use HashMap here because we need to preserve the order of indexes.
-    integerProperties: BTreeMap<u32, Value>,
-    stringProperties: HashMap<String16, Value>,
-    /// Order of string properties.
-    order: Vec<usize>
-}
+const PTR: u64 = NAF | 0x2_0000_0000_0000;
 
-#[derive(Debug)]
-enum Dynamic {
-    String(String16),
-    Array(Vec<Value>),
-    Object(Object),
-}
+const IS_PTR: Check = Check::all(PTR);
+
+const STR: u64 = NAF | 0x4_0000_0000_0000;
+
+const IS_STR: Check = Check::all(STR);
+
+const STR_PTR: u64 = STR | PTR;
+
+const IS_STR_PTR: Check = Check::all(STR_PTR);
+
+const FALSE: u64 = NAF;
+const TRUE: u64 = NAF | 1;
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
+
     use super::*;
 
     #[test]
     fn test_nan() {
+        assert_eq!(f64::INFINITY.to_bits(), INFINITY);
         assert_ne!(f64::NAN, f64::NAN);
         assert_eq!(f64::NAN.to_bits(), NAN);
-        //
-        assert_eq!(Value::number(f64::NAN).0, NAN);
-        if let Unpacked::Number(x) = Value::number(f64::NAN).unpack() {
-            assert!(x.is_nan())
-        } else {
-            panic!()
-        }
-        if let Unpacked::Number(x) = Value::number(0.0).unpack() {
-            assert_eq!(x, 0.0)
-        } else {
-            panic!()
-        }
-        //
-        let x = Value::null();
-        assert_eq!(x.0, PTR);
-        if let Unpacked::Null = x.unpack() {} else { panic!() }
-        //
-        if let Unpacked::Bool(true) = Value::bool(true).unpack() {} else { panic!() }
-        if let Unpacked::Bool(false) = Value::bool(false).unpack() {} else { panic!() }
+        assert_eq!(f64::NEG_INFINITY.to_bits(), NEG_INFINITY);
     }
 
     #[test]
