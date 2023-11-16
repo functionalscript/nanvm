@@ -38,49 +38,44 @@ const row = ([acc, total], [name, v]) => {
 
 /** @typedef {readonly Row[]} RowArray*/
 
-/** @type {(name: string) => (x: RowArray) => void} */
-const print = name => x => {
+/** @type {(f: () => void) => (name: string) => void} */
+const group = f => name => {
     console.group(name)
-    console.table(x.reduce(row, [[], 0n])[0])
+    f()
     console.groupEnd()
 }
 
-/** @type {(v: unknown) => void} */
-const printTypeof = v => console.log(`typeof ${v} = ${typeof v}`)
+/** @type {(x: RowArray) => (name: string) => void} */
+const print = x => group(() => console.table(x.reduce(row, [[], 0n])[0]))
 
 /** @type {(a: readonly unknown[]) => void} */
 const printTypeTable = a => console.table(a.map(v => [v, typeof v]))
 
-console.group('Types')
+group(() => {
+    printTypeTable([
+        void 0,
+        true,
+        9,
+        NaN,
+        Infinity,
+        -Infinity,
+        -0,
+        null,
+        'string',
+        {},
+        [5, 7]
+    ])
+    console.log(`Object.is(0, -0) = ${Object.is(0, -0)}`)
+    console.log(`[] instanceof Array = ${[] instanceof Array}`)
+})('Types')
 
-printTypeTable([
-    void 0,
-    true,
-    9,
-    NaN,
-    Infinity,
-    -Infinity,
-    -0,
-    null,
-    'string',
-    {},
-    [5,7]
-])
-
-console.log(`Object.is(0, -0) = ${Object.is(0, -0)}`)
-console.log(`[] instanceof Array = ${[] instanceof Array}`)
-
-console.groupEnd()
-
-console.group('Array Index')
-
-console.log({ a: 0, [-1]: 1 })
-console.log({ a: 0, [0]: 1 })
-console.log({ a: 0, [2 ** 32 - 2]: 1 })
-console.log({ a: 0, [2 ** 32 - 1]: 1 })
-console.log({ a: 0, [2 ** 32]: 1 })
-
-console.groupEnd()
+group(() => {
+    console.log({ a: 0, [-1]: 1 })
+    console.log({ a: 0, [0]: 1 })
+    console.log({ a: 0, [2 ** 32 - 2]: 1 })
+    console.log({ a: 0, [2 ** 32 - 1]: 1 })
+    console.log({ a: 0, [2 ** 32]: 1 })
+})('Array Index')
 
 export default {
     print,

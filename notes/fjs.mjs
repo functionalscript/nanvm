@@ -8,7 +8,7 @@ const { print } = table
 /** @type {(_: Row3) => import('./table.mjs').Row} */
 const multi = ([name, a, b]) => [`${name} ${a}x${b}`, 1n << (a * b)]
 
-print('FunctionalScript')([
+print([
     ...json.json,
     ['undefined', 1n],
     .../** @type {Row3[]} */([
@@ -24,4 +24,4 @@ print('FunctionalScript')([
         ['string10', 10n, 5n]
     ]).map(multi),
     ['bigInt', 1n << 51n],
-])
+])('FunctionalScript')

@@ -14,7 +14,7 @@ const json = [
     ['&object', (1n << 45n) - 1n],
 ]
 
-print('JSON')(json)
+print(json)('JSON')
 
 export default {
     json
