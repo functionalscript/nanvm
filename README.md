@@ -1,38 +1,29 @@
 # NaNVM
 
-## Embedded String Size
+## Float64
 
-| Size | Bits | Total                     | Total bits |
-|------|------|---------------------------|------------|
-| 1x16 | 16   | 0x1_0000                  |  16        |
-| 2x16 | 32   | 0x1_0001_0000             | >32        |
-| 4x12 | 48   | 0x1_0001_0001_0000        | >48        |
-| 5x10 | 50   | 0x5_0001_0001_0000        | >50        |
-| 6x8  | 48   | 0x6_0001_0001_0000        | >50        |
-| 7x7  | 49   | 0x8_0001_0001_0000        | >52        |
-| 8x6  | 48   | 0x9_0001_0001_0000        | >52        |
-| 9x5  | 45   | 0x9_2001_0001_0000        | >52        |
-| 10x5 | 50   | 0xD_2001_0001_0000        | >52        |
+|Sign, 1|Exponent, 11|Fraction, 52    |Value   |
+|-------|------------|----------------|--------|
+|0      |000         |0_0000_0000_0000|number  |
+|       |...         |                |number  |
+|       |7FF         |0_0000_0000_0000|+Inf    |
+|       |            |...             |reserved|
+|       |            |8_0000_0000_0000|NaN     |
+|       |            |...             |reserved|
+|1      |000         |0_0000_0000_0000|number  |
+|       |...         |                |number  |
+|       |7FF         |0_0000_0000_0000|-Inf    |
+|       |            |...             |reserved|
 
-## Pointer Size
+## Value
 
-2^48/2^3 = 2^45 = 0x2000_0000_0000
+`exponent == 0x7FF` is used for special values (53 bits):
 
-### Pointer Types
-
-- string
-- bigint
-- object
-  - object
-  - Array
-  - function
-  - UInt8Array
-  - ...
-
-## Constants
-
-- +Inf,Nan,-Inf,true,false,undefined: 6
-
-## Embedded BigInt
-
-## Embedded Index String
+|Special value, 53 bits|Value   |Size  |
+|----------------------|--------|------|
+|00_0000_0000_0000     |+Inf    |     1|
+|...                   |reserved|2^51-1|
+|08_0000_0000_0000     |Nan     |     1|
+|...                   |reserver|2^51-1|
+|10_0000_0000_0000     |-Inf    |     1|
+|...                   |reserved|2^52-1|
