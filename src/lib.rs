@@ -150,5 +150,9 @@ mod test {
     #[test]
     fn test_unsized() {
         let _x: Rc<[u8]> = Rc::new([1, 3]);
+        // let _y: Rc<(u8, [u8])> = Rc::new((5, [1, 3]));
+        // let r = Vec::default();
+        // let n = 4 + 4;
+        // let _y: Rc<[u8]> = Rc::new([5; n]);
     }
 }
