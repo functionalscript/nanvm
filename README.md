@@ -48,3 +48,11 @@ We need, at least, two types of pointers:
 
 ## All Values when `exponent` is `0x7FF`
 
+|Special value, 53 bits|Value   |# of values  |
+|----------------------|--------|-------------|
+|00_0000_0000_0000     |+Inf    |     1       |
+|...                   |reserved|2^51-1       |
+|08_0000_0000_0000     |Nan     |     1       |
+|...                   |reserver|2^51-1       |
+|10_0000_0000_0000     |-Inf    |     1       |
+|...                   |reserved|2^52-1       |

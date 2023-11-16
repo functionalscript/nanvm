@@ -45,6 +45,28 @@ const print = name => x => {
     console.groupEnd()
 }
 
+/** @type {(v: unknown) => void} */
+const printTypeof = v => console.log(`typeof ${v} = ${typeof v}`)
+
+console.group('Types')
+
+printTypeof(void 0)
+printTypeof(true)
+printTypeof(9)
+printTypeof(NaN)
+printTypeof(Infinity)
+printTypeof(-Infinity)
+printTypeof(-0)
+printTypeof(null)
+printTypeof('string')
+printTypeof({})
+printTypeof([5,7])
+
+console.log(`Object.is(0, -0) = ${Object.is(0, -0)}`)
+console.log(`[] instanceof Array = ${[] instanceof Array}`)
+
+console.groupEnd()
+
 console.group('Array Index')
 
 console.log({ a: 0, [-1]: 1 })
