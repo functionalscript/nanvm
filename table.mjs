@@ -24,14 +24,15 @@ const row = ([acc, total], [name, a, b]) => {
 }
 
 const print = name => x => {
-    console.log(name)
+    console.group(name)
     console.table(x.reduce(row, [[], 0n])[0])
+    console.groupEnd()
 }
 
 const json = [
-    ['+inf', 0n, 0n],
+    ['+Inf', 0n, 0n],
     ['NaN', 0n, 0n],
-    ['-inf', 0n, 0n],
+    ['-Inf', 0n, 0n],
     ['bool', 1n, 1n],
     ['null', 0n, 0n],
     ['&string', 1n, 45n],
@@ -64,8 +65,12 @@ print('FunctionalScript')([
     stringIndex,
 ])
 
+console.group('Integer Index')
+
 console.log({ a: 0, [-1]: 1 })
 console.log({ a: 0, [0]: 1 })
 console.log({ a: 0, [2 ** 32 - 2]: 1 })
 console.log({ a: 0, [2 ** 32 - 1]: 1 })
 console.log({ a: 0, [2 ** 32]: 1 })
+
+console.groupEnd()
