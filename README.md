@@ -25,6 +25,7 @@
 - object
   - object
   - Array
+  - function
   - UInt8Array
   - ...
 
