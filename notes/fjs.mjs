@@ -1,12 +1,17 @@
 import json from './json.mjs'
 import table from './table.mjs'
 
-const { print, multi } = table
+const { print } = table
+
+/** @typedef {readonly[string, bigint, bigint]} Row3 */
+
+/** @type {(_: Row3) => import('./table.mjs').Row} */
+const multi = ([name, a, b]) => [`${name} ${a}x${b}`, 1n << (a * b)]
 
 print('FunctionalScript')([
     ...json.json,
     ['undefined', 1n],
-    .../** @type {readonly import('./table.mjs').Row3[]} */([
+    .../** @type {Row3[]} */([
         ['string1', 1n, 16n],
         ['string2', 2n, 16n],
         ['string3', 3n, 16n],

@@ -36,11 +36,6 @@ const row = ([acc, total], [name, v]) => {
 
 /** @typedef {readonly[string, bigint]} Row */
 
-/** @typedef {readonly[string, bigint, bigint]} Row3 */
-
-/** @type {(_: Row3) => Row} */
-const multi = ([name, a, b]) => [`${name} ${a}x${b}`, 1n << (a * b)]
-
 /** @typedef {readonly Row[]} RowArray*/
 
 /** @type {(name: string) => (x: RowArray) => void} */
@@ -62,5 +57,4 @@ console.groupEnd()
 
 export default {
     print,
-    multi,
 }
