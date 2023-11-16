@@ -4,6 +4,13 @@ use std::{rc::Rc, collections::{BTreeMap, HashMap}};
 #[repr(transparent)]
 struct Value(u64);
 
+type Obj = [u64];
+
+
+fn new() -> Rc<Obj> {
+    Rc::new([1, 3])
+}
+
 // 0x7FF00000_00000000 -> +Inf
 // ...                 -> reserved 2^51 - 1
 // 0x7FF80000_00000000 -> NaN

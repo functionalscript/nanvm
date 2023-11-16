@@ -77,6 +77,20 @@ group(() => {
     console.log({ a: 0, [2 ** 32]: 1 })
 })('Array Index')
 
+/** @typedef {readonly[string, (a: bigint, b: bigint) => bigint]} Op */
+
+group(() => {
+    const infinity = 0x7FF0_0000_0000_0000n
+    const nan = 0x7FF8_0000_0000_0000n
+    const negativeInfinity = 0xFFF0_0000_0000_0000n
+    /** @type {(a: Op) => readonly[string, string]} */
+    const f = ([name, op]) => [name, hex(op(op(infinity, nan), negativeInfinity))]
+    console.table(/** @type {readonly Op[]} */([
+        ['&', (a, b) => a & b],
+        ['|', (a, b) => a | b],
+    ]).map(f))
+})("Number")
+
 export default {
     print,
 }
