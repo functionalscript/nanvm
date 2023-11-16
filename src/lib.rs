@@ -6,11 +6,6 @@ struct Value(u64);
 
 type Obj = [u64];
 
-
-fn new() -> Rc<Obj> {
-    Rc::new([1, 3])
-}
-
 // 0x7FF00000_00000000 -> +Inf
 // ...                 -> reserved 2^51 - 1
 // 0x7FF80000_00000000 -> NaN
@@ -150,5 +145,10 @@ mod test {
         //
         if let Unpacked::Bool(true) = Value::bool(true).unpack() {} else { panic!() }
         if let Unpacked::Bool(false) = Value::bool(false).unpack() {} else { panic!() }
+    }
+
+    #[test]
+    fn test_unsized() {
+        let _x: Rc<[u8]> = Rc::new([1, 3]);
     }
 }
