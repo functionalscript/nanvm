@@ -23,6 +23,11 @@ const row = ([acc, total], [name, a, b]) => {
     return [acc, total]
 }
 
+const print = name => x => {
+    console.log(name)
+    console.table(x.reduce(row, [[], 0n])[0])
+}
+
 const json = [
     ['+inf', 0n, 0n],
     ['NaN', 0n, 0n],
@@ -32,11 +37,6 @@ const json = [
     ['&string', 1n, 45n],
     ['&object', 1n, 45n],
 ]
-
-const print = name => x => {
-    console.log(name)
-    console.table(x.reduce(row, [[], 0n])[0])
-}
 
 print('JSON')(json)
 
