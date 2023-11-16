@@ -9,19 +9,19 @@ const size = v => {
 
 const hex = v => v.toString('16')
 
-const row = ([acc, total], [name, a, b]) => {
-    const ab = a * b
-    const v = 1n << ab
+const row1 = ([acc, total], [name, v]) => {
     total += v
     acc.push({
-        name: name,
-        x: `${a}x${b}`,
-        size: ab, num: hex(v),
-        total: hex(total),
+        name,
+        range: hex(v),
+        size: size(v),
+        'total range': hex(total),
         'total size': size(total - 1n)
     })
     return [acc, total]
 }
+
+const row = (x, [name, a, b]) => row1(x, [name, 1n << (a * b)])
 
 const print = name => x => {
     console.group(name)
