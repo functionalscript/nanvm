@@ -91,3 +91,5 @@ console.log({ a: 0, [2 ** 32 - 1]: 1 })
 console.log({ a: 0, [2 ** 32]: 1 })
 
 console.groupEnd()
+
+export default {}
