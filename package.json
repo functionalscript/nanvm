@@ -1,0 +1,26 @@
+{
+  "name": "nanvm",
+  "version": "0.0.0",
+  "description": "NaNVM",
+  "main": "table.mjs",
+  "scripts": {
+    "test": "tsc",
+    "json": "node ./notes/json.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/functionalscript/nanvm.git"
+  },
+  "keywords": [
+    "vm"
+  ],
+  "author": "Sergey Shandar",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/functionalscript/nanvm/issues"
+  },
+  "homepage": "https://github.com/functionalscript/nanvm#readme",
+  "dependencies": {
+    "typescript": "^5.2.2"
+  }
+}
