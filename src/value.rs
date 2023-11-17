@@ -16,7 +16,7 @@ const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 const NAN: u64 = 0x7FF8_0000_0000_0000;
 const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
-const EXTENSION: U64Subset = U64Subset::from_mask(0xFFF8_0000_0000_0000);
+const EXTENSION: U64Subset = U64Subset::from_tag(0xFFF8_0000_0000_0000);
 
 struct PtrSubset<T: Clean>(U64Subset, PhantomData<T>);
 
@@ -32,9 +32,9 @@ impl<T: Clean> PtrSubset<T> {
 }
 
 const PTR: PtrSubset<Object> =
-    PtrSubset::new(U64Subset::from_mask(EXTENSION.mask | 0x2_0000_0000_0000));
+    PtrSubset::new(U64Subset::from_tag(EXTENSION.mask | 0x2_0000_0000_0000));
 
-const STR: U64Subset = U64Subset::from_mask(EXTENSION.mask | 0x4_0000_0000_0000);
+const STR: U64Subset = U64Subset::from_tag(EXTENSION.mask | 0x4_0000_0000_0000);
 
 const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.intersection(PTR.0));
 
