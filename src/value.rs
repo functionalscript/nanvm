@@ -4,7 +4,7 @@ use crate::{
     container::{Clean, Container},
     object::Object,
     string16::String16,
-    u64subset::U64Subset,
+    u64subset_def::U64SubsetDef,
 };
 
 #[derive(Debug)]
@@ -16,12 +16,12 @@ const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 const NAN: u64 = 0x7FF8_0000_0000_0000;
 const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
-const EXTENSION: U64Subset = U64Subset::from_tag(0xFFF8_0000_0000_0000);
+const EXTENSION: U64SubsetDef = U64SubsetDef::from_tag(0xFFF8_0000_0000_0000);
 
-struct PtrSubset<T: Clean>(U64Subset, PhantomData<T>);
+struct PtrSubset<T: Clean>(U64SubsetDef, PhantomData<T>);
 
 impl<T: Clean> PtrSubset<T> {
-    const fn new(s: U64Subset) -> Self {
+    const fn new(s: U64SubsetDef) -> Self {
         Self(s, PhantomData)
     }
     fn update<const ADD: bool>(&self, v: u64) {
@@ -32,16 +32,16 @@ impl<T: Clean> PtrSubset<T> {
 }
 
 const PTR: PtrSubset<Object> =
-    PtrSubset::new(U64Subset::from_tag(EXTENSION.mask | 0x2_0000_0000_0000));
+    PtrSubset::new(U64SubsetDef::from_tag(EXTENSION.mask | 0x2_0000_0000_0000));
 
-const STR: U64Subset = U64Subset::from_tag(EXTENSION.mask | 0x4_0000_0000_0000);
+const STR: U64SubsetDef = U64SubsetDef::from_tag(EXTENSION.mask | 0x4_0000_0000_0000);
 
 const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.and(PTR.0));
 
 const FALSE: u64 = EXTENSION.mask;
 const TRUE: u64 = EXTENSION.mask | 1;
 
-const BOOL: U64Subset = U64Subset::set(TRUE | FALSE, TRUE & FALSE);
+const BOOL: U64SubsetDef = U64SubsetDef::set(TRUE | FALSE, TRUE & FALSE);
 
 fn update<const ADD: bool>(v: u64) {
     if PTR.0.is(v) {
