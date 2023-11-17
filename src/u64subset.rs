@@ -2,11 +2,14 @@ use crate::const_assert::const_assert;
 
 /// A subset of `u64`.
 ///
-/// It only works for sets in the form of every bit is either `0`, `1`, or `?`.
+/// It only works for sets which defines by a pattern in the form of every bit is either `0`, `1`, or `S`.
+/// - `0` means that bit is always `0`. It's a part of a tag and a mask. This bit is constant and doesn't carry information.
+/// - `1` means that bit is always `1`. It's a part of a tag and a mask. This bit is constant and doesn't carry information.
+/// - `S` means that bit is either `0` or `1`. It's a part of a superposiotion. This bit carries information.
 ///
-/// |             |0|1|?|
+/// |             |0|1|S|
 /// |-------------|-|-|-|
-/// |all          |0|1|1|
+/// |union        |0|1|1|
 /// |tag          |0|1|0|
 /// |superposition|0|0|1|
 /// |mask         |1|1|0|
@@ -35,7 +38,7 @@ impl U64Subset {
         value & self.mask == self.tag
     }
     #[inline(always)]
-    pub const fn bit_union(self) -> u64 {
+    pub const fn union(self) -> u64 {
         self.tag ^ !self.mask
     }
     #[inline(always)]
@@ -43,12 +46,12 @@ impl U64Subset {
         !self.mask
     }
     #[inline(always)]
-    pub const fn union(self, b: U64Subset) -> U64Subset {
-        U64Subset::set(self.bit_union() | b.bit_union(), self.tag & b.tag)
+    pub const fn or(self, b: U64Subset) -> U64Subset {
+        U64Subset::set(self.union() | b.union(), self.tag & b.tag)
     }
     #[inline(always)]
-    pub const fn intersection(self, b: U64Subset) -> U64Subset {
-        U64Subset::set(self.bit_union() & b.bit_union(), self.tag | b.tag)
+    pub const fn and(self, b: U64Subset) -> U64Subset {
+        U64Subset::set(self.union() & b.union(), self.tag | b.tag)
     }
 }
 
@@ -76,46 +79,46 @@ mod test {
 
     const B: U64Subset = U64Subset::set(0b000111, 0b000110);
     const C: U64Subset = U64Subset::set(0b011111, 0b010100);
-    const UBC: U64Subset = B.union(C);
+    const UBC: U64Subset = B.or(C);
     const _: () = const_assert(UBC.superposition() == 0b011011);
     const _: () = const_assert(UBC.tag == 0b000100);
-    const _: () = const_assert(UBC.bit_union() == 0b011111);
+    const _: () = const_assert(UBC.union() == 0b011111);
 
     #[test]
     fn test_ubc() {
         assert_eq!(UBC.superposition(), 0b011011);
         assert_eq!(UBC.tag, 0b000100);
-        assert_eq!(UBC.bit_union(), 0b011111);
+        assert_eq!(UBC.union(), 0b011111);
     }
 
     #[test]
     #[should_panic]
     fn test_ibc() {
-        B.intersection(C);
+        B.and(C);
     }
 
     const D: U64Subset = U64Subset::set(0b00111, 0b00110);
     const E: U64Subset = U64Subset::set(0b01111, 0b00100);
-    const UDE: U64Subset = D.union(E);
+    const UDE: U64Subset = D.or(E);
     const _: () = const_assert(UDE.superposition() == 0b01011);
     const _: () = const_assert(UDE.tag == 0b00100);
-    const _: () = const_assert(UDE.bit_union() == 0b01111);
-    const IDE: U64Subset = D.intersection(E);
+    const _: () = const_assert(UDE.union() == 0b01111);
+    const IDE: U64Subset = D.and(E);
     const _: () = const_assert(IDE.superposition() == 0b00001);
     const _: () = const_assert(IDE.tag == 0b00110);
-    const _: () = const_assert(IDE.bit_union() == 0b00111);
+    const _: () = const_assert(IDE.union() == 0b00111);
 
     #[test]
     fn test_ude() {
         assert_eq!(UDE.superposition(), 0b01011);
         assert_eq!(UDE.tag, 0b00100);
-        assert_eq!(UDE.bit_union(), 0b01111);
+        assert_eq!(UDE.union(), 0b01111);
     }
 
     #[test]
     fn test_ide() {
         assert_eq!(IDE.superposition(), 0b00001);
         assert_eq!(IDE.tag, 0b00110);
-        assert_eq!(IDE.bit_union(), 0b00111);
+        assert_eq!(IDE.union(), 0b00111);
     }
 }

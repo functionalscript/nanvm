@@ -36,7 +36,7 @@ const PTR: PtrSubset<Object> =
 
 const STR: U64Subset = U64Subset::from_tag(EXTENSION.mask | 0x4_0000_0000_0000);
 
-const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.intersection(PTR.0));
+const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.and(PTR.0));
 
 const FALSE: u64 = EXTENSION.mask;
 const TRUE: u64 = EXTENSION.mask | 1;
