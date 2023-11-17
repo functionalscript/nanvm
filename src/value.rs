@@ -41,7 +41,7 @@ const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.and(PTR.0));
 const FALSE: u64 = EXTENSION.mask;
 const TRUE: u64 = EXTENSION.mask | 1;
 
-const BOOL: U64SubsetDef = U64SubsetDef::set(TRUE & FALSE, TRUE | FALSE);
+const BOOL: U64SubsetDef = U64SubsetDef::from_tag_and_union(TRUE & FALSE, TRUE | FALSE);
 
 fn update<const ADD: bool>(v: u64) {
     if PTR.0.is(v) {

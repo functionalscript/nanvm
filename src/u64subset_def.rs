@@ -25,7 +25,7 @@ impl U64SubsetDef {
         Self { mask, tag }
     }
     #[inline(always)]
-    pub const fn set(tag: u64, union: u64) -> Self {
+    pub const fn from_tag_and_union(tag: u64, union: u64) -> Self {
         const_assert(union & tag == tag);
         Self::new(!(tag ^ union), tag)
     }
@@ -47,11 +47,11 @@ impl U64SubsetDef {
     }
     #[inline(always)]
     pub const fn or(self, b: U64SubsetDef) -> U64SubsetDef {
-        U64SubsetDef::set(self.tag & b.tag, self.union() | b.union())
+        U64SubsetDef::from_tag_and_union(self.tag & b.tag, self.union() | b.union())
     }
     #[inline(always)]
     pub const fn and(self, b: U64SubsetDef) -> U64SubsetDef {
-        U64SubsetDef::set(self.tag | b.tag, self.union() & b.union())
+        U64SubsetDef::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
     }
 }
 
@@ -61,7 +61,7 @@ mod test {
 
     use super::U64SubsetDef;
 
-    const A: U64SubsetDef = U64SubsetDef::set(0b010, 0b011);
+    const A: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b010, 0b011);
     const _: () = const_assert(A.superposition() == 0b001);
     const _: () = const_assert(A.tag == 0b010);
     const _: () = const_assert(!A.is(0b000));
@@ -77,8 +77,8 @@ mod test {
         assert!(A.is(0b011));
     }
 
-    const B: U64SubsetDef = U64SubsetDef::set(0b000110, 0b000111);
-    const C: U64SubsetDef = U64SubsetDef::set(0b010100, 0b011111);
+    const B: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b000110, 0b000111);
+    const C: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b010100, 0b011111);
     const UBC: U64SubsetDef = B.or(C);
     const _: () = const_assert(UBC.superposition() == 0b011011);
     const _: () = const_assert(UBC.tag == 0b000100);
@@ -97,8 +97,8 @@ mod test {
         B.and(C);
     }
 
-    const D: U64SubsetDef = U64SubsetDef::set(0b00110, 0b00111);
-    const E: U64SubsetDef = U64SubsetDef::set(0b00100, 0b01111);
+    const D: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b00110, 0b00111);
+    const E: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b00100, 0b01111);
     const UDE: U64SubsetDef = D.or(E);
     const _: () = const_assert(UDE.superposition() == 0b01011);
     const _: () = const_assert(UDE.tag == 0b00100);
