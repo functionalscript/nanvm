@@ -1,58 +1,43 @@
+mod const_assert;
+mod u64subset;
+
+use u64subset::U64Subset;
+
 #[derive(Debug)]
 #[repr(transparent)]
 struct Value(u64);
-
-#[derive(Debug, Clone, Copy)]
-struct Check {
-    mask: u64,
-    flag: u64,
-}
-
-impl Check {
-    #[inline(always)]
-    const fn some(mask: u64, flag: u64) -> Self {
-        Self { mask, flag }
-    }
-    #[inline(always)]
-    const fn all(mask: u64) -> Self {
-        Self::some(mask, mask)
-    }
-    #[inline(always)]
-    const fn is(self, value: u64) -> bool {
-        (value & self.mask) == self.flag
-    }
-}
 
 // compatible with `f64`
 const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 const NAN: u64 = 0x7FF8_0000_0000_0000;
 const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
-// not compatible with `f64`
-const NAF: u64 = 0xFFF8_0000_0000_0000;
+const NAF: U64Subset = U64Subset::all(0xFFF8_0000_0000_0000);
 
-const IS_NAF: Check = Check::all(NAF);
+const PTR: U64Subset = NAF.union(U64Subset::all(0x2_0000_0000_0000));
 
-const PTR: u64 = NAF | 0x2_0000_0000_0000;
+const STR: U64Subset = NAF.union(U64Subset::all(0x4_0000_0000_0000));
 
-const IS_PTR: Check = Check::all(PTR);
+const STR_PTR: U64Subset = STR.union(PTR);
 
-const STR: u64 = NAF | 0x4_0000_0000_0000;
+const FALSE: u64 = NAF.mask;
+const TRUE: u64 = NAF.mask | 1;
 
-const IS_STR: Check = Check::all(STR);
-
-const STR_PTR: u64 = STR | PTR;
-
-const IS_STR_PTR: Check = Check::all(STR_PTR);
-
-const FALSE: u64 = NAF;
-const TRUE: u64 = NAF | 1;
+const BOOL: U64Subset = U64Subset::set(TRUE | FALSE, TRUE & FALSE);
 
 #[cfg(test)]
 mod test {
     use std::rc::Rc;
 
     use super::*;
+    use crate::const_assert::const_assert;
+
+    const _: () = const_assert(BOOL.is(FALSE));
+    const _: () = const_assert(BOOL.is(TRUE));
+    const _: () = const_assert(!BOOL.is(0));
+    const _: () = const_assert(!BOOL.is(NAN));
+    const _: () = const_assert(BOOL.is(NAF.mask));
+    const _: () = const_assert(!BOOL.is(NAF.mask | 2));
 
     #[test]
     fn test_nan() {
