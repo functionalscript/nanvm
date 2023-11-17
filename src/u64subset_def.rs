@@ -25,9 +25,9 @@ impl U64SubsetDef {
         Self { mask, tag }
     }
     #[inline(always)]
-    pub const fn set(all: u64, tag: u64) -> Self {
-        const_assert(all & tag == tag);
-        Self::new(!(tag ^ all), tag)
+    pub const fn set(union: u64, tag: u64) -> Self {
+        const_assert(union & tag == tag);
+        Self::new(!(tag ^ union), tag)
     }
     #[inline(always)]
     pub const fn from_tag(tag: u64) -> Self {
