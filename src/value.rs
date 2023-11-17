@@ -1,4 +1,11 @@
-use crate::u64subset::U64Subset;
+use std::marker::PhantomData;
+
+use crate::{
+    container::{Clean, Container},
+    object::Object,
+    string16::String16,
+    u64subset::U64Subset,
+};
 
 #[derive(Debug)]
 #[repr(transparent)]
@@ -11,16 +18,53 @@ const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
 const EXTENSION: U64Subset = U64Subset::from_mask(0xFFF8_0000_0000_0000);
 
-const PTR: U64Subset = U64Subset::from_mask(EXTENSION.mask | 0x2_0000_0000_0000);
+struct PtrSubset<T: Clean>(U64Subset, PhantomData<T>);
+
+impl<T: Clean> PtrSubset<T> {
+    const fn new(s: U64Subset) -> Self {
+        Self(s, PhantomData)
+    }
+    fn update<const ADD: bool>(&self, v: u64) {
+        unsafe {
+            Container::update::<ADD>((v & self.0.superposition()) as *mut Container<T>);
+        }
+    }
+}
+
+const PTR: PtrSubset<Object> =
+    PtrSubset::new(U64Subset::from_mask(EXTENSION.mask | 0x2_0000_0000_0000));
 
 const STR: U64Subset = U64Subset::from_mask(EXTENSION.mask | 0x4_0000_0000_0000);
 
-const STR_PTR: U64Subset = STR.intersection(PTR);
+const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.intersection(PTR.0));
 
 const FALSE: u64 = EXTENSION.mask;
 const TRUE: u64 = EXTENSION.mask | 1;
 
 const BOOL: U64Subset = U64Subset::set(TRUE | FALSE, TRUE & FALSE);
+
+fn update<const ADD: bool>(v: u64) {
+    if PTR.0.is(v) {
+        if STR_PTR.0.is(v) {
+            STR_PTR.update::<ADD>(v);
+        } else {
+            PTR.update::<ADD>(v);
+        }
+    }
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Self {
+        update::<true>(self.0);
+        Self(self.0)
+    }
+}
+
+impl Drop for Value {
+    fn drop(&mut self) {
+        update::<false>(self.0);
+    }
+}
 
 #[cfg(test)]
 mod test {
