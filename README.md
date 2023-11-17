@@ -46,5 +46,64 @@ We need, at least, two types of pointers:
 
 `2` values.
 
-## All Values when `exponent` is `0x7FF`
+## Not a float (NaF)
 
+|prefix            |           |
+|------------------|-----------|
+|0111_1111_1111_0  |Infinity   |
+|0111_1111_1111_1  |NaN        |
+|1111_1111_1111_0  |-Infinity  |
+|1111_1111_1111_1  |NaF        |
+
+### Types of NaFs
+
+```rust
+const fn some<const M: u64, const E: u64>(n: u64) -> bool {
+    n & M == E
+}
+
+const fn all<const M: u64>(n: u64) -> bool {
+    some::<M, M>(n)
+}
+
+const NAF: u64 = 0xFFF8_0000_0000_0000;
+
+const fn is_naf(v: u64) -> bool { all::<NAF>(v) }
+const fn is_number(v: u64) -> bool { !is_naf(v) }
+
+const NAF_PTR: u64 = NAF | 0x4_0000_0000_0000;
+
+const NAF_NULL: u64 = NAF_PTR;
+
+const fn is_ptr(v: u64) -> bool { all::<NAF_PTR>(v) }
+
+const NAF_STR: u64 = NAF | 0x2_0000_0000_0000;
+
+const fn is_str(v: u64) -> bool { all::<NAF_STR>(v) }
+
+const NAF_STR_PTR: u64 = NAF_PTR | NAF_STR;
+
+const fn is_str_ptr(v: u64) -> bool { all::<NAF_STR_PTR>(v) }
+
+const fn is_index_str(v: u64) -> bool { some::<NAF_STR_PTR, NAF_STR>(v) }
+
+const fn is_bool(v: u64) -> bool { some::<NAF_STR_PTR, NAF>(v) }
+```
+
+## String
+
+```rust
+type String16 = Rc<[u16]>;
+```
+
+## Object
+
+```rust
+type Object = Rc<[Value]>
+```
+
+## Array
+
+```rust
+type Array = Rc<[Value]>;
+```
