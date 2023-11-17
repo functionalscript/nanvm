@@ -11,27 +11,31 @@ use crate::const_assert::const_assert;
 /// |-------------|-|-|-|
 /// |union        |0|1|1|
 /// |tag          |0|1|0|
-/// |superposition|0|0|1|
-/// |mask         |1|1|0|
+/// |superposition|0|0|1|union^tag     |
+/// |mask         |1|1|0|!superposition|
 #[derive(Clone, Copy)]
 pub struct U64SubsetDef {
-    pub mask: u64,
     pub tag: u64,
+    pub mask: u64,
 }
 
 impl U64SubsetDef {
     #[inline(always)]
-    pub const fn new(mask: u64, tag: u64) -> Self {
-        Self { mask, tag }
+    pub const fn from_tag_and_mask(tag: u64, mask: u64) -> Self {
+        Self { tag, mask }
+    }
+    #[inline(always)]
+    pub const fn from_tag_and_superposition(tag: u64, superposition: u64) -> Self {
+        Self::from_tag_and_mask(tag, !superposition)
     }
     #[inline(always)]
     pub const fn from_tag_and_union(tag: u64, union: u64) -> Self {
         const_assert(union & tag == tag);
-        Self::new(!(tag ^ union), tag)
+        Self::from_tag_and_superposition(tag,tag ^ union)
     }
     #[inline(always)]
     pub const fn from_tag(tag: u64) -> Self {
-        Self::new(tag, tag)
+        Self::from_tag_and_mask(tag, tag)
     }
     #[inline(always)]
     pub const fn is(self, value: u64) -> bool {
