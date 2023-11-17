@@ -1,5 +1,3 @@
-use std::fmt::{Display, Formatter, self, Debug};
-
 use crate::const_assert::const_assert;
 
 /// A subset of `u64`.
@@ -29,7 +27,7 @@ impl U64Subset {
         Self::new(!(bit_intersection ^ bit_union), bit_intersection)
     }
     #[inline(always)]
-    pub const fn all(mask: u64) -> Self {
+    pub const fn from_mask(mask: u64) -> Self {
         Self::new(mask, mask)
     }
     #[inline(always)]

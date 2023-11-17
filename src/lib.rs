@@ -12,16 +12,16 @@ const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 const NAN: u64 = 0x7FF8_0000_0000_0000;
 const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
-const NAF: U64Subset = U64Subset::all(0xFFF8_0000_0000_0000);
+const EXTENSION: U64Subset = U64Subset::from_mask(0xFFF8_0000_0000_0000);
 
-const PTR: U64Subset = NAF.union(U64Subset::all(0x2_0000_0000_0000));
+const PTR: U64Subset = U64Subset::from_mask(EXTENSION.mask | 0x2_0000_0000_0000);
 
-const STR: U64Subset = NAF.union(U64Subset::all(0x4_0000_0000_0000));
+const STR: U64Subset = U64Subset::from_mask(EXTENSION.mask | 0x4_0000_0000_0000);
 
-const STR_PTR: U64Subset = STR.union(PTR);
+const STR_PTR: U64Subset = STR.intersection(PTR);
 
-const FALSE: u64 = NAF.mask;
-const TRUE: u64 = NAF.mask | 1;
+const FALSE: u64 = EXTENSION.mask;
+const TRUE: u64 = EXTENSION.mask | 1;
 
 const BOOL: U64Subset = U64Subset::set(TRUE | FALSE, TRUE & FALSE);
 
@@ -36,8 +36,8 @@ mod test {
     const _: () = const_assert(BOOL.is(TRUE));
     const _: () = const_assert(!BOOL.is(0));
     const _: () = const_assert(!BOOL.is(NAN));
-    const _: () = const_assert(BOOL.is(NAF.mask));
-    const _: () = const_assert(!BOOL.is(NAF.mask | 2));
+    const _: () = const_assert(BOOL.is(EXTENSION.mask));
+    const _: () = const_assert(!BOOL.is(EXTENSION.mask | 2));
 
     #[test]
     fn test_nan() {
