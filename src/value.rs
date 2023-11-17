@@ -4,7 +4,7 @@ use crate::{
     container::{Clean, Container},
     object::Object,
     string16::String16,
-    u64subset_def::U64SubsetDef,
+    bit_subset64::BitSubset64,
 };
 
 #[derive(Debug)]
@@ -16,15 +16,18 @@ const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 const NAN: u64 = 0x7FF8_0000_0000_0000;
 const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
-const EXTENSION: U64SubsetDef = U64SubsetDef::from_tag(0xFFF8_0000_0000_0000);
+const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
 
-struct PtrSubset<T: Clean>(U64SubsetDef, PhantomData<T>);
+struct PtrSubset<T: Clean>(BitSubset64, PhantomData<T>);
 
 impl<T: Clean> PtrSubset<T> {
-    const fn new(s: U64SubsetDef) -> Self {
+    const fn new(s: BitSubset64) -> Self {
         Self(s, PhantomData)
     }
     fn update<const ADD: bool>(&self, v: u64) {
+        if v == NULL {
+            return;
+        }
         unsafe {
             Container::update::<ADD>((v & self.0.superposition()) as *mut Container<T>);
         }
@@ -32,20 +35,22 @@ impl<T: Clean> PtrSubset<T> {
 }
 
 const PTR: PtrSubset<Object> =
-    PtrSubset::new(U64SubsetDef::from_tag(EXTENSION.mask | 0x2_0000_0000_0000));
+    PtrSubset::new(BitSubset64::from_tag(EXTENSION.mask | 0x2_0000_0000_0000));
 
-const STR: U64SubsetDef = U64SubsetDef::from_tag(EXTENSION.mask | 0x4_0000_0000_0000);
+const NULL: u64 = PTR.0.tag;
+
+const STR: BitSubset64 = BitSubset64::from_tag(EXTENSION.mask | 0x4_0000_0000_0000);
 
 const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR.and(PTR.0));
 
 const FALSE: u64 = EXTENSION.mask;
 const TRUE: u64 = EXTENSION.mask | 1;
 
-const BOOL: U64SubsetDef = U64SubsetDef::from_tag_and_union(TRUE & FALSE, TRUE | FALSE);
+const BOOL: BitSubset64 = BitSubset64::from_tag_and_union(TRUE & FALSE, TRUE | FALSE);
 
 fn update<const ADD: bool>(v: u64) {
-    if PTR.0.is(v) {
-        if STR_PTR.0.is(v) {
+    if PTR.0.has(v) {
+        if STR_PTR.0.has(v) {
             STR_PTR.update::<ADD>(v);
         } else {
             PTR.update::<ADD>(v);
@@ -73,12 +78,12 @@ mod test {
     use super::*;
     use crate::const_assert::const_assert;
 
-    const _: () = const_assert(BOOL.is(FALSE));
-    const _: () = const_assert(BOOL.is(TRUE));
-    const _: () = const_assert(!BOOL.is(0));
-    const _: () = const_assert(!BOOL.is(NAN));
-    const _: () = const_assert(BOOL.is(EXTENSION.mask));
-    const _: () = const_assert(!BOOL.is(EXTENSION.mask | 2));
+    const _: () = const_assert(BOOL.has(FALSE));
+    const _: () = const_assert(BOOL.has(TRUE));
+    const _: () = const_assert(!BOOL.has(0));
+    const _: () = const_assert(!BOOL.has(NAN));
+    const _: () = const_assert(BOOL.has(EXTENSION.mask));
+    const _: () = const_assert(!BOOL.has(EXTENSION.mask | 2));
 
     #[test]
     fn test_nan() {

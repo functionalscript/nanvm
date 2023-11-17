@@ -1,27 +1,30 @@
 use crate::const_assert::const_assert;
 
-/// A definition of a subset of `u64`.
+/// A bit subset of `u64`.
 ///
-/// It only works for sets which defines by a pattern in the form of every bit is either `0`, `1`, or `S`.
-/// - `0` means that bit is always `0`. It's a part of a tag and a mask. This bit is constant and doesn't carry information.
-/// - `1` means that bit is always `1`. It's a part of a tag and a mask. This bit is constant and doesn't carry information.
-/// - `S` means that bit is either `0` or `1`. It's a part of a superposition. This bit carries information.
+/// It only works for sets which are defined by a pattern in the form when every bit is either `0`, `1`, or `S`.
+/// - `0` means that bit is always `0`. It's a part of a tag and a mask.
+/// - `1` means that bit is always `1`. It's a part of a tag and a mask.
+/// - `S` means that bit is either `0` or `1`. It's a part of a superposition.
 ///
-/// |             |0|1|S|
-/// |-------------|-|-|-|
-/// |union        |0|1|1|
-/// |tag          |0|1|0|
-/// |superposition|0|0|1|union^tag     |
-/// |mask         |1|1|0|!superposition|
+/// `cardinality = 2^(superposition.count_ones())`
+///
+/// |             |0|1|S|                 |
+/// |-------------|-|-|-|-----------------|
+/// |union        |0|1|1|items.reduce(or) |
+/// |tag          |0|1|0|items.reduce(and)|
+/// |superposition|0|0|1|union^tag        |
+/// |mask         |1|1|0|!superposition   |
 #[derive(Clone, Copy)]
-pub struct U64SubsetDef {
+pub struct BitSubset64 {
     pub tag: u64,
     pub mask: u64,
 }
 
-impl U64SubsetDef {
+impl BitSubset64 {
     #[inline(always)]
     pub const fn from_tag_and_mask(tag: u64, mask: u64) -> Self {
+        const_assert(mask & tag == tag);
         Self { tag, mask }
     }
     #[inline(always)]
@@ -30,7 +33,6 @@ impl U64SubsetDef {
     }
     #[inline(always)]
     pub const fn from_tag_and_union(tag: u64, union: u64) -> Self {
-        const_assert(union & tag == tag);
         Self::from_tag_and_superposition(tag,tag ^ union)
     }
     #[inline(always)]
@@ -38,7 +40,7 @@ impl U64SubsetDef {
         Self::from_tag_and_mask(tag, tag)
     }
     #[inline(always)]
-    pub const fn is(self, value: u64) -> bool {
+    pub const fn has(self, value: u64) -> bool {
         value & self.mask == self.tag
     }
     #[inline(always)]
@@ -50,12 +52,12 @@ impl U64SubsetDef {
         !self.mask
     }
     #[inline(always)]
-    pub const fn or(self, b: U64SubsetDef) -> U64SubsetDef {
-        U64SubsetDef::from_tag_and_union(self.tag & b.tag, self.union() | b.union())
+    pub const fn or(self, b: BitSubset64) -> BitSubset64 {
+        BitSubset64::from_tag_and_union(self.tag & b.tag, self.union() | b.union())
     }
     #[inline(always)]
-    pub const fn and(self, b: U64SubsetDef) -> U64SubsetDef {
-        U64SubsetDef::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
+    pub const fn and(self, b: BitSubset64) -> BitSubset64 {
+        BitSubset64::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
     }
 }
 
@@ -63,27 +65,27 @@ impl U64SubsetDef {
 mod test {
     use crate::const_assert::const_assert;
 
-    use super::U64SubsetDef;
+    use super::BitSubset64;
 
-    const A: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b010, 0b011);
+    const A: BitSubset64 = BitSubset64::from_tag_and_union(0b010, 0b011);
     const _: () = const_assert(A.superposition() == 0b001);
     const _: () = const_assert(A.tag == 0b010);
-    const _: () = const_assert(!A.is(0b000));
-    const _: () = const_assert(A.is(0b010));
-    const _: () = const_assert(A.is(0b011));
+    const _: () = const_assert(!A.has(0b000));
+    const _: () = const_assert(A.has(0b010));
+    const _: () = const_assert(A.has(0b011));
 
     #[test]
     fn test_a() {
         assert_eq!(A.superposition(), 0b001);
         assert_eq!(A.tag, 0b010);
-        assert!(!A.is(0b000));
-        assert!(A.is(0b010));
-        assert!(A.is(0b011));
+        assert!(!A.has(0b000));
+        assert!(A.has(0b010));
+        assert!(A.has(0b011));
     }
 
-    const B: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b000110, 0b000111);
-    const C: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b010100, 0b011111);
-    const UBC: U64SubsetDef = B.or(C);
+    const B: BitSubset64 = BitSubset64::from_tag_and_union(0b000110, 0b000111);
+    const C: BitSubset64 = BitSubset64::from_tag_and_union(0b010100, 0b011111);
+    const UBC: BitSubset64 = B.or(C);
     const _: () = const_assert(UBC.superposition() == 0b011011);
     const _: () = const_assert(UBC.tag == 0b000100);
     const _: () = const_assert(UBC.union() == 0b011111);
@@ -101,13 +103,13 @@ mod test {
         B.and(C);
     }
 
-    const D: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b00110, 0b00111);
-    const E: U64SubsetDef = U64SubsetDef::from_tag_and_union(0b00100, 0b01111);
-    const UDE: U64SubsetDef = D.or(E);
+    const D: BitSubset64 = BitSubset64::from_tag_and_union(0b00110, 0b00111);
+    const E: BitSubset64 = BitSubset64::from_tag_and_union(0b00100, 0b01111);
+    const UDE: BitSubset64 = D.or(E);
     const _: () = const_assert(UDE.superposition() == 0b01011);
     const _: () = const_assert(UDE.tag == 0b00100);
     const _: () = const_assert(UDE.union() == 0b01111);
-    const IDE: U64SubsetDef = D.and(E);
+    const IDE: BitSubset64 = D.and(E);
     const _: () = const_assert(IDE.superposition() == 0b00001);
     const _: () = const_assert(IDE.tag == 0b00110);
     const _: () = const_assert(IDE.union() == 0b00111);
