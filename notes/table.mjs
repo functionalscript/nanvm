@@ -89,7 +89,7 @@ group(() => {
         ['&', (a, b) => a & b],
         ['|', (a, b) => a | b],
     ]).map(f))
-})("Number")
+})('Number')
 
 export default {
     print,
