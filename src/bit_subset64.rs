@@ -2,22 +2,32 @@ use crate::const_assert::const_assert;
 
 /// A bit subset of `u64`.
 ///
-/// It only works for sets which are defined by a pattern in the form when every bit is either `0`, `1`, or `S`.
-/// - `0` means that bit is always `0`. It's a part of a tag and a mask.
-/// - `1` means that bit is always `1`. It's a part of a tag and a mask.
-/// - `S` means that bit is either `0` or `1`. It's a part of a superposition.
+/// This structure represents a subset of bits within a 64-bit unsigned integer,
+/// defined by a specific pattern where each bit is either `0`, `1`, or `S`.
 ///
-/// `cardinality = 2^(superposition.count_ones())`
+/// - `0` means the bit is always `0`. These bits contribute to both the tag and the mask.
+/// - `1` means the bit is always `1`. These bits also contribute to both the tag and the mask.
+/// - `S` represents a superposition state, meaning the bit can be either `0` or `1`.
 ///
-/// |             |0|1|S|                 |
-/// |-------------|-|-|-|-----------------|
-/// |union        |0|1|1|items.reduce(or) |
-/// |tag          |0|1|0|items.reduce(and)|
-/// |superposition|0|0|1|union^tag        |
-/// |mask         |1|1|0|!superposition   |
+/// The cardinality of the set is calculated as `2^(superposition.count_ones())`, representing
+/// the number of unique combinations possible within the superposition bits.
+///
+/// The following table summarizes how each field is derived:
+///
+/// |Property      | 0 | 1 | S | Description        |
+/// |--------------|---|---|---|--------------------|
+/// | union        | 0 | 1 | 1 | items.reduce(or)   |
+/// | tag          | 0 | 1 | 0 | items.reduce(and)  |
+/// | superposition| 0 | 0 | 1 | union ^ tag        |
+/// | mask         | 1 | 1 | 0 | !superposition     |
 #[derive(Clone, Copy)]
 pub struct BitSubset64 {
+    /// Represents the intersection of all items in the subset. A pattern of bits
+    /// where a `1` in each position indicates that the corresponding bit is consistently `1`
+    /// across all items, and a `0` indicates that it is not consistently `1`.
     pub tag: u64,
+    /// Identifies the bits that are constant (either `0` or `1`). A `1` in a position
+    /// indicates a fixed bit (as per the `tag`), and a `0` indicates a superposition bit.
     pub mask: u64,
 }
 
@@ -52,8 +62,13 @@ impl BitSubset64 {
         !self.mask
     }
     #[inline(always)]
-    pub const fn or(self, b: BitSubset64) -> BitSubset64 {
+    pub const fn or_unchecked(self, b: BitSubset64) -> BitSubset64 {
         BitSubset64::from_tag_and_union(self.tag & b.tag, self.union() | b.union())
+    }
+    #[inline(always)]
+    pub const fn or(self, b: BitSubset64) -> BitSubset64 {
+        const_assert(self.superposition() == b.superposition());
+        self.or_unchecked(b)
     }
     #[inline(always)]
     pub const fn and(self, b: BitSubset64) -> BitSubset64 {
@@ -85,7 +100,7 @@ mod test {
 
     const B: BitSubset64 = BitSubset64::from_tag_and_union(0b000110, 0b000111);
     const C: BitSubset64 = BitSubset64::from_tag_and_union(0b010100, 0b011111);
-    const UBC: BitSubset64 = B.or(C);
+    const UBC: BitSubset64 = B.or_unchecked(C);
     const _: () = const_assert(UBC.superposition() == 0b011011);
     const _: () = const_assert(UBC.tag == 0b000100);
     const _: () = const_assert(UBC.union() == 0b011111);
@@ -105,7 +120,7 @@ mod test {
 
     const D: BitSubset64 = BitSubset64::from_tag_and_union(0b00110, 0b00111);
     const E: BitSubset64 = BitSubset64::from_tag_and_union(0b00100, 0b01111);
-    const UDE: BitSubset64 = D.or(E);
+    const UDE: BitSubset64 = D.or_unchecked(E);
     const _: () = const_assert(UDE.superposition() == 0b01011);
     const _: () = const_assert(UDE.tag == 0b00100);
     const _: () = const_assert(UDE.union() == 0b01111);
