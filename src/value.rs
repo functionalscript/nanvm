@@ -37,12 +37,12 @@ impl<T: Clean> PtrSubset<T> {
     }
 }
 
-const EXTENSION_SPLIT: (BitSubset64, BitSubset64) = EXTENSION.split(50);
+const EXTENSION_SPLIT: (BitSubset64, BitSubset64) = EXTENSION.split(0x0004_0000_0000_0000);
 
 const BOOL: BitSubset64 = EXTENSION_SPLIT.0;
 const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 
-const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(49);
+const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
 const STRING: PtrSubset<String16> = PtrSubset::new(PTR_SPLIT.0);
 const OBJECT: PtrSubset<Object> = PtrSubset::new(PTR_SPLIT.1);
