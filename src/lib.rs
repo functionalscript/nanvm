@@ -6,3 +6,4 @@ mod object;
 mod ptr_subset;
 mod string16;
 mod value;
+mod value_type;

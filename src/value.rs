@@ -4,6 +4,7 @@ use crate::{
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     string16::String16,
+    value_type::ValueType,
 };
 
 #[derive(Debug)]
@@ -64,17 +65,53 @@ impl Value {
     fn from_bool(b: bool) -> Self {
         Self(if b { TRUE } else { FALSE })
     }
+    const fn is_number(&self) -> bool {
+        !EXTENSION.has(self.0)
+    }
     fn get_number(&self) -> Option<f64> {
-        if EXTENSION.has(self.0) {
-            return None;
+        if self.is_number() {
+            return Some(f64::from_bits(self.0));
         }
-        Some(f64::from_bits(self.0))
+        None
+    }
+    const fn is_bool(&self) -> bool {
+        BOOL.has(self.0)
     }
     const fn get_bool(&self) -> Option<bool> {
-        if BOOL.has(self.0) {
+        if self.is_bool() {
             return Some(self.0 != FALSE);
         }
         None
+    }
+    const fn is_ptr(&self) -> bool {
+        PTR.has(self.0)
+    }
+    const fn is_string(&self) -> bool {
+        STRING.subset().has(self.0)
+    }
+    const fn null() -> Self {
+        Self(OBJECT.subset().tag)
+    }
+    const fn is_null(&self) -> bool {
+        self.0 == OBJECT.subset().tag
+    }
+    const fn is_object(&self) -> bool {
+        OBJECT.subset().has(self.0)
+    }
+    const fn get_type(&self) -> ValueType {
+        if self.is_ptr() {
+            if self.is_string() {
+                ValueType::String
+            } else {
+                ValueType::Object
+            }
+        } else {
+            if self.is_number() {
+                ValueType::Number
+            } else {
+                ValueType::Bool
+            }
+        }
     }
 }
 
@@ -113,13 +150,37 @@ mod test {
             Some(f64::NEG_INFINITY)
         );
         assert!(Value::from_number(f64::NAN).get_number().unwrap().is_nan());
+        //
         assert_eq!(Value::from_bool(true).get_number(), None);
+        assert_eq!(Value::null().get_number(), None);
     }
 
     #[test]
     fn test_bool() {
         assert_eq!(Value::from_bool(true).get_bool(), Some(true));
         assert_eq!(Value::from_bool(false).get_bool(), Some(false));
+        //
         assert_eq!(Value::from_number(15.0).get_bool(), None);
+        assert_eq!(Value::null().get_bool(), None);
+    }
+
+    #[test]
+    fn test_null() {
+        assert!(Value::null().is_null());
+        //
+        assert!(!Value::from_number(-15.7).is_null());
+        assert!(!Value::from_bool(false).is_null());
+    }
+
+    #[test]
+    fn test_object() {
+        assert!(Value::null().is_object());
+    }
+
+    #[test]
+    fn test_type() {
+        assert_eq!(Value::from_number(15.0).get_type(), ValueType::Number);
+        assert_eq!(Value::from_bool(true).get_type(), ValueType::Bool);
+        assert_eq!(Value::null().get_type(), ValueType::Object);
     }
 }
