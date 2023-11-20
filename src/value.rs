@@ -71,10 +71,10 @@ impl Value {
         Some(self.0 as f64)
     }
     const fn get_bool(&self) -> Option<bool> {
-        if !BOOL.has(self.0) {
-            return None
+        if BOOL.has(self.0) {
+            return Some(self.0 != FALSE)
         }
-        Some(self.0 != FALSE)
+        None
     }
 }
 
