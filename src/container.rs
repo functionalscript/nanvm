@@ -17,11 +17,12 @@ impl<T: Clean> Container<T> {
     }
     pub unsafe fn update<const ADD: bool>(p: *mut Self) {
         let r = &mut *p;
+        let c = r.counter;
         if ADD {
-            r.counter += 1;
+            r.counter = c + 1;
         } else {
-            if r.counter != 0 {
-                r.counter -= 1;
+            if c != 0 {
+                r.counter = c - 1;
                 return;
             }
             r.value.clean();

@@ -88,7 +88,7 @@ impl BitSubset64 {
     }
     #[inline(always)]
     pub const fn ptr_subset<T: Clean>(self) -> PtrSubset<T> {
-        PtrSubset(self, PhantomData)
+        PtrSubset::new(self)
     }
 }
 

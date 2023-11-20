@@ -1,10 +1,14 @@
-use crate::{bit_subset64::BitSubset64, object::Object, ptr_subset::PtrSubset, string16::String16};
+use crate::{
+    bit_subset64::BitSubset64,
+    container::Clean,
+    object::Object,
+    ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
+    string16::String16,
+};
 
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct Value(u64);
-
-//
 
 const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
 
@@ -16,20 +20,25 @@ const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
 const STRING: PtrSubset<String16> = PTR_SPLIT.0.ptr_subset();
-const STRING_TAG: u64 = STRING.0.tag;
+const STRING_TAG: u64 = STRING.subset().tag;
 const OBJECT: PtrSubset<Object> = PTR_SPLIT.1.ptr_subset();
-const OBJECT_TAG: u64 = OBJECT.0.tag;
+const OBJECT_TAG: u64 = OBJECT.subset().tag;
 
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
 fn update<const ADD: bool>(v: u64) {
-    if PTR.has(v) {
-        if STRING.0.has(v) {
-            STRING.update::<ADD>(v);
-        } else {
-            OBJECT.update::<ADD>(v);
-        }
+    if !PTR.has(v) {
+        return;
+    }
+    let p = v & PTR_SUBSET_SUPERPOSITION;
+    if p == 0 {
+        return;
+    }
+    if STRING.subset().has(v) {
+        STRING.update::<ADD>(p);
+    } else {
+        OBJECT.update::<ADD>(p);
     }
 }
 
