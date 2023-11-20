@@ -43,7 +43,7 @@ impl BitSubset64 {
     }
     #[inline(always)]
     pub const fn from_tag_and_union(tag: u64, union: u64) -> Self {
-        Self::from_tag_and_superposition(tag,tag ^ union)
+        Self::from_tag_and_superposition(tag, tag ^ union)
     }
     #[inline(always)]
     pub const fn from_tag(tag: u64) -> Self {

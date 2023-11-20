@@ -1,22 +1,11 @@
 use std::marker::PhantomData;
 
 use crate::{
+    bit_subset64::BitSubset64,
     container::{Clean, Container},
     object::Object,
     string16::String16,
-    bit_subset64::BitSubset64,
 };
-
-#[derive(Debug)]
-#[repr(transparent)]
-struct Value(u64);
-
-// compatible with `f64`
-const INFINITY: u64 = 0x7FF0_0000_0000_0000;
-const NAN: u64 = 0x7FF8_0000_0000_0000;
-const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
-
-const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
 
 struct PtrSubset<T: Clean>(BitSubset64, PhantomData<T>);
 
@@ -33,6 +22,17 @@ impl<T: Clean> PtrSubset<T> {
         }
     }
 }
+
+#[derive(Debug)]
+#[repr(transparent)]
+struct Value(u64);
+
+// compatible with `f64`
+const INFINITY: u64 = 0x7FF0_0000_0000_0000;
+const NAN: u64 = 0x7FF8_0000_0000_0000;
+const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
+
+const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
 
 const PTR: PtrSubset<Object> =
     PtrSubset::new(BitSubset64::from_tag(EXTENSION.mask | 0x2_0000_0000_0000));
