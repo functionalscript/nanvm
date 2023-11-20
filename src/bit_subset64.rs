@@ -142,7 +142,7 @@ mod test {
     #[test]
     #[should_panic]
     fn test_split_fail() {
-        UBC.split(2);
+        UBC.split(0b100);
     }
 
     const D: BitSubset64 = BitSubset64::from_tag_and_union(0b00110, 0b00111);
