@@ -80,7 +80,7 @@ impl BitSubset64 {
         const_assert(i_mask & self.mask == 0);
         let mask = self.mask | i_mask;
         (
-            BitSubset64::from_tag_and_mask(self.tag , mask),
+            BitSubset64::from_tag_and_mask(self.tag, mask),
             BitSubset64::from_tag_and_mask(self.tag | i_mask, mask),
         )
     }
