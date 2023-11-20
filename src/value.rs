@@ -61,6 +61,9 @@ impl Value {
         assert!(number::is_valid(n));
         Self(n)
     }
+    fn from_bool(b: bool) -> Self {
+        Self(if b { TRUE } else { FALSE })
+    }
     const fn get_number(&self) -> Option<f64> {
         if EXTENSION.has(self.0) {
             return None
