@@ -50,10 +50,6 @@ const OBJECT: PtrSubset<Object> = PtrSubset::new(PTR_SPLIT.1);
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
-// all extensions
-
-// const EXTENSION: BitSubset64 = PTR.or_unchecked(STR_INDEX).or_unchecked(BOOL);
-
 fn update<const ADD: bool>(v: u64) {
     if PTR.has(v) {
         if STRING.0.has(v) {
