@@ -64,11 +64,11 @@ impl Value {
     fn from_bool(b: bool) -> Self {
         Self(if b { TRUE } else { FALSE })
     }
-    const fn get_number(&self) -> Option<f64> {
+    fn get_number(&self) -> Option<f64> {
         if EXTENSION.has(self.0) {
             return None
         }
-        Some(self.0 as f64)
+        Some(f64::from_bits(self.0))
     }
     const fn get_bool(&self) -> Option<bool> {
         if BOOL.has(self.0) {
@@ -98,5 +98,22 @@ mod test {
         // let r = Vec::default();
         // let n = 4 + 4;
         // let _y: Rc<[u8]> = Rc::new([5; n]);
+    }
+
+    #[test]
+    fn test_number() {
+        assert_eq!(Value::from_number(1.0).get_number(), Some(1.0));
+        assert_eq!(Value::from_number(-1.0).get_number(), Some(-1.0));
+        assert_eq!(Value::from_number(f64::INFINITY).get_number(), Some(f64::INFINITY));
+        assert_eq!(Value::from_number(f64::NEG_INFINITY).get_number(), Some(f64::NEG_INFINITY));
+        assert!(Value::from_number(f64::NAN).get_number().unwrap().is_nan());
+        assert_eq!(Value::from_bool(true).get_number(), None);
+    }
+
+    #[test]
+    fn test_bool() {
+        assert_eq!(Value::from_bool(true).get_bool(), Some(true));
+        assert_eq!(Value::from_bool(false).get_bool(), Some(false));
+        assert_eq!(Value::from_number(15.0).get_bool(), None);
     }
 }
