@@ -3,7 +3,7 @@ use crate::{
     container::Clean,
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-    string16::String16,
+    string16::String16, number,
 };
 
 #[derive(Debug)]
@@ -52,6 +52,26 @@ impl Clone for Value {
 impl Drop for Value {
     fn drop(&mut self) {
         update::<false>(self.0);
+    }
+}
+
+impl Value {
+    fn from_number(n: f64) -> Self {
+        let n = n.to_bits();
+        assert!(number::is_valid(n));
+        Self(n)
+    }
+    const fn get_number(&self) -> Option<f64> {
+        if EXTENSION.has(self.0) {
+            return None
+        }
+        Some(self.0 as f64)
+    }
+    const fn get_bool(&self) -> Option<bool> {
+        if !BOOL.has(self.0) {
+            return None
+        }
+        Some(self.0 != FALSE)
     }
 }
 
