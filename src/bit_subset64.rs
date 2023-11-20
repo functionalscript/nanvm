@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{const_assert::const_assert, ptr_subset::PtrSubset, container::Clean};
+use crate::{const_assert::const_assert, container::Clean, ptr_subset::PtrSubset};
 
 /// A bit subset of `u64`.
 ///
