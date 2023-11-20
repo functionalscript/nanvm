@@ -38,8 +38,8 @@ impl BitSubset64 {
         Self { tag, mask }
     }
     #[inline(always)]
-    pub const fn from_tag_and_superposition(tag: u64, superposition: u64) -> Self {
-        Self::from_tag_and_mask(tag, !superposition)
+    pub const fn from_tag_and_superposition(tag: u64, sup: u64) -> Self {
+        Self::from_tag_and_mask(tag, !sup)
     }
     #[inline(always)]
     pub const fn from_tag_and_union(tag: u64, union: u64) -> Self {
@@ -55,7 +55,7 @@ impl BitSubset64 {
     }
     #[inline(always)]
     pub const fn union(self) -> u64 {
-        self.tag ^ !self.mask
+        self.tag ^ self.superposition()
     }
     #[inline(always)]
     pub const fn superposition(self) -> u64 {
