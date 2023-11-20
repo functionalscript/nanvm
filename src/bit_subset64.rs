@@ -1,4 +1,6 @@
-use crate::const_assert::const_assert;
+use std::marker::PhantomData;
+
+use crate::{const_assert::const_assert, container::Clean, ptr_subset::PtrSubset};
 
 /// A bit subset of `u64`.
 ///
@@ -75,14 +77,18 @@ impl BitSubset64 {
         BitSubset64::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
     }
     #[inline(always)]
-    pub const fn split(self, i: u8) -> (BitSubset64, BitSubset64) {
-        let i_mask = 1 << i;
-        const_assert(i_mask & self.mask == 0);
-        let mask = self.mask | i_mask;
+    pub const fn split(self, m: u64) -> (BitSubset64, BitSubset64) {
+        const_assert(m != 0);
+        const_assert(m & self.mask == 0);
+        let mask = self.mask | m;
         (
             BitSubset64::from_tag_and_mask(self.tag, mask),
-            BitSubset64::from_tag_and_mask(self.tag | i_mask, mask),
+            BitSubset64::from_tag_and_mask(self.tag | m, mask),
         )
+    }
+    #[inline(always)]
+    pub const fn ptr_subset<T: Clean>(self) -> PtrSubset<T> {
+        PtrSubset(self, PhantomData)
     }
 }
 
@@ -99,7 +105,7 @@ mod test {
     const _: () = const_assert(A.has(0b010));
     const _: () = const_assert(A.has(0b011));
 
-    const AS: (BitSubset64, BitSubset64) = A.split(0);
+    const AS: (BitSubset64, BitSubset64) = A.split(1);
     const _: () = const_assert(AS.0.tag == 0b010);
     const _: () = const_assert(AS.0.superposition() == 0);
     const _: () = const_assert(AS.1.tag == 0b011);
@@ -121,10 +127,10 @@ mod test {
     const _: () = const_assert(UBC.tag == 0b000100);
     const _: () = const_assert(UBC.union() == 0b011111);
 
-    const UBCS: (BitSubset64, BitSubset64) = UBC.split(3);
-    const _: () = const_assert(UBCS.0.superposition() == 0b010011);
-    const _: () = const_assert(UBCS.0.tag == 0b000100);
-    const _: () = const_assert(UBCS.1.tag == 0b001100);
+    const _UBCS: (BitSubset64, BitSubset64) = UBC.split(0b1000);
+    const _: () = const_assert(_UBCS.0.superposition() == 0b010011);
+    const _: () = const_assert(_UBCS.0.tag == 0b000100);
+    const _: () = const_assert(_UBCS.1.tag == 0b001100);
 
     #[test]
     fn test_ubc() {
@@ -142,7 +148,7 @@ mod test {
     #[test]
     #[should_panic]
     fn test_split_fail() {
-        UBC.split(2);
+        UBC.split(0b100);
     }
 
     const D: BitSubset64 = BitSubset64::from_tag_and_union(0b00110, 0b00111);
