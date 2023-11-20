@@ -18,23 +18,13 @@ const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 
 //
 
-const EXTENSION_MASK: u64 = 0xFFF8_0000_0000_0000;
-
-const fn extension(tag: u64, sup: u64) -> BitSubset64 {
-    BitSubset64::from_tag_and_superposition(EXTENSION_MASK | tag, sup)
-}
+const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
 
 struct PtrSubset<T: Clean>(BitSubset64, PhantomData<T>);
 
 impl<T: Clean> PtrSubset<T> {
-    const fn new(tag: u64) -> Self {
-        Self(
-            extension(
-                tag | 0x1_0000_0000_0000,
-                0x0000_FFFF_FFFF_FFFF, // 48-bits. We can reduce it to 45-bits by removing the first alignment bits.
-            ),
-            PhantomData,
-        )
+    const fn new(s: BitSubset64) -> Self {
+        Self(s, PhantomData)
     }
     fn update<const ADD: bool>(&self, v: u64) {
         let v = v & self.0.superposition();
@@ -47,43 +37,29 @@ impl<T: Clean> PtrSubset<T> {
     }
 }
 
-// an object pointer
+const EXTENSION_SPLIT: (BitSubset64, BitSubset64) = EXTENSION.split(50);
 
-const OBJ_PTR: PtrSubset<Object> = PtrSubset::new(0);
+const BOOL: BitSubset64 = EXTENSION_SPLIT.0;
+const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 
-// a string index
+const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(49);
 
-const STR_INDEX: BitSubset64 = extension(0x2_0000_0000_0000, 0xFFFF_FFFF);
-
-// a pointer to a string
-
-const STR_PTR: PtrSubset<String16> = PtrSubset::new(STR_INDEX.tag);
-
-// all strings
-
-const STR: BitSubset64 = STR_INDEX.or_unchecked(STR_PTR.0);
-
-// all pointers
-
-const PTR: BitSubset64 = OBJ_PTR.0.or(STR_PTR.0);
-
-// bool
-
-const BOOL: BitSubset64 = extension(0, 1);
+const STRING: PtrSubset<String16> = PtrSubset::new(PTR_SPLIT.0);
+const OBJECT: PtrSubset<Object> = PtrSubset::new(PTR_SPLIT.1);
 
 const FALSE: u64 = BOOL.tag;
-const TRUE: u64 = BOOL.union();
+const TRUE: u64 = BOOL.tag | 1;
 
 // all extensions
 
-const EXTENSION: BitSubset64 = PTR.or_unchecked(STR_INDEX).or_unchecked(BOOL);
+// const EXTENSION: BitSubset64 = PTR.or_unchecked(STR_INDEX).or_unchecked(BOOL);
 
 fn update<const ADD: bool>(v: u64) {
     if PTR.has(v) {
-        if STR_PTR.0.has(v) {
-            STR_PTR.update::<ADD>(v);
+        if STRING.0.has(v) {
+            STRING.update::<ADD>(v);
         } else {
-            OBJ_PTR.update::<ADD>(v);
+            OBJECT.update::<ADD>(v);
         }
     }
 }
@@ -112,8 +88,7 @@ mod test {
     const _: () = const_assert(BOOL.has(TRUE));
     const _: () = const_assert(!BOOL.has(0));
     const _: () = const_assert(!BOOL.has(NAN));
-    const _: () = const_assert(BOOL.has(EXTENSION_MASK));
-    const _: () = const_assert(!BOOL.has(EXTENSION_MASK | 2));
+    const _: () = const_assert(BOOL.has(EXTENSION.mask));
 
     #[test]
     fn test_nan() {
