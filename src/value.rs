@@ -1,9 +1,9 @@
 use crate::{
     bit_subset64::BitSubset64,
-    container::Clean,
+    number,
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-    string16::String16, number,
+    string16::String16,
 };
 
 #[derive(Debug)]
@@ -66,13 +66,13 @@ impl Value {
     }
     fn get_number(&self) -> Option<f64> {
         if EXTENSION.has(self.0) {
-            return None
+            return None;
         }
         Some(f64::from_bits(self.0))
     }
     const fn get_bool(&self) -> Option<bool> {
         if BOOL.has(self.0) {
-            return Some(self.0 != FALSE)
+            return Some(self.0 != FALSE);
         }
         None
     }
@@ -104,8 +104,14 @@ mod test {
     fn test_number() {
         assert_eq!(Value::from_number(1.0).get_number(), Some(1.0));
         assert_eq!(Value::from_number(-1.0).get_number(), Some(-1.0));
-        assert_eq!(Value::from_number(f64::INFINITY).get_number(), Some(f64::INFINITY));
-        assert_eq!(Value::from_number(f64::NEG_INFINITY).get_number(), Some(f64::NEG_INFINITY));
+        assert_eq!(
+            Value::from_number(f64::INFINITY).get_number(),
+            Some(f64::INFINITY)
+        );
+        assert_eq!(
+            Value::from_number(f64::NEG_INFINITY).get_number(),
+            Some(f64::NEG_INFINITY)
+        );
         assert!(Value::from_number(f64::NAN).get_number().unwrap().is_nan());
         assert_eq!(Value::from_bool(true).get_number(), None);
     }
