@@ -27,8 +27,8 @@ const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
-const STRING: PtrSubset<String16> = PtrSubset::new(PTR_SPLIT.0);
-const OBJECT: PtrSubset<Object> = PtrSubset::new(PTR_SPLIT.1);
+const STRING: PtrSubset<String16> = PTR_SPLIT.0.ptr_subset();
+const OBJECT: PtrSubset<Object> = PTR_SPLIT.1.ptr_subset();
 
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;

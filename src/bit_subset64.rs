@@ -1,4 +1,6 @@
-use crate::const_assert::const_assert;
+use std::marker::PhantomData;
+
+use crate::{const_assert::const_assert, ptr_subset::PtrSubset, container::Clean};
 
 /// A bit subset of `u64`.
 ///
@@ -83,6 +85,10 @@ impl BitSubset64 {
             BitSubset64::from_tag_and_mask(self.tag, mask),
             BitSubset64::from_tag_and_mask(self.tag | m, mask),
         )
+    }
+    #[inline(always)]
+    pub const fn ptr_subset<T: Clean>(self) -> PtrSubset<T> {
+        PtrSubset(self, PhantomData)
     }
 }
 
