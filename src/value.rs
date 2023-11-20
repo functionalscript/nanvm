@@ -2,12 +2,7 @@ use crate::{bit_subset64::BitSubset64, object::Object, ptr_subset::PtrSubset, st
 
 #[derive(Debug)]
 #[repr(transparent)]
-struct Value(u64);
-
-// compatible with `f64`
-const INFINITY: u64 = 0x7FF0_0000_0000_0000;
-const NAN: u64 = 0x7FF8_0000_0000_0000;
-const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
+pub struct Value(u64);
 
 //
 
@@ -21,7 +16,9 @@ const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
 const STRING: PtrSubset<String16> = PTR_SPLIT.0.ptr_subset();
+const STRING_TAG: u64 = STRING.0.tag;
 const OBJECT: PtrSubset<Object> = PTR_SPLIT.1.ptr_subset();
+const OBJECT_TAG: u64 = OBJECT.0.tag;
 
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
@@ -54,21 +51,13 @@ mod test {
     use std::rc::Rc;
 
     use super::*;
-    use crate::const_assert::const_assert;
+    use crate::{const_assert::const_assert, number::NAN};
 
     const _: () = const_assert(BOOL.has(FALSE));
     const _: () = const_assert(BOOL.has(TRUE));
     const _: () = const_assert(!BOOL.has(0));
     const _: () = const_assert(!BOOL.has(NAN));
     const _: () = const_assert(BOOL.has(EXTENSION.mask));
-
-    #[test]
-    fn test_nan() {
-        assert_eq!(f64::INFINITY.to_bits(), INFINITY);
-        assert_ne!(f64::NAN, f64::NAN);
-        assert_eq!(f64::NAN.to_bits(), NAN);
-        assert_eq!(f64::NEG_INFINITY.to_bits(), NEG_INFINITY);
-    }
 
     #[test]
     fn test_unsized() {
