@@ -40,14 +40,12 @@ mod test {
     #[test]
     #[should_panic]
     fn test_nan_panic() {
-        //
         check(0x7FF0_00F0_0500_0001);
     }
 
     #[test]
     #[should_panic]
-    fn test_nan_panic1() {
-        //
-        check(0x7FF0_00F0_0500_0001);
+    fn test_nan_panic2() {
+        check(0xFFFA_FF96_5534_5781);
     }
 }
