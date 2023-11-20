@@ -121,10 +121,10 @@ mod test {
     const _: () = const_assert(UBC.tag == 0b000100);
     const _: () = const_assert(UBC.union() == 0b011111);
 
-    const UBCS: (BitSubset64, BitSubset64) = UBC.split(0b1000);
-    const _: () = const_assert(UBCS.0.superposition() == 0b010011);
-    const _: () = const_assert(UBCS.0.tag == 0b000100);
-    const _: () = const_assert(UBCS.1.tag == 0b001100);
+    const _UBCS: (BitSubset64, BitSubset64) = UBC.split(0b1000);
+    const _: () = const_assert(_UBCS.0.superposition() == 0b010011);
+    const _: () = const_assert(_UBCS.0.tag == 0b000100);
+    const _: () = const_assert(_UBCS.1.tag == 0b001100);
 
     #[test]
     fn test_ubc() {

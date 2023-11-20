@@ -4,7 +4,7 @@ use crate::{
     bit_subset64::BitSubset64,
     container::{Clean, Container},
     object::Object,
-    string16::String16,
+    string16::String16, ptr_subset::PtrSubset,
 };
 
 #[derive(Debug)]
@@ -19,23 +19,6 @@ const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
 //
 
 const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
-
-struct PtrSubset<T: Clean>(BitSubset64, PhantomData<T>);
-
-impl<T: Clean> PtrSubset<T> {
-    const fn new(s: BitSubset64) -> Self {
-        Self(s, PhantomData)
-    }
-    fn update<const ADD: bool>(&self, v: u64) {
-        let v = v & self.0.superposition();
-        if v == 0 {
-            return;
-        }
-        unsafe {
-            Container::update::<ADD>(v as *mut Container<T>);
-        }
-    }
-}
 
 const EXTENSION_SPLIT: (BitSubset64, BitSubset64) = EXTENSION.split(0x0004_0000_0000_0000);
 
