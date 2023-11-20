@@ -38,8 +38,8 @@ impl BitSubset64 {
         Self { tag, mask }
     }
     #[inline(always)]
-    pub const fn from_tag_and_superposition(tag: u64, superposition: u64) -> Self {
-        Self::from_tag_and_mask(tag, !superposition)
+    pub const fn from_tag_and_superposition(tag: u64, sup: u64) -> Self {
+        Self::from_tag_and_mask(tag, !sup)
     }
     #[inline(always)]
     pub const fn from_tag_and_union(tag: u64, union: u64) -> Self {
@@ -55,7 +55,7 @@ impl BitSubset64 {
     }
     #[inline(always)]
     pub const fn union(self) -> u64 {
-        self.tag ^ !self.mask
+        self.tag ^ self.superposition()
     }
     #[inline(always)]
     pub const fn superposition(self) -> u64 {
@@ -74,6 +74,16 @@ impl BitSubset64 {
     pub const fn and(self, b: BitSubset64) -> BitSubset64 {
         BitSubset64::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
     }
+    #[inline(always)]
+    pub const fn split(self, i: u8) -> (BitSubset64, BitSubset64) {
+        let i_mask = 1 << i;
+        const_assert(i_mask & self.mask == 0);
+        let mask = self.mask | i_mask;
+        (
+            BitSubset64::from_tag_and_mask(self.tag, mask),
+            BitSubset64::from_tag_and_mask(self.tag | i_mask, mask),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -88,6 +98,12 @@ mod test {
     const _: () = const_assert(!A.has(0b000));
     const _: () = const_assert(A.has(0b010));
     const _: () = const_assert(A.has(0b011));
+
+    const AS: (BitSubset64, BitSubset64) = A.split(0);
+    const _: () = const_assert(AS.0.tag == 0b010);
+    const _: () = const_assert(AS.0.superposition() == 0);
+    const _: () = const_assert(AS.1.tag == 0b011);
+    const _: () = const_assert(AS.1.superposition() == 0);
 
     #[test]
     fn test_a() {
@@ -105,6 +121,11 @@ mod test {
     const _: () = const_assert(UBC.tag == 0b000100);
     const _: () = const_assert(UBC.union() == 0b011111);
 
+    const UBCS: (BitSubset64, BitSubset64) = UBC.split(3);
+    const _: () = const_assert(UBCS.0.superposition() == 0b010011);
+    const _: () = const_assert(UBCS.0.tag == 0b000100);
+    const _: () = const_assert(UBCS.1.tag == 0b001100);
+
     #[test]
     fn test_ubc() {
         assert_eq!(UBC.superposition(), 0b011011);
@@ -116,6 +137,12 @@ mod test {
     #[should_panic]
     fn test_ibc() {
         B.and(C);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_split_fail() {
+        UBC.split(2);
     }
 
     const D: BitSubset64 = BitSubset64::from_tag_and_union(0b00110, 0b00111);
