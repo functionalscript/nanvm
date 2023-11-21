@@ -4,7 +4,7 @@ use crate::{
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     string16::String16,
-    value_type::ValueType, container::{DROP, CLONE},
+    value_type::ValueType, container::{DROP, CLONE, Container, Clean},
 };
 
 #[derive(Debug)]
@@ -112,6 +112,23 @@ impl Value {
                 ValueType::Bool
             }
         }
+    }
+    const fn get_ptr<T: Clean>(&self, ps: &PtrSubset<T>) -> Option<&Container<T>> {
+        let v = self.0;
+        if ps.subset().has(v) {
+            let p = v & PTR_SUBSET_SUPERPOSITION;
+            if p == 0 {
+                return None;
+            }
+            return Some(unsafe { &*(p as *const Container<T>) });
+        }
+        None
+    }
+    const fn get_string(&self) -> Option<&Container<String16>> {
+        self.get_ptr(&STRING)
+    }
+    const fn get_object(&self) -> Option<&Container<Object>> {
+        self.get_ptr(&OBJECT)
     }
 }
 

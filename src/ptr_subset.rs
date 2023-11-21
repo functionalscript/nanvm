@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::{
     bit_subset64::BitSubset64,
     const_assert::const_assert,
-    container::{Clean, Container},
+    container::{Clean, Container}, value::Value,
 };
 
 pub struct PtrSubset<T: Clean>(BitSubset64, PhantomData<T>);
