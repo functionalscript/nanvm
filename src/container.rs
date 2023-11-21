@@ -1,4 +1,7 @@
-use std::{alloc::{GlobalAlloc, Layout, System}, ptr::read};
+use std::{
+    alloc::{GlobalAlloc, Layout, System},
+    ptr::read,
+};
 
 #[repr(C)]
 pub struct Container<T> {
