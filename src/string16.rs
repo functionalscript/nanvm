@@ -1,7 +1,8 @@
-use crate::container::Clean;
+use crate::container::Containable;
 
-pub struct String16 {}
+#[repr(C)]
+pub struct String16();
 
-impl Clean for String16 {
+impl Containable for String16 {
     fn clean(&mut self) {}
 }

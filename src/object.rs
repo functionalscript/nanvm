@@ -1,7 +1,7 @@
-use crate::container::Clean;
+use crate::container::Containable;
 
 pub struct Object {}
 
-impl Clean for Object {
+impl Containable for Object {
     fn clean(&mut self) {}
 }

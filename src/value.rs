@@ -1,10 +1,11 @@
 use crate::{
     bit_subset64::BitSubset64,
+    container::{Containable, Container, CLONE, DROP},
     number,
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     string16::String16,
-    value_type::ValueType, container::{DROP, CLONE, Container, Clean},
+    value_type::ValueType,
 };
 
 #[derive(Debug)]
@@ -113,21 +114,21 @@ impl Value {
             }
         }
     }
-    const fn get_ptr<T: Clean>(&self, ps: &PtrSubset<T>) -> Option<&Container<T>> {
+    fn get_ptr<T: Containable>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
         let v = self.0;
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
             if p == 0 {
                 return None;
             }
-            return Some(unsafe { &*(p as *const Container<T>) });
+            return Some(unsafe { &mut *(p as *mut Container<T>) });
         }
         None
     }
-    const fn get_string(&self) -> Option<&Container<String16>> {
+    fn get_string(&self) -> Option<&mut Container<String16>> {
         self.get_ptr(&STRING)
     }
-    const fn get_object(&self) -> Option<&Container<Object>> {
+    fn get_object(&self) -> Option<&mut Container<Object>> {
         self.get_ptr(&OBJECT)
     }
 }

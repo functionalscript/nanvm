@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{const_assert::const_assert, container::Clean, ptr_subset::PtrSubset};
+use crate::{const_assert::const_assert, container::Containable, ptr_subset::PtrSubset};
 
 /// A bit subset of `u64`.
 ///
@@ -87,7 +87,7 @@ impl BitSubset64 {
         )
     }
     #[inline(always)]
-    pub const fn ptr_subset<T: Clean>(self) -> PtrSubset<T> {
+    pub const fn ptr_subset<T: Containable>(self) -> PtrSubset<T> {
         PtrSubset::new(self)
     }
 }
