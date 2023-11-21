@@ -3,12 +3,15 @@ use std::alloc::{GlobalAlloc, Layout, System};
 #[repr(C)]
 pub struct Container<T: Clean> {
     counter: usize,
-    value: T,
+    pub value: T,
 }
 
 pub trait Clean {
     fn clean(&mut self);
 }
+
+pub const DROP: bool = false;
+pub const CLONE: bool = true;
 
 impl<T: Clean> Container<T> {
     const LAYOUT: Layout = Layout::new::<Container<T>>();

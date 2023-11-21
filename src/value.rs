@@ -4,7 +4,7 @@ use crate::{
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     string16::String16,
-    value_type::ValueType,
+    value_type::ValueType, container::{DROP, CLONE},
 };
 
 #[derive(Debug)]
@@ -45,14 +45,14 @@ fn update<const ADD: bool>(v: u64) {
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        update::<true>(self.0);
+        update::<CLONE>(self.0);
         Self(self.0)
     }
 }
 
 impl Drop for Value {
     fn drop(&mut self) {
-        update::<false>(self.0);
+        update::<DROP>(self.0);
     }
 }
 
