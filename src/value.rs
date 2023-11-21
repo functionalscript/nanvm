@@ -1,6 +1,6 @@
 use crate::{
     bit_subset64::BitSubset64,
-    container::{Container, CLONE, DROP},
+    container::{Containable, Container, CLONE, DROP},
     number,
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -114,7 +114,7 @@ impl Value {
             }
         }
     }
-    fn get_ptr<T>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+    fn get_ptr<T: Containable>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
         let v = self.0;
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;

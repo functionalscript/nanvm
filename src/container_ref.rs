@@ -1,23 +1,23 @@
 use std::ops::Deref;
 
-use crate::container::{Container, CLONE, DROP};
+use crate::container::{Containable, Container, CLONE, DROP};
 
-struct Ref<T>(*mut Container<T>);
+pub struct Ref<T: Containable>(*mut Container<T>);
 
-impl<T> Ref<T> {
+impl<T: Containable> Ref<T> {
     pub fn new(p: &mut Container<T>) -> Self {
         unsafe { Container::update::<CLONE>(p) };
         Self(p)
     }
 }
 
-impl<T> Clone for Ref<T> {
+impl<T: Containable> Clone for Ref<T> {
     fn clone(&self) -> Self {
         Self::new(unsafe { &mut *self.0 })
     }
 }
 
-impl<T> Drop for Ref<T> {
+impl<T: Containable> Drop for Ref<T> {
     fn drop(&mut self) {
         unsafe {
             Container::update::<DROP>(self.0);
@@ -25,7 +25,7 @@ impl<T> Drop for Ref<T> {
     }
 }
 
-impl<T> Deref for Ref<T> {
+impl<T: Containable> Deref for Ref<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         unsafe { &(*self.0).value }

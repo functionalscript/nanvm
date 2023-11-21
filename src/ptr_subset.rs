@@ -1,13 +1,17 @@
 use std::marker::PhantomData;
 
-use crate::{bit_subset64::BitSubset64, const_assert::const_assert, container::Container};
+use crate::{
+    bit_subset64::BitSubset64,
+    const_assert::const_assert,
+    container::{Containable, Container},
+};
 
 pub struct PtrSubset<T>(BitSubset64, PhantomData<T>);
 
 // 49 bits for now
 pub const PTR_SUBSET_SUPERPOSITION: u64 = 0x1_FFFF_FFFF_FFFF;
 
-impl<T> PtrSubset<T> {
+impl<T: Containable> PtrSubset<T> {
     #[inline(always)]
     pub fn update<const ADD: bool>(&self, p: u64) {
         unsafe {
