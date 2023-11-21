@@ -1,32 +1,36 @@
-use std::alloc::{GlobalAlloc, Layout, System};
+use std::{
+    alloc::{GlobalAlloc, Layout, System},
+    ptr::read,
+};
 
 #[repr(C)]
-pub struct Container<T: Clean> {
+pub struct Container<T> {
     counter: usize,
-    value: T,
+    pub value: T,
+    size: usize,
 }
 
-pub trait Clean {
-    fn clean(&mut self);
-}
+pub const DROP: bool = false;
+pub const CLONE: bool = true;
 
-impl<T: Clean> Container<T> {
+impl<T> Container<T> {
     const LAYOUT: Layout = Layout::new::<Container<T>>();
     pub unsafe fn alloc() -> *mut Self {
         System.alloc_zeroed(Self::LAYOUT) as *mut Self
     }
     pub unsafe fn update<const ADD: bool>(p: *mut Self) {
         let r = &mut *p;
+        let c = r.counter;
         if ADD {
-            r.counter += 1;
-        } else {
-            if r.counter != 0 {
-                r.counter -= 1;
-                return;
-            }
-            r.value.clean();
-            System.dealloc(p as *mut u8, Self::LAYOUT);
+            r.counter = c + 1;
+            return;
         }
+        if c != 0 {
+            r.counter = c - 1;
+            return;
+        }
+        drop(read(&r.value));
+        System.dealloc(p as *mut u8, Self::LAYOUT);
     }
 }
 
@@ -36,8 +40,8 @@ mod test {
 
     struct DebugClean(*mut usize);
 
-    impl Clean for DebugClean {
-        fn clean(&mut self) {
+    impl Drop for DebugClean {
+        fn drop(&mut self) {
             unsafe {
                 *self.0 += 1;
             }

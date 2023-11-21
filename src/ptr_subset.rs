@@ -1,20 +1,25 @@
 use std::marker::PhantomData;
 
-use crate::{
-    bit_subset64::BitSubset64,
-    container::{Clean, Container},
-};
+use crate::{bit_subset64::BitSubset64, const_assert::const_assert, container::Container};
 
-pub struct PtrSubset<T: Clean>(pub BitSubset64, pub PhantomData<T>);
+pub struct PtrSubset<T>(BitSubset64, PhantomData<T>);
 
-impl<T: Clean> PtrSubset<T> {
-    pub fn update<const ADD: bool>(&self, v: u64) {
-        let v = v & self.0.superposition();
-        if v == 0 {
-            return;
-        }
+// 49 bits for now
+pub const PTR_SUBSET_SUPERPOSITION: u64 = 0x1_FFFF_FFFF_FFFF;
+
+impl<T> PtrSubset<T> {
+    #[inline(always)]
+    pub fn update<const ADD: bool>(&self, p: u64) {
         unsafe {
-            Container::update::<ADD>(v as *mut Container<T>);
+            Container::update::<ADD>(p as *mut Container<T>);
         }
+    }
+    #[inline(always)]
+    pub const fn subset(&self) -> BitSubset64 {
+        self.0
+    }
+    pub const fn new(subset: BitSubset64) -> Self {
+        const_assert(subset.superposition() == PTR_SUBSET_SUPERPOSITION);
+        Self(subset, PhantomData)
     }
 }
