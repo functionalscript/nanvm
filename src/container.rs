@@ -4,6 +4,8 @@ use std::{
     ptr::read,
 };
 
+use crate::const_assert::const_assert;
+
 #[repr(C)]
 pub struct Container<T: Containable> {
     counter: usize,
@@ -18,19 +20,42 @@ pub trait Containable {
 pub const DROP: bool = false;
 pub const CLONE: bool = true;
 
-impl<T: Containable> Container<T> {
-    const LAYOUT: Layout = Layout::new::<Container<T>>();
-    const ITEM_LAYOUT: Layout = Layout::new::<T::Item>();
-    pub fn layout(size: usize) -> (Layout, usize) {
-        Self::LAYOUT
-            .extend(
-                Layout::from_size_align(size_of::<T::Item>() * size, align_of::<T::Item>())
-                    .unwrap(),
-            )
-            .unwrap()
+const fn compatible(t: usize, i: Layout) {
+    const_assert(t >= i.align());
+    const_assert(t % i.align() == 0);
+}
+
+struct ContainableLayout {
+    align: usize,
+    size: usize,
+    item_size: usize,
+}
+
+impl ContainableLayout {
+    const fn layout(&self, size: usize) -> Layout {
+        unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
     }
+}
+
+const fn layout<T: Containable>() -> ContainableLayout {
+    const_assert(true);
+    let t = Layout::new::<Container<T>>();
+    let i = Layout::new::<T::Item>();
+    let align = t.align();
+    let size = t.size();
+    compatible(align, i);
+    compatible(size, i);
+    ContainableLayout {
+        align,
+        size,
+        item_size: i.size(),
+    }
+}
+
+impl<T: Containable> Container<T> {
+    const LAYOUT: ContainableLayout = layout::<T>();
     pub unsafe fn alloc(size: usize) -> *mut Self {
-        let p = System.alloc_zeroed(Self::layout(size).0) as *mut Self;
+        let p = System.alloc_zeroed(Self::LAYOUT.layout(size)) as *mut Self;
         (*p).size = size;
         p
     }
@@ -46,7 +71,7 @@ impl<T: Containable> Container<T> {
             return;
         }
         drop(read(&r.value));
-        System.dealloc(p as *mut u8, Self::LAYOUT);
+        System.dealloc(p as *mut u8, Self::LAYOUT.layout(r.size));
     }
 }
 
@@ -81,9 +106,19 @@ mod test {
     }
 
     #[test]
+    fn test_layout() {
+        let x = Container::<DebugClean>::LAYOUT.layout(10);
+        let r = Layout::new::<Container<DebugClean>>()
+            .extend(Layout::array::<usize>(10).unwrap())
+            .unwrap();
+        assert_eq!(r.0, x);
+    }
+
+    #[test]
     fn test2() {
         unsafe {
-            let p = Container::<DebugClean>::alloc(0);
+            let p = Container::<DebugClean>::alloc(10);
+            assert_eq!((*p).size, 10);
             let mut i = 0;
             (*p).value.0 = &mut i;
             Container::update::<true>(p);
