@@ -5,7 +5,7 @@ use crate::{
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     string16::String16,
-    value_type::ValueType,
+    type_::Type,
 };
 
 #[derive(Debug)]
@@ -99,18 +99,18 @@ impl Value {
     const fn is_object(&self) -> bool {
         OBJECT.subset().has(self.0)
     }
-    const fn get_type(&self) -> ValueType {
+    const fn get_type(&self) -> Type {
         if self.is_ptr() {
             if self.is_string() {
-                ValueType::String
+                Type::String
             } else {
-                ValueType::Object
+                Type::Object
             }
         } else {
             if self.is_number() {
-                ValueType::Number
+                Type::Number
             } else {
-                ValueType::Bool
+                Type::Bool
             }
         }
     }
@@ -205,8 +205,8 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_type() {
-        assert_eq!(Value::from_number(15.0).get_type(), ValueType::Number);
-        assert_eq!(Value::from_bool(true).get_type(), ValueType::Bool);
-        assert_eq!(Value::null().get_type(), ValueType::Object);
+        assert_eq!(Value::from_number(15.0).get_type(), Type::Number);
+        assert_eq!(Value::from_bool(true).get_type(), Type::Bool);
+        assert_eq!(Value::null().get_type(), Type::Object);
     }
 }
