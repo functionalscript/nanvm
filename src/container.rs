@@ -25,7 +25,7 @@ const fn compatible(t: usize, i: Layout) {
 }
 
 impl<T: Containable> Container<T> {
-    const FAS_LAYOUT: FasLayout = FasLayout::new::<Container<T>, T::Item>();
+    const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
     pub unsafe fn alloc(size: usize) -> *mut Self {
         let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(size)) as *mut Self;
         (*p).size = size;
@@ -44,7 +44,7 @@ impl<T: Containable> Container<T> {
         }
         read(&r.value);
         for i in 0..r.size {
-            read(Self::FAS_LAYOUT.get::<Container<T>, T::Item>(r, i));
+            read(Self::FAS_LAYOUT.get(r, i));
         }
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.size));
     }
@@ -58,6 +58,8 @@ mod test {
 
     struct DebugClean(*mut usize);
 
+    struct DebugItem(u8);
+
     impl Drop for DebugClean {
         fn drop(&mut self) {
             unsafe {
@@ -66,20 +68,51 @@ mod test {
         }
     }
 
+    static mut counter: usize = 0;
+
+    impl Drop for DebugItem {
+        fn drop(&mut self) {
+            unsafe { counter += 1; }
+        }
+    }
+
     impl Containable for DebugClean {
-        type Item = u8;
+        type Item = DebugItem;
     }
 
     #[test]
     #[wasm_bindgen_test]
+    fn sequential_test() {
+        test();
+        test2()
+    }
+
     fn test() {
         unsafe {
+            counter = 0;
             let p = Container::<DebugClean>::alloc(0);
             let mut i = 0;
             (*p).value.0 = &mut i;
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
+            assert_eq!(counter, 0);
+        }
+    }
+
+    fn test2() {
+        unsafe {
+            counter = 0;
+            let p = Container::<DebugClean>::alloc(9);
+            assert_eq!((*p).size, 9);
+            let mut i = 0;
+            (*p).value.0 = &mut i;
+            Container::update::<true>(p);
+            Container::update::<false>(p);
+            assert_eq!(i, 0);
+            Container::update::<false>(p);
+            assert_eq!(i, 1);
+            assert_eq!(counter, 9);
         }
     }
 
@@ -92,21 +125,5 @@ mod test {
             .extend(Layout::array::<u8>(9).unwrap())
             .unwrap();
         assert_eq!(r.0, x);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test2() {
-        unsafe {
-            let p = Container::<DebugClean>::alloc(9);
-            assert_eq!((*p).size, 9);
-            let mut i = 0;
-            (*p).value.0 = &mut i;
-            Container::update::<true>(p);
-            Container::update::<false>(p);
-            assert_eq!(i, 0);
-            Container::update::<false>(p);
-            assert_eq!(i, 1);
-        }
     }
 }
