@@ -1,11 +1,11 @@
 use crate::{
-    bit_subset64::BitSubset64,
-    container::{Container, CLONE, DROP},
+    common::bit_subset64::BitSubset64,
+    container::{Container, Info, CLONE, DROP},
     number,
-    object::Object,
+    object::ObjectInfo,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-    string16::String16,
-    value_type::ValueType,
+    string::StringInfo,
+    type_::Type,
 };
 
 #[derive(Debug)]
@@ -21,9 +21,9 @@ const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
-const STRING: PtrSubset<String16> = PTR_SPLIT.0.ptr_subset();
+pub const STRING: PtrSubset<StringInfo> = PTR_SPLIT.0.ptr_subset();
 const STRING_TAG: u64 = STRING.subset().tag;
-const OBJECT: PtrSubset<Object> = PTR_SPLIT.1.ptr_subset();
+const OBJECT: PtrSubset<ObjectInfo> = PTR_SPLIT.1.ptr_subset();
 const OBJECT_TAG: u64 = OBJECT.subset().tag;
 
 const FALSE: u64 = BOOL.tag;
@@ -99,22 +99,22 @@ impl Value {
     const fn is_object(&self) -> bool {
         OBJECT.subset().has(self.0)
     }
-    const fn get_type(&self) -> ValueType {
+    const fn get_type(&self) -> Type {
         if self.is_ptr() {
             if self.is_string() {
-                ValueType::String
+                Type::String
             } else {
-                ValueType::Object
+                Type::Object
             }
         } else {
             if self.is_number() {
-                ValueType::Number
+                Type::Number
             } else {
-                ValueType::Bool
+                Type::Bool
             }
         }
     }
-    fn get_ptr<T>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+    fn get_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
         let v = self.0;
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
@@ -125,10 +125,10 @@ impl Value {
         }
         None
     }
-    fn get_string(&self) -> Option<&mut Container<String16>> {
+    fn get_string(&self) -> Option<&mut Container<StringInfo>> {
         self.get_ptr(&STRING)
     }
-    fn get_object(&self) -> Option<&mut Container<Object>> {
+    fn get_object(&self) -> Option<&mut Container<ObjectInfo>> {
         self.get_ptr(&OBJECT)
     }
 }
@@ -137,16 +137,19 @@ impl Value {
 mod test {
     use std::rc::Rc;
 
-    use super::*;
-    use crate::{const_assert::const_assert, number::NAN};
+    use wasm_bindgen_test::wasm_bindgen_test;
 
-    const _: () = const_assert(BOOL.has(FALSE));
-    const _: () = const_assert(BOOL.has(TRUE));
-    const _: () = const_assert(!BOOL.has(0));
-    const _: () = const_assert(!BOOL.has(NAN));
-    const _: () = const_assert(BOOL.has(EXTENSION.mask));
+    use super::*;
+    use crate::number::NAN;
+
+    const _: () = assert!(BOOL.has(FALSE));
+    const _: () = assert!(BOOL.has(TRUE));
+    const _: () = assert!(!BOOL.has(0));
+    const _: () = assert!(!BOOL.has(NAN));
+    const _: () = assert!(BOOL.has(EXTENSION.mask));
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_unsized() {
         let _x: Rc<[u8]> = Rc::new([1, 3]);
         // let _y: Rc<(u8, [u8])> = Rc::new((5, [1, 3]));
@@ -156,6 +159,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_number() {
         assert_eq!(Value::from_number(1.0).get_number(), Some(1.0));
         assert_eq!(Value::from_number(-1.0).get_number(), Some(-1.0));
@@ -174,6 +178,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_bool() {
         assert_eq!(Value::from_bool(true).get_bool(), Some(true));
         assert_eq!(Value::from_bool(false).get_bool(), Some(false));
@@ -183,6 +188,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_null() {
         assert!(Value::null().is_null());
         //
@@ -191,14 +197,16 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_object() {
         assert!(Value::null().is_object());
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_type() {
-        assert_eq!(Value::from_number(15.0).get_type(), ValueType::Number);
-        assert_eq!(Value::from_bool(true).get_type(), ValueType::Bool);
-        assert_eq!(Value::null().get_type(), ValueType::Object);
+        assert_eq!(Value::from_number(15.0).get_type(), Type::Number);
+        assert_eq!(Value::from_bool(true).get_type(), Type::Bool);
+        assert_eq!(Value::null().get_type(), Type::Object);
     }
 }
