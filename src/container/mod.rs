@@ -33,13 +33,12 @@ impl<T: Info> Container<T> {
         (*p).size = size;
         p
     }
-    pub unsafe fn update<const ADD: bool>(p: *mut Self) {
+    pub unsafe fn add_ref(p: *mut Self) {
+        (*p).counter += 1;
+    }
+    pub unsafe fn release(p: *mut Self) {
         let r = &mut *p;
         let c = r.counter;
-        if ADD {
-            r.counter = c + 1;
-            return;
-        }
         if c != 0 {
             r.counter = c - 1;
             return;
@@ -49,6 +48,10 @@ impl<T: Info> Container<T> {
             read(Self::FAS_LAYOUT.get(r, i));
         }
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.size));
+    }
+    #[inline(always)]
+    pub unsafe fn update<const ADD: bool>(p: *mut Self) {
+        if ADD { Self::add_ref(p) } else { Self::release(p) }
     }
 }
 
