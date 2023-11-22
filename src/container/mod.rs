@@ -51,7 +51,11 @@ impl<T: Info> Container<T> {
     }
     #[inline(always)]
     pub unsafe fn update<const ADD: bool>(p: *mut Self) {
-        if ADD { Self::add_ref(p) } else { Self::release(p) }
+        if ADD {
+            Self::add_ref(p)
+        } else {
+            Self::release(p)
+        }
     }
 }
 
