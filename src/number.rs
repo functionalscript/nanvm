@@ -9,10 +9,6 @@ pub const fn is_valid(v: u64) -> bool {
     v & E != E || v & EF == INFINITY || v == NAN
 }
 
-pub const fn check(v: u64) {
-    assert!(is_valid(v));
-}
-
 #[cfg(test)]
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
@@ -31,11 +27,11 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_check() {
-        check(0);
-        check(1);
-        check(INFINITY);
-        check(NAN);
-        check(NEG_INFINITY);
+        assert!(is_valid(0));
+        assert!(is_valid(1));
+        assert!(is_valid(INFINITY));
+        assert!(is_valid(NAN));
+        assert!(is_valid(NEG_INFINITY));
         assert_eq!((0.0f64 / 0.0).to_bits(), NAN);
     }
 
@@ -43,13 +39,13 @@ mod test {
     #[wasm_bindgen_test]
     #[should_panic]
     fn test_nan_panic() {
-        check(0x7FF0_00F0_0500_0001);
+        assert!(is_valid(0x7FF0_00F0_0500_0001));
     }
 
     #[test]
     #[wasm_bindgen_test]
     #[should_panic]
     fn test_nan_panic2() {
-        check(0xFFFA_FF96_5534_5781);
+        assert!(is_valid(0xFFFA_FF96_5534_5781));
     }
 }

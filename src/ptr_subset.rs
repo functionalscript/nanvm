@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    bit_subset64::BitSubset64,
+    common::bit_subset64::BitSubset64,
     container::{Containable, Container},
 };
 

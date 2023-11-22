@@ -7,7 +7,7 @@ use std::{
     mem::{align_of, size_of},
 };
 
-use crate::usize::max;
+use crate::common::usize::max;
 
 pub struct FasLayout<T, I> {
     size: usize,
