@@ -1,10 +1,9 @@
 use std::{
     alloc::{GlobalAlloc, Layout, System},
-    mem::{align_of, size_of},
     ptr::read,
 };
 
-use crate::const_assert::const_assert;
+use crate::{const_assert::const_assert, fas::FasLayout};
 
 #[repr(C)]
 pub struct Container<T: Containable> {
@@ -25,42 +24,10 @@ const fn compatible(t: usize, i: Layout) {
     const_assert(t % i.align() == 0);
 }
 
-struct ContainableLayout {
-    size: usize,
-    align: usize,
-    item_size: usize,
-}
-
-impl ContainableLayout {
-    const fn layout(&self, size: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
-    }
-}
-
-const fn max(a: usize, b: usize) -> usize {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}
-
-const fn layout<T: Containable>() -> ContainableLayout {
-    let i_align = align_of::<T::Item>();
-    let c = Layout::new::<Container<T>>();
-    let align = max(c.align(), i_align);
-    let size = (c.size() + i_align - 1) / i_align * i_align;
-    ContainableLayout {
-        align,
-        size,
-        item_size: size_of::<T::Item>(),
-    }
-}
-
 impl<T: Containable> Container<T> {
-    const LAYOUT: ContainableLayout = layout::<T>();
+    const FAS_LAYOUT: FasLayout = FasLayout::new::<Container<T>, T::Item>();
     pub unsafe fn alloc(size: usize) -> *mut Self {
-        let p = System.alloc_zeroed(Self::LAYOUT.layout(size)) as *mut Self;
+        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(size)) as *mut Self;
         (*p).size = size;
         p
     }
@@ -76,7 +43,7 @@ impl<T: Containable> Container<T> {
             return;
         }
         drop(read(&r.value));
-        System.dealloc(p as *mut u8, Self::LAYOUT.layout(r.size));
+        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.size));
     }
 }
 
@@ -116,14 +83,12 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_layout() {
-        let cl = Container::<DebugClean>::LAYOUT;
+        let cl = Container::<DebugClean>::FAS_LAYOUT;
         let x = cl.layout(9);
         let r = Layout::new::<Container<DebugClean>>()
             .extend(Layout::array::<u8>(9).unwrap())
             .unwrap();
         assert_eq!(r.0, x);
-        let rt = Layout::from_size_align(cl.size + cl.item_size * 9, cl.align).unwrap();
-        assert_eq!(x, rt);
     }
 
     #[test]
