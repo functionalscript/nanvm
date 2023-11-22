@@ -3,17 +3,13 @@ use std::{
     ptr::read,
 };
 
-use crate::fas::FasLayout;
+use crate::{containable::Containable, fas::FasLayout};
 
 #[repr(C)]
 pub struct Container<T: Containable> {
     counter: usize,
     pub value: T,
     size: usize,
-}
-
-pub trait Containable {
-    type Item;
 }
 
 pub const DROP: bool = false;

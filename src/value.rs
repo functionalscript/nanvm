@@ -1,6 +1,7 @@
 use crate::{
     bit_subset64::BitSubset64,
-    container::{Containable, Container, CLONE, DROP},
+    containable::Containable,
+    container::{Container, CLONE, DROP},
     number,
     object::Object,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},

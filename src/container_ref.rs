@@ -1,6 +1,9 @@
 use std::ops::Deref;
 
-use crate::container::{Containable, Container, CLONE, DROP};
+use crate::{
+    containable::Containable,
+    container::{Container, CLONE, DROP},
+};
 
 pub struct Ref<T: Containable>(*mut Container<T>);
 
