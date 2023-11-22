@@ -1,5 +1,5 @@
 mod containable;
-mod container_ref;
+mod reference;
 
 use std::{
     alloc::{GlobalAlloc, Layout, System},
@@ -9,7 +9,7 @@ use std::{
 use crate::fas::FasLayout;
 
 pub use self::containable::Containable;
-pub use self::container_ref::Ref;
+pub use self::reference::Ref;
 
 #[repr(C)]
 pub struct Container<T: Containable> {
