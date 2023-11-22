@@ -33,12 +33,7 @@ struct ContainableLayout {
 
 impl ContainableLayout {
     const fn layout(&self, size: usize) -> Layout {
-        unsafe {
-            Layout::from_size_align_unchecked(
-                self.size + self.item_size * size,
-                self.align,
-            )
-        }
+        unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
     }
 }
 
@@ -127,8 +122,7 @@ mod test {
             .extend(Layout::array::<u8>(9).unwrap())
             .unwrap();
         assert_eq!(r.0, x);
-        let rt =
-            Layout::from_size_align(cl.size + cl.item_size * 9, cl.align).unwrap();
+        let rt = Layout::from_size_align(cl.size + cl.item_size * 9, cl.align).unwrap();
         assert_eq!(x, rt);
     }
 
