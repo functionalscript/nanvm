@@ -42,7 +42,10 @@ impl<T: Containable> Container<T> {
             r.counter = c - 1;
             return;
         }
-        drop(read(&r.value));
+        read(&r.value);
+        for i in 0..r.size {
+            read(Self::FAS_LAYOUT.get::<Container<T>, T::Item>(r, i));
+        }
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.size));
     }
 }

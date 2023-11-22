@@ -20,12 +20,22 @@ impl FasLayout {
         let c = Layout::new::<T>();
         Self {
             align: max(c.align(), i_align),
-            size: (c.size() + i_align - 1) / i_align * i_align,
+            size: {
+                let mask = i_align - 1;
+                (c.size() + mask) & !mask
+            },
             item_size: size_of::<I>(),
         }
     }
     pub const fn layout(&self, size: usize) -> Layout {
         unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
+    }
+    pub fn get<T, I>(&self, p: &mut T, i: usize) -> &mut I {
+        unsafe {
+            let p = p as *mut T as *mut u8;
+            let p = p.add(self.size + self.item_size * i);
+            &mut *(p as *mut I)
+        }
     }
 }
 
