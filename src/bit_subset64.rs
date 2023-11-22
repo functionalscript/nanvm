@@ -1,4 +1,4 @@
-use crate::{containable::Containable, ptr_subset::PtrSubset};
+use crate::{container::Containable, ptr_subset::PtrSubset};
 
 /// A bit subset of `u64`.
 ///

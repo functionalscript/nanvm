@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::{bit_subset64::BitSubset64, containable::Containable, container::Container};
+use crate::{
+    bit_subset64::BitSubset64,
+    container::{Containable, Container},
+};
 
 pub struct PtrSubset<T>(BitSubset64, PhantomData<T>);
 

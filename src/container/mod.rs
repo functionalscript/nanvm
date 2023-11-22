@@ -1,9 +1,13 @@
+mod containable;
+
 use std::{
     alloc::{GlobalAlloc, Layout, System},
     ptr::read,
 };
 
-use crate::{containable::Containable, fas::FasLayout};
+use crate::fas::FasLayout;
+
+pub use self::containable::Containable;
 
 #[repr(C)]
 pub struct Container<T: Containable> {
