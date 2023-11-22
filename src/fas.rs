@@ -28,3 +28,32 @@ impl FasLayout {
         unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::FasLayout;
+
+    const L88: FasLayout = FasLayout::new::<u8, u8>();
+    const _: () = assert!(L88.align == 1);
+    const _: () = assert!(L88.size == 1);
+    const _: () = assert!(L88.item_size == 1);
+    const _: () = assert!(L88.layout(0).size() == 1);
+    const _: () = assert!(L88.layout(0).align() == 1);
+    const _: () = assert!(L88.layout(1).size() == 2);
+
+    const L816: FasLayout = FasLayout::new::<u8, u16>();
+    const _: () = assert!(L816.align == 2);
+    const _: () = assert!(L816.size == 2);
+    const _: () = assert!(L816.item_size == 2);
+    const _: () = assert!(L816.layout(0).size() == 2);
+    const _: () = assert!(L816.layout(0).align() == 2);
+    const _: () = assert!(L816.layout(1).size() == 4);
+
+    const L168: FasLayout = FasLayout::new::<u16, u8>();
+    const _: () = assert!(L168.align == 2);
+    const _: () = assert!(L168.size == 2);
+    const _: () = assert!(L168.item_size == 1);
+    const _: () = assert!(L168.layout(0).size() == 2);
+    const _: () = assert!(L168.layout(0).align() == 2);
+    const _: () = assert!(L168.layout(1).size() == 3);
+}
