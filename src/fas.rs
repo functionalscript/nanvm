@@ -18,11 +18,9 @@ impl FasLayout {
     pub const fn new<T, I>() -> Self {
         let i_align = align_of::<I>();
         let c = Layout::new::<T>();
-        let align = max(c.align(), i_align);
-        let size = (c.size() + i_align - 1) / i_align * i_align;
         Self {
-            align,
-            size,
+            align: max(c.align(), i_align),
+            size: (c.size() + i_align - 1) / i_align * i_align,
             item_size: size_of::<I>(),
         }
     }
