@@ -3,7 +3,7 @@ use std::{
     ptr::read,
 };
 
-use crate::{const_assert::const_assert, fas::FasLayout};
+use crate::fas::FasLayout;
 
 #[repr(C)]
 pub struct Container<T: Containable> {
@@ -20,8 +20,8 @@ pub const DROP: bool = false;
 pub const CLONE: bool = true;
 
 const fn compatible(t: usize, i: Layout) {
-    const_assert(t >= i.align());
-    const_assert(t % i.align() == 0);
+    assert!(t >= i.align());
+    assert!(t % i.align() == 0);
 }
 
 impl<T: Containable> Container<T> {

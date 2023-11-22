@@ -1,5 +1,3 @@
-use crate::const_assert::const_assert;
-
 // compatible with `f64`
 pub const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 pub const NAN: u64 = 0x7FF8_0000_0000_0000;
@@ -12,7 +10,7 @@ pub const fn is_valid(v: u64) -> bool {
 }
 
 pub const fn check(v: u64) {
-    const_assert(is_valid(v));
+    assert!(is_valid(v));
 }
 
 #[cfg(test)]

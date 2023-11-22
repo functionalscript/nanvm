@@ -1,4 +1,4 @@
-use crate::{const_assert::const_assert, container::Containable, ptr_subset::PtrSubset};
+use crate::{container::Containable, ptr_subset::PtrSubset};
 
 /// A bit subset of `u64`.
 ///
@@ -34,7 +34,7 @@ pub struct BitSubset64 {
 impl BitSubset64 {
     #[inline(always)]
     pub const fn from_tag_and_mask(tag: u64, mask: u64) -> Self {
-        const_assert(mask & tag == tag);
+        assert!(mask & tag == tag);
         Self { tag, mask }
     }
     #[inline(always)]
@@ -67,7 +67,7 @@ impl BitSubset64 {
     }
     #[inline(always)]
     pub const fn or(self, b: BitSubset64) -> BitSubset64 {
-        const_assert(self.superposition() == b.superposition());
+        assert!(self.superposition() == b.superposition());
         self.or_unchecked(b)
     }
     #[inline(always)]
@@ -76,8 +76,8 @@ impl BitSubset64 {
     }
     #[inline(always)]
     pub const fn split(self, m: u64) -> (BitSubset64, BitSubset64) {
-        const_assert(m != 0);
-        const_assert(m & self.mask == 0);
+        assert!(m != 0);
+        assert!(m & self.mask == 0);
         let mask = self.mask | m;
         (
             BitSubset64::from_tag_and_mask(self.tag, mask),
@@ -94,22 +94,20 @@ impl BitSubset64 {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::const_assert::const_assert;
-
     use super::BitSubset64;
 
     const A: BitSubset64 = BitSubset64::from_tag_and_union(0b010, 0b011);
-    const _: () = const_assert(A.superposition() == 0b001);
-    const _: () = const_assert(A.tag == 0b010);
-    const _: () = const_assert(!A.has(0b000));
-    const _: () = const_assert(A.has(0b010));
-    const _: () = const_assert(A.has(0b011));
+    const _: () = assert!(A.superposition() == 0b001);
+    const _: () = assert!(A.tag == 0b010);
+    const _: () = assert!(!A.has(0b000));
+    const _: () = assert!(A.has(0b010));
+    const _: () = assert!(A.has(0b011));
 
     const AS: (BitSubset64, BitSubset64) = A.split(1);
-    const _: () = const_assert(AS.0.tag == 0b010);
-    const _: () = const_assert(AS.0.superposition() == 0);
-    const _: () = const_assert(AS.1.tag == 0b011);
-    const _: () = const_assert(AS.1.superposition() == 0);
+    const _: () = assert!(AS.0.tag == 0b010);
+    const _: () = assert!(AS.0.superposition() == 0);
+    const _: () = assert!(AS.1.tag == 0b011);
+    const _: () = assert!(AS.1.superposition() == 0);
 
     #[test]
     #[wasm_bindgen_test]
@@ -124,14 +122,14 @@ mod test {
     const B: BitSubset64 = BitSubset64::from_tag_and_union(0b000110, 0b000111);
     const C: BitSubset64 = BitSubset64::from_tag_and_union(0b010100, 0b011111);
     const UBC: BitSubset64 = B.or_unchecked(C);
-    const _: () = const_assert(UBC.superposition() == 0b011011);
-    const _: () = const_assert(UBC.tag == 0b000100);
-    const _: () = const_assert(UBC.union() == 0b011111);
+    const _: () = assert!(UBC.superposition() == 0b011011);
+    const _: () = assert!(UBC.tag == 0b000100);
+    const _: () = assert!(UBC.union() == 0b011111);
 
     const _UBCS: (BitSubset64, BitSubset64) = UBC.split(0b1000);
-    const _: () = const_assert(_UBCS.0.superposition() == 0b010011);
-    const _: () = const_assert(_UBCS.0.tag == 0b000100);
-    const _: () = const_assert(_UBCS.1.tag == 0b001100);
+    const _: () = assert!(_UBCS.0.superposition() == 0b010011);
+    const _: () = assert!(_UBCS.0.tag == 0b000100);
+    const _: () = assert!(_UBCS.1.tag == 0b001100);
 
     #[test]
     #[wasm_bindgen_test]
@@ -158,13 +156,13 @@ mod test {
     const D: BitSubset64 = BitSubset64::from_tag_and_union(0b00110, 0b00111);
     const E: BitSubset64 = BitSubset64::from_tag_and_union(0b00100, 0b01111);
     const UDE: BitSubset64 = D.or_unchecked(E);
-    const _: () = const_assert(UDE.superposition() == 0b01011);
-    const _: () = const_assert(UDE.tag == 0b00100);
-    const _: () = const_assert(UDE.union() == 0b01111);
+    const _: () = assert!(UDE.superposition() == 0b01011);
+    const _: () = assert!(UDE.tag == 0b00100);
+    const _: () = assert!(UDE.union() == 0b01111);
     const IDE: BitSubset64 = D.and(E);
-    const _: () = const_assert(IDE.superposition() == 0b00001);
-    const _: () = const_assert(IDE.tag == 0b00110);
-    const _: () = const_assert(IDE.union() == 0b00111);
+    const _: () = assert!(IDE.superposition() == 0b00001);
+    const _: () = assert!(IDE.tag == 0b00110);
+    const _: () = assert!(IDE.union() == 0b00111);
 
     #[test]
     #[wasm_bindgen_test]

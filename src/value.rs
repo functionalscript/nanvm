@@ -140,13 +140,13 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
-    use crate::{const_assert::const_assert, number::NAN};
+    use crate::number::NAN;
 
-    const _: () = const_assert(BOOL.has(FALSE));
-    const _: () = const_assert(BOOL.has(TRUE));
-    const _: () = const_assert(!BOOL.has(0));
-    const _: () = const_assert(!BOOL.has(NAN));
-    const _: () = const_assert(BOOL.has(EXTENSION.mask));
+    const _: () = assert!(BOOL.has(FALSE));
+    const _: () = assert!(BOOL.has(TRUE));
+    const _: () = assert!(!BOOL.has(0));
+    const _: () = assert!(!BOOL.has(NAN));
+    const _: () = assert!(BOOL.has(EXTENSION.mask));
 
     #[test]
     #[wasm_bindgen_test]

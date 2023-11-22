@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use crate::{
     bit_subset64::BitSubset64,
-    const_assert::const_assert,
     container::{Containable, Container},
 };
 
@@ -23,7 +22,7 @@ impl<T: Containable> PtrSubset<T> {
         self.0
     }
     pub const fn new(subset: BitSubset64) -> Self {
-        const_assert(subset.superposition() == PTR_SUBSET_SUPERPOSITION);
+        assert!(subset.superposition() == PTR_SUBSET_SUPERPOSITION);
         Self(subset, PhantomData)
     }
 }

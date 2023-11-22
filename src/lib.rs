@@ -1,5 +1,4 @@
 mod bit_subset64;
-mod const_assert;
 mod container;
 mod container_ref;
 mod fas;
