@@ -1,4 +1,4 @@
-use crate::{container::Containable, ptr_subset::PtrSubset};
+use crate::{container::Info, ptr_subset::PtrSubset};
 
 /// A bit subset of `u64`.
 ///
@@ -85,7 +85,7 @@ impl BitSubset64 {
         )
     }
     #[inline(always)]
-    pub const fn ptr_subset<T: Containable>(self) -> PtrSubset<T> {
+    pub const fn ptr_subset<T: Info>(self) -> PtrSubset<T> {
         PtrSubset::new(self)
     }
 }

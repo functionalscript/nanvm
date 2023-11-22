@@ -1,10 +1,10 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Containable, Container, CLONE, DROP},
+    container::{Container, Info, CLONE, DROP},
     number,
-    object::Object,
+    object::ObjectInfo,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-    string16::String16,
+    string::StringInfo,
     type_::Type,
 };
 
@@ -21,9 +21,9 @@ const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
-const STRING: PtrSubset<String16> = PTR_SPLIT.0.ptr_subset();
+pub const STRING: PtrSubset<StringInfo> = PTR_SPLIT.0.ptr_subset();
 const STRING_TAG: u64 = STRING.subset().tag;
-const OBJECT: PtrSubset<Object> = PTR_SPLIT.1.ptr_subset();
+const OBJECT: PtrSubset<ObjectInfo> = PTR_SPLIT.1.ptr_subset();
 const OBJECT_TAG: u64 = OBJECT.subset().tag;
 
 const FALSE: u64 = BOOL.tag;
@@ -114,7 +114,7 @@ impl Value {
             }
         }
     }
-    fn get_ptr<T: Containable>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+    fn get_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
         let v = self.0;
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
@@ -125,10 +125,10 @@ impl Value {
         }
         None
     }
-    fn get_string(&self) -> Option<&mut Container<String16>> {
+    fn get_string(&self) -> Option<&mut Container<StringInfo>> {
         self.get_ptr(&STRING)
     }
-    fn get_object(&self) -> Option<&mut Container<Object>> {
+    fn get_object(&self) -> Option<&mut Container<ObjectInfo>> {
         self.get_ptr(&OBJECT)
     }
 }

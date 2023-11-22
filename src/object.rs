@@ -1,11 +1,11 @@
 use crate::{
-    container::{Containable, Ref},
-    string16::String16,
+    container::{Info, Ref},
+    string::StringInfo,
     value::Value,
 };
 
-pub struct Object();
+pub struct ObjectInfo();
 
-impl Containable for Object {
-    type Item = (Ref<String16>, Value);
+impl Info for ObjectInfo {
+    type Item = (Ref<StringInfo>, Value);
 }
