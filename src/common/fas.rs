@@ -9,34 +9,35 @@ use std::{
 
 use crate::common::usize::max;
 
-pub struct FasLayout<T, I> {
-    size: usize,
+pub struct FasLayout<H, I> {
     align: usize,
+    header_size: usize,
     item_size: usize,
-    _p: PhantomData<(T, I)>,
+    _p: PhantomData<(H, I)>,
 }
 
-impl<T, I> FasLayout<T, I> {
+impl<H, I> FasLayout<H, I> {
     pub const fn new() -> Self {
         let i_align = align_of::<I>();
-        let c = Layout::new::<T>();
         Self {
-            align: max(c.align(), i_align),
-            size: {
+            align: max(align_of::<H>(), i_align),
+            header_size: {
                 let mask = i_align - 1;
-                (c.size() + mask) & !mask
+                (size_of::<H>() + mask) & !mask
             },
             item_size: size_of::<I>(),
             _p: PhantomData,
         }
     }
     pub const fn layout(&self, size: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
-    }
-    pub fn get(&self, p: &mut T, i: usize) -> &mut I {
         unsafe {
-            let p = p as *mut T as *mut u8;
-            let p = p.add(self.size + self.item_size * i);
+            Layout::from_size_align_unchecked(self.header_size + self.item_size * size, self.align)
+        }
+    }
+    pub fn get(&self, p: &mut H, i: usize) -> &mut I {
+        unsafe {
+            let p = p as *mut H as *mut u8;
+            let p = p.add(self.header_size + self.item_size * i);
             &mut *(p as *mut I)
         }
     }
@@ -48,7 +49,7 @@ mod test {
 
     const L88: FasLayout<u8, u8> = FasLayout::new();
     const _: () = assert!(L88.align == 1);
-    const _: () = assert!(L88.size == 1);
+    const _: () = assert!(L88.header_size == 1);
     const _: () = assert!(L88.item_size == 1);
     const _: () = assert!(L88.layout(0).size() == 1);
     const _: () = assert!(L88.layout(0).align() == 1);
@@ -56,7 +57,7 @@ mod test {
 
     const L816: FasLayout<u8, u16> = FasLayout::new();
     const _: () = assert!(L816.align == 2);
-    const _: () = assert!(L816.size == 2);
+    const _: () = assert!(L816.header_size == 2);
     const _: () = assert!(L816.item_size == 2);
     const _: () = assert!(L816.layout(0).size() == 2);
     const _: () = assert!(L816.layout(0).align() == 2);
@@ -64,7 +65,7 @@ mod test {
 
     const L168: FasLayout<u16, u8> = FasLayout::new();
     const _: () = assert!(L168.align == 2);
-    const _: () = assert!(L168.size == 2);
+    const _: () = assert!(L168.header_size == 2);
     const _: () = assert!(L168.item_size == 1);
     const _: () = assert!(L168.layout(0).size() == 2);
     const _: () = assert!(L168.layout(0).align() == 2);
