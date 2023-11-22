@@ -85,11 +85,6 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn sequential_test() {
-        test();
-        test2()
-    }
-
-    fn test() {
         unsafe {
             counter = 0;
             let p = Container::<DebugClean>::alloc(0);
@@ -100,9 +95,6 @@ mod test {
             assert_eq!(i, 1);
             assert_eq!(counter, 0);
         }
-    }
-
-    fn test2() {
         unsafe {
             counter = 0;
             let p = Container::<DebugClean>::alloc(9);
