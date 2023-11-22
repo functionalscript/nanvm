@@ -26,29 +26,39 @@ const fn compatible(t: usize, i: Layout) {
 }
 
 struct ContainableLayout {
-    align: usize,
     size: usize,
+    align: usize,
     item_size: usize,
 }
 
 impl ContainableLayout {
     const fn layout(&self, size: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.size + self.item_size * size, self.align) }
+        unsafe {
+            Layout::from_size_align_unchecked(
+                self.size + self.item_size * size,
+                self.align,
+            )
+        }
+    }
+}
+
+const fn max(a: usize, b: usize) -> usize {
+    if a > b {
+        a
+    } else {
+        b
     }
 }
 
 const fn layout<T: Containable>() -> ContainableLayout {
-    const_assert(true);
-    let t = Layout::new::<Container<T>>();
-    let i = Layout::new::<T::Item>();
-    let align = t.align();
-    let size = t.size();
-    compatible(align, i);
-    compatible(size, i);
+    let i_align = align_of::<T::Item>();
+    let c = Layout::new::<Container<T>>();
+    let align = max(c.align(), i_align);
+    let size = (c.size() + i_align - 1) / i_align * i_align;
     ContainableLayout {
         align,
         size,
-        item_size: i.size(),
+        item_size: size_of::<T::Item>(),
     }
 }
 
@@ -77,6 +87,8 @@ impl<T: Containable> Container<T> {
 
 #[cfg(test)]
 mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use super::*;
 
     struct DebugClean(*mut usize);
@@ -90,10 +102,11 @@ mod test {
     }
 
     impl Containable for DebugClean {
-        type Item = usize;
+        type Item = u8;
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test() {
         unsafe {
             let p = Container::<DebugClean>::alloc(0);
@@ -106,19 +119,25 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_layout() {
-        let x = Container::<DebugClean>::LAYOUT.layout(10);
+        let cl = Container::<DebugClean>::LAYOUT;
+        let x = cl.layout(9);
         let r = Layout::new::<Container<DebugClean>>()
-            .extend(Layout::array::<usize>(10).unwrap())
+            .extend(Layout::array::<u8>(9).unwrap())
             .unwrap();
         assert_eq!(r.0, x);
+        let rt =
+            Layout::from_size_align(cl.size + cl.item_size * 9, cl.align).unwrap();
+        assert_eq!(x, rt);
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test2() {
         unsafe {
-            let p = Container::<DebugClean>::alloc(10);
-            assert_eq!((*p).size, 10);
+            let p = Container::<DebugClean>::alloc(9);
+            assert_eq!((*p).size, 9);
             let mut i = 0;
             (*p).value.0 = &mut i;
             Container::update::<true>(p);

@@ -17,9 +17,12 @@ pub const fn check(v: u64) {
 
 #[cfg(test)]
 mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use super::*;
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_nan() {
         assert_eq!(f64::INFINITY.to_bits(), INFINITY);
         assert_ne!(f64::NAN, f64::NAN);
@@ -28,6 +31,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_check() {
         check(0);
         check(1);
@@ -38,12 +42,14 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[should_panic]
     fn test_nan_panic() {
         check(0x7FF0_00F0_0500_0001);
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[should_panic]
     fn test_nan_panic2() {
         check(0xFFFA_FF96_5534_5781);

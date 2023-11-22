@@ -92,6 +92,8 @@ impl BitSubset64 {
 
 #[cfg(test)]
 mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use crate::const_assert::const_assert;
 
     use super::BitSubset64;
@@ -110,6 +112,7 @@ mod test {
     const _: () = const_assert(AS.1.superposition() == 0);
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_a() {
         assert_eq!(A.superposition(), 0b001);
         assert_eq!(A.tag, 0b010);
@@ -131,6 +134,7 @@ mod test {
     const _: () = const_assert(_UBCS.1.tag == 0b001100);
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_ubc() {
         assert_eq!(UBC.superposition(), 0b011011);
         assert_eq!(UBC.tag, 0b000100);
@@ -138,12 +142,14 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[should_panic]
     fn test_ibc() {
         B.and(C);
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[should_panic]
     fn test_split_fail() {
         UBC.split(0b100);
@@ -161,6 +167,7 @@ mod test {
     const _: () = const_assert(IDE.union() == 0b00111);
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_ude() {
         assert_eq!(UDE.superposition(), 0b01011);
         assert_eq!(UDE.tag, 0b00100);
@@ -168,6 +175,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_ide() {
         assert_eq!(IDE.superposition(), 0b00001);
         assert_eq!(IDE.tag, 0b00110);

@@ -137,6 +137,8 @@ impl Value {
 mod test {
     use std::rc::Rc;
 
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use super::*;
     use crate::{const_assert::const_assert, number::NAN};
 
@@ -147,6 +149,7 @@ mod test {
     const _: () = const_assert(BOOL.has(EXTENSION.mask));
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_unsized() {
         let _x: Rc<[u8]> = Rc::new([1, 3]);
         // let _y: Rc<(u8, [u8])> = Rc::new((5, [1, 3]));
@@ -156,6 +159,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_number() {
         assert_eq!(Value::from_number(1.0).get_number(), Some(1.0));
         assert_eq!(Value::from_number(-1.0).get_number(), Some(-1.0));
@@ -174,6 +178,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_bool() {
         assert_eq!(Value::from_bool(true).get_bool(), Some(true));
         assert_eq!(Value::from_bool(false).get_bool(), Some(false));
@@ -183,6 +188,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_null() {
         assert!(Value::null().is_null());
         //
@@ -191,11 +197,13 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_object() {
         assert!(Value::null().is_object());
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_type() {
         assert_eq!(Value::from_number(15.0).get_type(), ValueType::Number);
         assert_eq!(Value::from_bool(true).get_type(), ValueType::Bool);
