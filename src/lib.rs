@@ -1,6 +1,5 @@
 mod common;
 mod container;
-mod fas;
 mod number;
 mod object;
 mod ptr_subset;

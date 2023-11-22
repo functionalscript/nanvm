@@ -6,7 +6,7 @@ use std::{
     ptr::read,
 };
 
-use crate::fas::FasLayout;
+use crate::common::fas::FasLayout;
 
 pub use self::containable::Containable;
 pub use self::reference::Ref;
