@@ -72,7 +72,9 @@ mod test {
 
     impl Drop for DebugItem {
         fn drop(&mut self) {
-            unsafe { counter += 1; }
+            unsafe {
+                counter += 1;
+            }
         }
     }
 
