@@ -91,6 +91,19 @@ group(() => {
     ]).map(f))
 })('Number')
 
+group(() => {
+    /** @type {(t: unknown) => readonly[unknown, string]} */
+    const f = t => [t, typeof t]
+    console.table([
+        f(15),
+        f("Hello world!"),
+        f(true),
+        f([]),
+        f({}),
+        f(null),
+    ])
+})('typeof')
+
 export default {
     print,
 }
