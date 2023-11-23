@@ -1,3 +1,4 @@
+mod base;
 mod info;
 mod ref_;
 
@@ -10,12 +11,13 @@ use std::alloc::System;
 
 use crate::common::fas::FasLayout;
 
+use self::base::{Base, ADD_REF, RELEASE};
 pub use self::info::Info;
 pub use self::ref_::Ref;
 
 #[repr(C)]
 pub struct Container<T: Info> {
-    counter: usize,
+    base: Base,
     len: usize,
     pub info: T,
 }
@@ -32,7 +34,7 @@ impl<T: Info> Container<T> {
         write(
             container,
             Container {
-                counter: 0,
+                base: Base::default(),
                 len,
                 info,
             },
@@ -48,13 +50,11 @@ impl<T: Info> Container<T> {
         Self::FAS_LAYOUT.get_mut(self, self.len)
     }
     pub unsafe fn add_ref(p: *mut Self) {
-        (*p).counter += 1;
+        Base::update::<ADD_REF>(&mut (*p).base);
     }
     pub unsafe fn release(p: *mut Self) {
         let container = &mut *p;
-        let c = container.counter;
-        if c != 0 {
-            container.counter = c - 1;
+        if Base::update::<RELEASE>(&mut container.base) != 0 {
             return;
         }
         let len = container.len;
