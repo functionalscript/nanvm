@@ -1,11 +1,11 @@
 use crate::{
-    container::{Header, Ref},
+    container::{Info, Ref},
     string::StringHeader,
     value::Value,
 };
 
 pub struct ObjectHeader(usize);
 
-impl Header for ObjectHeader {
+impl Info for ObjectHeader {
     type Item = (Ref<StringHeader>, Value);
 }

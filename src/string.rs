@@ -1,8 +1,8 @@
-use crate::container::{Header, Ref};
+use crate::container::{Info, Ref};
 
 pub struct StringHeader(usize);
 
-impl Header for StringHeader {
+impl Info for StringHeader {
     type Item = u16;
 }
 

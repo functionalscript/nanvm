@@ -1,4 +1,4 @@
-mod header;
+mod info;
 mod ref_;
 
 use core::{
@@ -10,34 +10,34 @@ use std::alloc::System;
 
 use crate::common::fas::FasLayout;
 
-pub use self::header::Header;
+pub use self::info::Info;
 pub use self::ref_::Ref;
 
 #[repr(C)]
-pub struct Container<T: Header> {
+pub struct Container<T: Info> {
     counter: usize,
     len: usize,
-    pub value: T,
+    pub info: T,
 }
 
 pub const DROP: bool = false;
 pub const CLONE: bool = true;
 
-impl<T: Header> Container<T> {
+impl<T: Info> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(value: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
+    pub unsafe fn alloc(info: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
         let mut len = items.len();
         let p = System.alloc(Self::FAS_LAYOUT.layout(len)) as *mut Self;
-        let header = &mut *p;
+        let container = &mut *p;
         write(
-            header,
+            container,
             Container {
                 counter: 0,
                 len,
-                value,
+                info,
             },
         );
-        for (dst, src) in header.get_items_mut().iter_mut().zip(items) {
+        for (dst, src) in container.get_items_mut().iter_mut().zip(items) {
             write(dst, src);
             len -= 1;
         }
@@ -51,17 +51,17 @@ impl<T: Header> Container<T> {
         (*p).counter += 1;
     }
     pub unsafe fn release(p: *mut Self) {
-        let header = &mut *p;
-        let c = header.counter;
+        let container = &mut *p;
+        let c = container.counter;
         if c != 0 {
-            header.counter = c - 1;
+            container.counter = c - 1;
             return;
         }
-        let len = header.len;
-        for i in header.get_items_mut() {
+        let len = container.len;
+        for i in container.get_items_mut() {
             read(i);
         }
-        read(&header.value);
+        read(&container.info);
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
     }
     #[inline(always)]
@@ -104,7 +104,7 @@ mod test {
         }
     }
 
-    impl Header for DebugClean {
+    impl Info for DebugClean {
         type Item = DebugItem;
     }
 
