@@ -2,7 +2,7 @@ mod header;
 mod ref_;
 
 use core::{
-    alloc::{GlobalAlloc, Layout},
+    alloc::GlobalAlloc,
     ptr::{read, write},
 };
 
@@ -58,7 +58,7 @@ impl<T: Header> Container<T> {
 
 #[cfg(test)]
 mod test {
-    use std::ptr::null_mut;
+    use std::{alloc::Layout, ptr::null_mut};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
