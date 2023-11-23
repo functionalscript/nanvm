@@ -62,7 +62,7 @@ impl<T: Header> Container<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{alloc::Layout, ptr::null_mut};
+    use core::alloc::Layout;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
