@@ -30,15 +30,15 @@ impl<H, I> FasLayout<H, I> {
             _p: PhantomData,
         }
     }
-    const fn offset(&self, i: usize) -> usize {
-        self.header_size + self.item_size * i
+    const fn size(&self, len: usize) -> usize {
+        self.header_size + self.item_size * len
     }
     pub const fn layout(&self, len: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.offset(len), self.align) }
+        unsafe { Layout::from_size_align_unchecked(self.size(len), self.align) }
     }
-    pub fn get_mut(&self, p: &mut H, len: usize) -> &mut [I] {
+    pub fn get_mut(&self, header: &mut H, len: usize) -> &mut [I] {
         unsafe {
-            let p = p as *mut H as *mut u8;
+            let p = header as *mut H as *mut u8;
             let p = p.add(self.header_size);
             from_raw_parts_mut(&mut *(p as *mut I), len)
         }
