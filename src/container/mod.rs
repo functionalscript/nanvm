@@ -84,7 +84,7 @@ mod test {
 
     struct DebugClean(*mut usize);
 
-    struct DebugItem(u8);
+    struct DebugItem(*mut usize);
 
     impl Drop for DebugClean {
         fn drop(&mut self) {
@@ -94,12 +94,10 @@ mod test {
         }
     }
 
-    static mut counter: usize = 0;
-
     impl Drop for DebugItem {
         fn drop(&mut self) {
             unsafe {
-                counter += 1;
+                *self.0 += 1;
             }
         }
     }
@@ -112,20 +110,18 @@ mod test {
     #[wasm_bindgen_test]
     fn sequential_test() {
         unsafe {
-            counter = 0;
             let mut i = 0;
             let p = Container::<DebugClean>::alloc(DebugClean(&mut i), [].into_iter());
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
-            assert_eq!(counter, 0);
         }
         unsafe {
-            counter = 0;
+            let mut counter = 0;
             let mut i = 0;
             let p = Container::<DebugClean>::alloc(
                 DebugClean(&mut i),
-                [DebugItem(0), DebugItem(1), DebugItem(2)].into_iter(),
+                [DebugItem(&mut counter), DebugItem(&mut counter), DebugItem(&mut counter)].into_iter(),
             );
             assert_eq!((*p).len, 3);
             Container::update::<true>(p);
@@ -143,7 +139,7 @@ mod test {
         let cl = Container::<DebugClean>::FAS_LAYOUT;
         let x = cl.layout(9);
         let r = Layout::new::<Container<DebugClean>>()
-            .extend(Layout::array::<u8>(9).unwrap())
+            .extend(Layout::array::<DebugItem>(9).unwrap())
             .unwrap();
         assert_eq!(r.0, x);
     }
