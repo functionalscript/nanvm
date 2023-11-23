@@ -68,17 +68,14 @@ mod test {
 
     use super::*;
 
-    struct DebugClean {
-        p: *mut usize,
-        len: usize,
-    }
+    struct DebugClean(*mut usize);
 
     struct DebugItem(u8);
 
     impl Drop for DebugClean {
         fn drop(&mut self) {
             unsafe {
-                *self.p += 1;
+                *self.0 += 1;
             }
         }
     }
@@ -103,7 +100,7 @@ mod test {
         unsafe {
             counter = 0;
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 0 }, 0);
+            let p = Container::<DebugClean>::alloc(DebugClean(&mut i), 0);
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
@@ -112,8 +109,8 @@ mod test {
         unsafe {
             counter = 0;
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 9 }, 9);
-            assert_eq!((*p).value.len, 9);
+            let p = Container::<DebugClean>::alloc(DebugClean(&mut i), 9);
+            assert_eq!((*p).len, 9);
             Container::update::<true>(p);
             Container::update::<false>(p);
             assert_eq!(i, 0);
