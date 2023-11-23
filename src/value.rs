@@ -29,19 +29,20 @@ const OBJECT_TAG: u64 = OBJECT.subset().tag;
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
-fn update<const ADD: bool>(v: u64) {
+fn update<const ADD: bool>(v: u64) -> bool {
     if !PTR.has(v) {
-        return;
+        return false;
     }
     let p = v & PTR_SUBSET_SUPERPOSITION;
     if p == 0 {
-        return;
+        return false;
     }
     if STRING.subset().has(v) {
         STRING.update::<ADD>(p);
     } else {
         OBJECT.update::<ADD>(p);
     }
+    return false;
 }
 
 impl Clone for Value {
