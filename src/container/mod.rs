@@ -121,7 +121,12 @@ mod test {
             let mut i = 0;
             let p = Container::<DebugClean>::alloc(
                 DebugClean(&mut i),
-                [DebugItem(&mut counter), DebugItem(&mut counter), DebugItem(&mut counter)].into_iter(),
+                [
+                    DebugItem(&mut counter),
+                    DebugItem(&mut counter),
+                    DebugItem(&mut counter),
+                ]
+                .into_iter(),
             );
             assert_eq!((*p).len, 3);
             Container::update::<true>(p);
