@@ -64,8 +64,7 @@ impl<T: Info> Container<T> {
         }
     }
     pub unsafe fn release(p: *mut Self) {
-        let container = &mut *p;
-        if Base::update::<RELEASE>(&mut container.base) != 0 {
+        if Base::update::<RELEASE>(&mut (*p).base) != 0 {
             return;
         }
         Self::dealloc(p)
