@@ -25,34 +25,43 @@ pub const CLONE: bool = true;
 
 impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(v: T, i: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
-        let len = i.len();
-        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(len)) as *mut Self;
-        let r = &mut *p;
-        r.counter = 0;
-        r.len = len;
-        write(&mut r.value, v);
-        let x = Self::FAS_LAYOUT.get_mut(r, len);
-        for (i, j) in x.iter_mut().zip(i) {
-            write(i, j);
+    pub unsafe fn alloc(value: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
+        let mut len = items.len();
+        let p = System.alloc(Self::FAS_LAYOUT.layout(len)) as *mut Self;
+        let header = &mut *p;
+        write(
+            header,
+            Container {
+                counter: 0,
+                len,
+                value,
+            },
+        );
+        for (dst, src) in header.get_items_mut().iter_mut().zip(items) {
+            write(dst, src);
+            len -= 1;
         }
+        assert_eq!(len, 0);
         p
+    }
+    fn get_items_mut(&mut self) -> &mut [T::Item] {
+        Self::FAS_LAYOUT.get_mut(self, self.len)
     }
     pub unsafe fn add_ref(p: *mut Self) {
         (*p).counter += 1;
     }
     pub unsafe fn release(p: *mut Self) {
-        let r = &mut *p;
-        let c = r.counter;
+        let header = &mut *p;
+        let c = header.counter;
         if c != 0 {
-            r.counter = c - 1;
+            header.counter = c - 1;
             return;
         }
-        let len = r.len;
-        for i in Self::FAS_LAYOUT.get_mut(r, len) {
+        let len = header.len;
+        for i in header.get_items_mut() {
             read(i);
         }
-        read(&r.value);
+        read(&header.value);
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
     }
     #[inline(always)]
@@ -68,7 +77,6 @@ impl<T: Header> Container<T> {
 #[cfg(test)]
 mod test {
     use core::alloc::Layout;
-    use std::iter::repeat;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
