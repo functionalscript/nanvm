@@ -1,7 +1,7 @@
 // Flexible Array Structure
 // https://en.wikipedia.org/wiki/Flexible_array_member
 
-use std::{
+use core::{
     alloc::Layout,
     marker::PhantomData,
     mem::{align_of, size_of},

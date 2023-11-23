@@ -1,10 +1,12 @@
 mod header;
 mod ref_;
 
-use std::{
-    alloc::{GlobalAlloc, Layout, System},
+use core::{
+    alloc::{GlobalAlloc, Layout},
     ptr::{read, write},
 };
+
+use std::alloc::System;
 
 use crate::common::fas::FasLayout;
 
