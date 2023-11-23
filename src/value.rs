@@ -1,6 +1,8 @@
+use std::ptr::null_mut;
+
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Container, Info, CLONE, DROP},
+    container::{Base, Container, Info, CLONE, DROP},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -33,28 +35,33 @@ fn update<const I: isize>(v: u64) -> isize {
     if !PTR.has(v) {
         return 1;
     }
-    let p = v & PTR_SUBSET_SUPERPOSITION;
-    if p == 0 {
+    let i = v & PTR_SUBSET_SUPERPOSITION;
+    if i == 0 {
         return 1;
     }
-    if STRING.subset().has(v) {
-        STRING.update::<I>(p);
-    } else {
-        OBJECT.update::<I>(p);
-    }
-    return 1;
+    unsafe { Base::update::<I>(i as *mut Base) }
 }
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        update::<1>(self.0);
-        Self(self.0)
+        let c = self.0;
+        update::<1>(c);
+        Self(c)
     }
 }
 
 impl Drop for Value {
     fn drop(&mut self) {
-        update::<-1>(self.0);
+        let c = self.0;
+        if update::<-1>(c) != 0 {
+            return;
+        }
+        let p = c & PTR_SUBSET_SUPERPOSITION;
+        if STRING.subset().has(c) {
+            STRING.dealloc(p);
+        } else {
+            OBJECT.dealloc(p);
+        }
     }
 }
 

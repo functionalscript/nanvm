@@ -11,7 +11,7 @@ use std::alloc::System;
 
 use crate::common::fas::FasLayout;
 
-use self::base::{Base, ADD_REF, RELEASE};
+pub use self::base::{Base, ADD_REF, RELEASE};
 pub use self::info::Info;
 pub use self::ref_::Ref;
 
