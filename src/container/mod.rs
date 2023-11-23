@@ -15,7 +15,7 @@ pub use self::ref_::Ref;
 pub struct Container<T: Header> {
     counter: usize,
     pub value: T,
-    size: usize,
+    len: usize,
 }
 
 pub const DROP: bool = false;
@@ -28,9 +28,9 @@ const fn compatible(t: usize, i: Layout) {
 
 impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(size: usize) -> *mut Self {
-        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(size)) as *mut Self;
-        (*p).size = size;
+    pub unsafe fn alloc(len: usize) -> *mut Self {
+        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(len)) as *mut Self;
+        (*p).len = len;
         p
     }
     pub unsafe fn add_ref(p: *mut Self) {
@@ -44,10 +44,10 @@ impl<T: Header> Container<T> {
             return;
         }
         read(&r.value);
-        for i in Self::FAS_LAYOUT.get_mut(r, r.size) {
+        for i in Self::FAS_LAYOUT.get_mut(r, r.len) {
             read(i);
         }
-        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.size));
+        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.len));
     }
     #[inline(always)]
     pub unsafe fn update<const ADD: bool>(p: *mut Self) {
@@ -107,7 +107,7 @@ mod test {
         unsafe {
             counter = 0;
             let p = Container::<DebugClean>::alloc(9);
-            assert_eq!((*p).size, 9);
+            assert_eq!((*p).len, 9);
             let mut i = 0;
             (*p).value.0 = &mut i;
             Container::update::<true>(p);

@@ -33,14 +33,14 @@ impl<H, I> FasLayout<H, I> {
     const fn offset(&self, i: usize) -> usize {
         self.header_size + self.item_size * i
     }
-    pub const fn layout(&self, size: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.offset(size), self.align) }
+    pub const fn layout(&self, len: usize) -> Layout {
+        unsafe { Layout::from_size_align_unchecked(self.offset(len), self.align) }
     }
-    pub fn get_mut(&self, p: &mut H, size: usize) -> &mut [I] {
+    pub fn get_mut(&self, p: &mut H, len: usize) -> &mut [I] {
         unsafe {
             let p = p as *mut H as *mut u8;
             let p = p.add(self.header_size);
-            from_raw_parts_mut(&mut *(p as *mut I), size)
+            from_raw_parts_mut(&mut *(p as *mut I), len)
         }
     }
 }
