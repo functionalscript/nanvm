@@ -52,17 +52,23 @@ impl<T: Info> Container<T> {
     pub unsafe fn add_ref(p: *mut Self) {
         Base::update::<ADD_REF>(&mut (*p).base);
     }
+    pub fn dealloc(p: *mut Self) {
+        unsafe {
+            let container = &mut *p;
+            let len = container.len;
+            for i in container.get_items_mut() {
+                read(i);
+            }
+            read(&container.info);
+            System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
+        }
+    }
     pub unsafe fn release(p: *mut Self) {
         let container = &mut *p;
         if Base::update::<RELEASE>(&mut container.base) != 0 {
             return;
         }
-        let len = container.len;
-        for i in container.get_items_mut() {
-            read(i);
-        }
-        read(&container.info);
-        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
+        Self::dealloc(p)
     }
     #[inline(always)]
     pub unsafe fn update<const ADD: bool>(p: *mut Self) {
