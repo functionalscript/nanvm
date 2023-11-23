@@ -1,10 +1,10 @@
 use crate::container::{Info, Ref};
 
-pub struct StringInfo();
+pub struct StringHeader(usize);
 
-impl Info for StringInfo {
+impl Info for StringHeader {
     type Item = u16;
 }
 
 #[repr(transparent)]
-pub struct String(Ref<StringInfo>);
+pub struct String(Ref<StringHeader>);

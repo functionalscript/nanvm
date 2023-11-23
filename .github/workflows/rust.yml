@@ -25,13 +25,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: sysctl -n machdep.cpu.brand_string
       if: matrix.os == 'macos-13'
-    - run: cargo test --verbose
-    - run: npm ci
-    - run: npm test
-    - run: npm run json
+    - run: cargo test --verbose --release
 
   test-wasm:
     runs-on: ubuntu-latest
@@ -39,3 +36,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@wasm-pack
       - run: wasm-pack test --node --release
+
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm ci
+    - run: npm test
+    - run: npm run json

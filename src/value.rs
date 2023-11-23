@@ -1,10 +1,10 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Container, Info, CLONE, DROP},
+    container::{Base, Container, Info},
     number,
-    object::ObjectInfo,
+    object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-    string::StringInfo,
+    string::StringHeader,
     type_::Type,
 };
 
@@ -21,39 +21,45 @@ const PTR: BitSubset64 = EXTENSION_SPLIT.1;
 
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 
-pub const STRING: PtrSubset<StringInfo> = PTR_SPLIT.0.ptr_subset();
+pub const STRING: PtrSubset<StringHeader> = PTR_SPLIT.0.ptr_subset();
 const STRING_TAG: u64 = STRING.subset().tag;
-const OBJECT: PtrSubset<ObjectInfo> = PTR_SPLIT.1.ptr_subset();
+const OBJECT: PtrSubset<ObjectHeader> = PTR_SPLIT.1.ptr_subset();
 const OBJECT_TAG: u64 = OBJECT.subset().tag;
 
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
-fn update<const ADD: bool>(v: u64) {
+fn update<const I: isize>(v: u64) -> isize {
     if !PTR.has(v) {
-        return;
+        return 1;
     }
-    let p = v & PTR_SUBSET_SUPERPOSITION;
-    if p == 0 {
-        return;
+    let i = v & PTR_SUBSET_SUPERPOSITION;
+    if i == 0 {
+        return 1;
     }
-    if STRING.subset().has(v) {
-        STRING.update::<ADD>(p);
-    } else {
-        OBJECT.update::<ADD>(p);
-    }
+    unsafe { Base::update::<I>(i as *mut Base) }
 }
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        update::<CLONE>(self.0);
-        Self(self.0)
+        let c = self.0;
+        update::<1>(c);
+        Self(c)
     }
 }
 
 impl Drop for Value {
     fn drop(&mut self) {
-        update::<DROP>(self.0);
+        let c = self.0;
+        if update::<-1>(c) != 0 {
+            return;
+        }
+        let p = c & PTR_SUBSET_SUPERPOSITION;
+        if STRING.subset().has(c) {
+            STRING.dealloc(p);
+        } else {
+            OBJECT.dealloc(p);
+        }
     }
 }
 
@@ -125,10 +131,10 @@ impl Value {
         }
         None
     }
-    fn get_string(&self) -> Option<&mut Container<StringInfo>> {
+    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
         self.get_ptr(&STRING)
     }
-    fn get_object(&self) -> Option<&mut Container<ObjectInfo>> {
+    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
         self.get_ptr(&OBJECT)
     }
 }

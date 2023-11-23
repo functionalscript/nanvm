@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use crate::{
     common::bit_subset64::BitSubset64,
@@ -12,10 +12,8 @@ pub const PTR_SUBSET_SUPERPOSITION: u64 = 0x1_FFFF_FFFF_FFFF;
 
 impl<T: Info> PtrSubset<T> {
     #[inline(always)]
-    pub fn update<const ADD: bool>(&self, p: u64) {
-        unsafe {
-            Container::update::<ADD>(p as *mut Container<T>);
-        }
+    pub fn dealloc(&self, p: u64) {
+        Container::dealloc(p as *mut Container<T>);
     }
     #[inline(always)]
     pub const fn subset(&self) -> BitSubset64 {

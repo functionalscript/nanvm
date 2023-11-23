@@ -1,10 +1,11 @@
 // Flexible Array Structure
 // https://en.wikipedia.org/wiki/Flexible_array_member
 
-use std::{
+use core::{
     alloc::Layout,
     marker::PhantomData,
     mem::{align_of, size_of},
+    slice::from_raw_parts_mut,
 };
 
 use crate::common::usize::max;
@@ -29,17 +30,17 @@ impl<H, I> FasLayout<H, I> {
             _p: PhantomData,
         }
     }
-    const fn offset(&self, i: usize) -> usize {
-        self.header_size + self.item_size * i
+    const fn size(&self, len: usize) -> usize {
+        self.header_size + self.item_size * len
     }
-    pub const fn layout(&self, size: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.offset(size), self.align) }
+    pub const fn layout(&self, len: usize) -> Layout {
+        unsafe { Layout::from_size_align_unchecked(self.size(len), self.align) }
     }
-    pub fn get(&self, p: &mut H, i: usize) -> &mut I {
+    pub fn get_mut(&self, header: &mut H, len: usize) -> &mut [I] {
         unsafe {
-            let p = p as *mut H as *mut u8;
-            let p = p.add(self.offset(i));
-            &mut *(p as *mut I)
+            let p = header as *mut H as *mut u8;
+            let p = p.add(self.header_size);
+            from_raw_parts_mut(&mut *(p as *mut I), len)
         }
     }
 }
