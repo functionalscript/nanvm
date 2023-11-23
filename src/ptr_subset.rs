@@ -12,9 +12,9 @@ pub const PTR_SUBSET_SUPERPOSITION: u64 = 0x1_FFFF_FFFF_FFFF;
 
 impl<T: Info> PtrSubset<T> {
     #[inline(always)]
-    pub fn update<const ADD: bool>(&self, p: u64) {
+    pub fn update<const I: isize>(&self, p: u64) {
         unsafe {
-            Container::update::<ADD>(p as *mut Container<T>);
+            Container::update::<I>(p as *mut Container<T>);
         }
     }
     #[inline(always)]

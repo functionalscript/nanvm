@@ -29,7 +29,7 @@ const OBJECT_TAG: u64 = OBJECT.subset().tag;
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
-fn update<const ADD: bool>(v: u64) -> isize {
+fn update<const I: isize>(v: u64) -> isize {
     if !PTR.has(v) {
         return 1;
     }
@@ -38,23 +38,23 @@ fn update<const ADD: bool>(v: u64) -> isize {
         return 1;
     }
     if STRING.subset().has(v) {
-        STRING.update::<ADD>(p);
+        STRING.update::<I>(p);
     } else {
-        OBJECT.update::<ADD>(p);
+        OBJECT.update::<I>(p);
     }
     return 1;
 }
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        update::<CLONE>(self.0);
+        update::<1>(self.0);
         Self(self.0)
     }
 }
 
 impl Drop for Value {
     fn drop(&mut self) {
-        update::<DROP>(self.0);
+        update::<-1>(self.0);
     }
 }
 
