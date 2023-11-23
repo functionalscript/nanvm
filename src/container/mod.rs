@@ -25,12 +25,17 @@ pub const CLONE: bool = true;
 
 impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(v: T, len: usize) -> *mut Self {
+    pub unsafe fn alloc(v: T, i: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
+        let len = i.len();
         let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(len)) as *mut Self;
         let r = &mut *p;
         r.counter = 0;
         r.len = len;
         write(&mut r.value, v);
+        let x = Self::FAS_LAYOUT.get_mut(r, len);
+        for (i, j) in x.iter_mut().zip(i) {
+            write(i, j);
+        }
         p
     }
     pub unsafe fn add_ref(p: *mut Self) {
@@ -63,6 +68,7 @@ impl<T: Header> Container<T> {
 #[cfg(test)]
 mod test {
     use core::alloc::Layout;
+    use std::iter::repeat;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -100,7 +106,7 @@ mod test {
         unsafe {
             counter = 0;
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean(&mut i), 0);
+            let p = Container::<DebugClean>::alloc(DebugClean(&mut i), [].into_iter());
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
@@ -109,14 +115,17 @@ mod test {
         unsafe {
             counter = 0;
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean(&mut i), 9);
-            assert_eq!((*p).len, 9);
+            let p = Container::<DebugClean>::alloc(
+                DebugClean(&mut i),
+                [DebugItem(0), DebugItem(1), DebugItem(2)].into_iter(),
+            );
+            assert_eq!((*p).len, 3);
             Container::update::<true>(p);
             Container::update::<false>(p);
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
-            assert_eq!(counter, 9);
+            assert_eq!(counter, 3);
         }
     }
 
