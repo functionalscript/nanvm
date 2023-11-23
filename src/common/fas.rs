@@ -5,6 +5,7 @@ use std::{
     alloc::Layout,
     marker::PhantomData,
     mem::{align_of, size_of},
+    slice::from_raw_parts_mut,
 };
 
 use crate::common::usize::max;
@@ -35,11 +36,11 @@ impl<H, I> FasLayout<H, I> {
     pub const fn layout(&self, size: usize) -> Layout {
         unsafe { Layout::from_size_align_unchecked(self.offset(size), self.align) }
     }
-    pub fn get(&self, p: &mut H, i: usize) -> &mut I {
+    pub fn get_mut(&self, p: &mut H, size: usize) -> &mut [I] {
         unsafe {
             let p = p as *mut H as *mut u8;
-            let p = p.add(self.offset(i));
-            &mut *(p as *mut I)
+            let p = p.add(self.header_size);
+            from_raw_parts_mut(&mut *(p as *mut I), size)
         }
     }
 }

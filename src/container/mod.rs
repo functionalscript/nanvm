@@ -44,8 +44,8 @@ impl<T: Header> Container<T> {
             return;
         }
         read(&r.value);
-        for i in 0..r.size {
-            read(Self::FAS_LAYOUT.get(r, i));
+        for i in Self::FAS_LAYOUT.get_mut(r, r.size) {
+            read(i);
         }
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.size));
     }
