@@ -16,6 +16,7 @@ pub use self::ref_::Ref;
 #[repr(C)]
 pub struct Container<T: Header> {
     counter: usize,
+    len: usize,
     pub value: T,
 }
 
@@ -24,9 +25,12 @@ pub const CLONE: bool = true;
 
 impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(v: T) -> *mut Self {
-        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(v.len())) as *mut Self;
-        write(&mut (*p).value, v);
+    pub unsafe fn alloc(v: T, len: usize) -> *mut Self {
+        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(len)) as *mut Self;
+        let r = &mut *p;
+        r.counter = 0;
+        r.len = len;
+        write(&mut r.value, v);
         p
     }
     pub unsafe fn add_ref(p: *mut Self) {
@@ -39,7 +43,7 @@ impl<T: Header> Container<T> {
             r.counter = c - 1;
             return;
         }
-        let len = r.value.len();
+        let len = r.len;
         for i in Self::FAS_LAYOUT.get_mut(r, len) {
             read(i);
         }
@@ -102,7 +106,7 @@ mod test {
         unsafe {
             counter = 0;
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 0 });
+            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 0 }, 0);
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
@@ -111,7 +115,7 @@ mod test {
         unsafe {
             counter = 0;
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 9 });
+            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 9 }, 9);
             assert_eq!((*p).value.len, 9);
             Container::update::<true>(p);
             Container::update::<false>(p);
