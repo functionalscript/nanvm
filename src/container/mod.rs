@@ -121,24 +121,25 @@ mod test {
             assert_eq!(i, 1);
         }
         unsafe {
-            let mut counter = 0;
-            let mut i = 0;
+            let mut item_count = 0;
+            let mut clean_count = 0;
             let p = Container::<DebugClean>::alloc(
-                DebugClean(&mut i),
+                DebugClean(&mut clean_count),
                 [
-                    DebugItem(&mut counter),
-                    DebugItem(&mut counter),
-                    DebugItem(&mut counter),
+                    DebugItem(&mut item_count),
+                    DebugItem(&mut item_count),
+                    DebugItem(&mut item_count),
                 ]
                 .into_iter(),
             );
             assert_eq!((*p).len, 3);
             Container::add_ref(p);
             Container::release(p);
-            assert_eq!(i, 0);
+            assert_eq!(clean_count, 0);
+            assert_eq!(item_count, 0);
             Container::release(p);
-            assert_eq!(i, 1);
-            assert_eq!(counter, 3);
+            assert_eq!(clean_count, 1);
+            assert_eq!(item_count, 3);
         }
     }
 
