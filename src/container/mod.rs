@@ -95,9 +95,6 @@ mod test {
 
     impl Header for DebugClean {
         type Item = DebugItem;
-        fn len(&self) -> usize {
-            self.len
-        }
     }
 
     #[test]
