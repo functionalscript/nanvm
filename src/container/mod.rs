@@ -22,11 +22,6 @@ pub struct Container<T: Header> {
 pub const DROP: bool = false;
 pub const CLONE: bool = true;
 
-const fn compatible(t: usize, i: Layout) {
-    assert!(t >= i.align());
-    assert!(t % i.align() == 0);
-}
-
 impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
     pub unsafe fn alloc(v: T) -> *mut Self {
