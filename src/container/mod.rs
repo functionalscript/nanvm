@@ -3,7 +3,7 @@ mod ref_;
 
 use std::{
     alloc::{GlobalAlloc, Layout, System},
-    ptr::read,
+    ptr::{read, write},
 };
 
 use crate::common::fas::FasLayout;
@@ -15,7 +15,6 @@ pub use self::ref_::Ref;
 pub struct Container<T: Header> {
     counter: usize,
     pub value: T,
-    len: usize,
 }
 
 pub const DROP: bool = false;
@@ -28,9 +27,9 @@ const fn compatible(t: usize, i: Layout) {
 
 impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(len: usize) -> *mut Self {
-        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(len)) as *mut Self;
-        (*p).len = len;
+    pub unsafe fn alloc(v: T) -> *mut Self {
+        let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(v.len())) as *mut Self;
+        write(&mut (*p).value, v);
         p
     }
     pub unsafe fn add_ref(p: *mut Self) {
@@ -43,11 +42,12 @@ impl<T: Header> Container<T> {
             r.counter = c - 1;
             return;
         }
-        read(&r.value);
-        for i in Self::FAS_LAYOUT.get_mut(r, r.len) {
+        let len = r.value.len();
+        for i in Self::FAS_LAYOUT.get_mut(r, len) {
             read(i);
         }
-        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(r.len));
+        read(&r.value);
+        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
     }
     #[inline(always)]
     pub unsafe fn update<const ADD: bool>(p: *mut Self) {
@@ -61,6 +61,8 @@ impl<T: Header> Container<T> {
 
 #[cfg(test)]
 mod test {
+    use std::ptr::null_mut;
+
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
@@ -102,9 +104,8 @@ mod test {
     fn sequential_test() {
         unsafe {
             counter = 0;
-            let p = Container::<DebugClean>::alloc(0);
             let mut i = 0;
-            (*p).value.p = &mut i;
+            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 0 });
             assert_eq!(i, 0);
             Container::update::<false>(p);
             assert_eq!(i, 1);
@@ -112,10 +113,9 @@ mod test {
         }
         unsafe {
             counter = 0;
-            let p = Container::<DebugClean>::alloc(9);
-            assert_eq!((*p).len, 9);
             let mut i = 0;
-            (*p).value.p = &mut i;
+            let p = Container::<DebugClean>::alloc(DebugClean { p: &mut i, len: 9 });
+            assert_eq!((*p).value.len, 9);
             Container::update::<true>(p);
             Container::update::<false>(p);
             assert_eq!(i, 0);
