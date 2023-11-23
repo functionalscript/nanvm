@@ -1,4 +1,4 @@
-mod info;
+mod header;
 mod ref_;
 
 use std::{
@@ -8,11 +8,11 @@ use std::{
 
 use crate::common::fas::FasLayout;
 
-pub use self::info::Info;
+pub use self::header::Header;
 pub use self::ref_::Ref;
 
 #[repr(C)]
-pub struct Container<T: Info> {
+pub struct Container<T: Header> {
     counter: usize,
     pub value: T,
     size: usize,
@@ -26,7 +26,7 @@ const fn compatible(t: usize, i: Layout) {
     assert!(t % i.align() == 0);
 }
 
-impl<T: Info> Container<T> {
+impl<T: Header> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
     pub unsafe fn alloc(size: usize) -> *mut Self {
         let p = System.alloc_zeroed(Self::FAS_LAYOUT.layout(size)) as *mut Self;
@@ -87,7 +87,7 @@ mod test {
         }
     }
 
-    impl Info for DebugClean {
+    impl Header for DebugClean {
         type Item = DebugItem;
     }
 
