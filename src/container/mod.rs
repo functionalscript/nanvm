@@ -22,9 +22,6 @@ pub struct Container<T: Info> {
     pub info: T,
 }
 
-pub const DROP: bool = false;
-pub const CLONE: bool = true;
-
 impl<T: Info> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
     pub unsafe fn alloc(info: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
@@ -69,6 +66,7 @@ impl<T: Info> Container<T> {
         }
         Self::dealloc(p)
     }
+    /*
     #[inline(always)]
     pub unsafe fn update<const I: isize>(p: *mut Self) {
         if I == 1 {
@@ -77,6 +75,7 @@ impl<T: Info> Container<T> {
             Self::release(p)
         }
     }
+    */
 }
 
 #[cfg(test)]
@@ -118,7 +117,7 @@ mod test {
             let mut i = 0;
             let p = Container::<DebugClean>::alloc(DebugClean(&mut i), [].into_iter());
             assert_eq!(i, 0);
-            Container::update::<-1>(p);
+            Container::release(p);
             assert_eq!(i, 1);
         }
         unsafe {
@@ -134,10 +133,10 @@ mod test {
                 .into_iter(),
             );
             assert_eq!((*p).len, 3);
-            Container::update::<1>(p);
-            Container::update::<-1>(p);
+            Container::add_ref(p);
+            Container::release(p);
             assert_eq!(i, 0);
-            Container::update::<-1>(p);
+            Container::release(p);
             assert_eq!(i, 1);
             assert_eq!(counter, 3);
         }

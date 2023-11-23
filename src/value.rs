@@ -1,8 +1,6 @@
-use std::ptr::null_mut;
-
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Base, Container, Info, CLONE, DROP},
+    container::{Base, Container, Info},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
