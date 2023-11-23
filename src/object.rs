@@ -4,8 +4,11 @@ use crate::{
     value::Value,
 };
 
-pub struct ObjectHeader();
+pub struct ObjectHeader(usize);
 
 impl Header for ObjectHeader {
     type Item = (Ref<StringHeader>, Value);
+    fn len(&self) -> usize {
+        self.0
+    }
 }
