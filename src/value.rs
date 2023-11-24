@@ -1,6 +1,6 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Base, Container, Info, ADD_REF, RELEASE},
+    container::{Base, Container, Info, Update},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -29,7 +29,7 @@ const OBJECT_TAG: u64 = OBJECT.subset().tag;
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
-fn update<const I: isize>(v: u64) -> isize {
+fn update(v: u64, u: Update) -> isize {
     if !PTR.has(v) {
         return 1;
     }
@@ -37,13 +37,13 @@ fn update<const I: isize>(v: u64) -> isize {
     if i == 0 {
         return 1;
     }
-    unsafe { Base::update::<I>(i as *mut Base) }
+    unsafe { Base::update(i as *mut Base, u) }
 }
 
 impl Clone for Value {
     fn clone(&self) -> Self {
         let c = self.0;
-        update::<ADD_REF>(c);
+        update(c, Update::AddRef);
         Self(c)
     }
 }
@@ -51,7 +51,7 @@ impl Clone for Value {
 impl Drop for Value {
     fn drop(&mut self) {
         let c = self.0;
-        if update::<RELEASE>(c) != 0 {
+        if update(c, Update::Release) != 0 {
             return;
         }
         let p = c & PTR_SUBSET_SUPERPOSITION;

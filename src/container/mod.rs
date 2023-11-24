@@ -11,7 +11,7 @@ use std::alloc::System;
 
 use crate::common::fas::FasLayout;
 
-pub use self::base::{Base, ADD_REF, RELEASE};
+pub use self::base::{Base, Update};
 pub use self::info::Info;
 pub use self::ref_::Ref;
 
@@ -47,7 +47,7 @@ impl<T: Info> Container<T> {
         Self::FAS_LAYOUT.get_mut(self, self.len)
     }
     pub unsafe fn add_ref(p: *mut Self) {
-        Base::update::<ADD_REF>(&mut (*p).base);
+        Base::update(&mut (*p).base, Update::AddRef);
     }
     pub fn dealloc(p: *mut Self) {
         unsafe {
@@ -61,7 +61,7 @@ impl<T: Info> Container<T> {
         }
     }
     pub unsafe fn release(p: *mut Self) {
-        if Base::update::<RELEASE>(&mut (*p).base) != 0 {
+        if Base::update(&mut (*p).base, Update::Release) != 0 {
             return;
         }
         Self::dealloc(p)
