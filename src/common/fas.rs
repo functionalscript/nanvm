@@ -47,6 +47,8 @@ impl<H, I> FasLayout<H, I> {
 
 #[cfg(test)]
 mod test {
+    use std::mem::size_of;
+
     use super::FasLayout;
 
     const L88: FasLayout<u8, u8> = FasLayout::new();
@@ -72,4 +74,51 @@ mod test {
     const _: () = assert!(L168.layout(0).size() == 2);
     const _: () = assert!(L168.layout(0).align() == 2);
     const _: () = assert!(L168.layout(1).size() == 3);
+
+    #[test]
+    fn test_large_struct() {
+        struct LargeStruct([u8; 1024]);
+        const LAYOUT: FasLayout<LargeStruct, u8> = FasLayout::new();
+        assert_eq!(LAYOUT.header_size, 1024);
+        assert_eq!(LAYOUT.item_size, 1);
+        assert_eq!(LAYOUT.layout(10).size(), 1034); // 1024 for header + 10 for items
+    }
+
+    #[repr(align(128))]
+    struct Aligned128(u8);
+
+    #[test]
+    fn test_unusual_alignment() {
+        const LAYOUT: FasLayout<u8, Aligned128> = FasLayout::new();
+        assert_eq!(LAYOUT.align, 128);
+        assert_eq!(LAYOUT.header_size, 128); // Aligns to 128
+        assert_eq!(LAYOUT.item_size, size_of::<Aligned128>());
+    }
+
+    #[test]
+    fn test_zero_sized_type() {
+        struct ZeroSizedType;
+        const LAYOUT: FasLayout<ZeroSizedType, u8> = FasLayout::new();
+        assert_eq!(LAYOUT.header_size, 0);
+        assert_eq!(LAYOUT.layout(10).size(), 10); // Only space for items
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_size_overflow() {
+        const LAYOUT: FasLayout<u8, u8> = FasLayout::new();
+        // Assuming usize max value causes overflow in offset calculation
+        let _ = LAYOUT.layout(usize::MAX);
+    }
+
+    #[test]
+    fn test_different_combinations() {
+        const LAYOUT1: FasLayout<u16, u32> = FasLayout::new();
+        assert_eq!(LAYOUT1.header_size, 4); // Aligns to 4 (u32 alignment)
+        assert_eq!(LAYOUT1.layout(2).size(), 12); // 4 for header + 8 for items
+
+        const LAYOUT2: FasLayout<u64, u8> = FasLayout::new();
+        assert_eq!(LAYOUT2.header_size, 8); // Aligns to 8 (u64 alignment)
+        assert_eq!(LAYOUT2.layout(3).size(), 11); // 8 for header + 3 for items
+    }
 }
