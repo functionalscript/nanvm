@@ -66,16 +66,6 @@ impl<T: Info> Container<T> {
         }
         Self::dealloc(p)
     }
-    /*
-    #[inline(always)]
-    pub unsafe fn update<const I: isize>(p: *mut Self) {
-        if I == 1 {
-            Self::add_ref(p)
-        } else {
-            Self::release(p)
-        }
-    }
-    */
 }
 
 #[cfg(test)]

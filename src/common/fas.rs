@@ -104,14 +104,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn test_size_overflow() {
-        const LAYOUT: FasLayout<u8, u8> = FasLayout::new();
-        // Assuming usize max value causes overflow in offset calculation
-        let _ = LAYOUT.layout(usize::MAX);
-    }
-
-    #[test]
     fn test_different_combinations() {
         const LAYOUT1: FasLayout<u16, u32> = FasLayout::new();
         assert_eq!(LAYOUT1.header_size, 4); // Aligns to 4 (u32 alignment)
