@@ -1,6 +1,6 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Base, Container, Info},
+    container::{Base, Container, Info, ADD_REF, RELEASE},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -43,7 +43,7 @@ fn update<const I: isize>(v: u64) -> isize {
 impl Clone for Value {
     fn clone(&self) -> Self {
         let c = self.0;
-        update::<1>(c);
+        update::<ADD_REF>(c);
         Self(c)
     }
 }
@@ -51,7 +51,7 @@ impl Clone for Value {
 impl Drop for Value {
     fn drop(&mut self) {
         let c = self.0;
-        if update::<-1>(c) != 0 {
+        if update::<RELEASE>(c) != 0 {
             return;
         }
         let p = c & PTR_SUBSET_SUPERPOSITION;
