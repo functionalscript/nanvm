@@ -69,9 +69,6 @@ impl Value {
         assert!(number::is_valid(n));
         Self(n)
     }
-    fn from_bool(b: bool) -> Self {
-        Self(if b { TRUE } else { FALSE })
-    }
     const fn is_number(&self) -> bool {
         !EXTENSION.has(self.0)
     }
@@ -80,6 +77,9 @@ impl Value {
             return Some(f64::from_bits(self.0));
         }
         None
+    }
+    const fn from_bool(b: bool) -> Self {
+        Self(if b { TRUE } else { FALSE })
     }
     const fn is_bool(&self) -> bool {
         BOOL.has(self.0)
@@ -120,6 +120,15 @@ impl Value {
             }
         }
     }
+    fn from_ptr<T: Info>(
+        ps: &PtrSubset<T>,
+        info: T,
+        i: impl ExactSizeIterator<Item = T::Item>,
+    ) -> Self {
+        let p = unsafe { Container::alloc(info, i) } as u64;
+        assert!(ps.subset().mask & p == 0);
+        Self(p | ps.subset().tag)
+    }
     fn get_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
         let v = self.0;
         if ps.subset().has(v) {
@@ -131,8 +140,14 @@ impl Value {
         }
         None
     }
+    fn from_string(s: impl ExactSizeIterator<Item = u16>) -> Self {
+        Self::from_ptr(&STRING, StringHeader(), s)
+    }
     fn get_string(&self) -> Option<&mut Container<StringHeader>> {
         self.get_ptr(&STRING)
+    }
+    fn from_object(i: impl ExactSizeIterator<Item = (Value, Value)>) -> Self {
+        Self::from_ptr(&OBJECT, ObjectHeader(), i)
     }
     fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
         self.get_ptr(&OBJECT)
