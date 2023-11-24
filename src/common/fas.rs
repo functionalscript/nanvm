@@ -49,6 +49,8 @@ impl<H, I> FasLayout<H, I> {
 mod test {
     use std::mem::size_of;
 
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use super::FasLayout;
 
     const L88: FasLayout<u8, u8> = FasLayout::new();
@@ -76,6 +78,7 @@ mod test {
     const _: () = assert!(L168.layout(1).size() == 3);
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_large_struct() {
         struct LargeStruct([u8; 1024]);
         const LAYOUT: FasLayout<LargeStruct, u8> = FasLayout::new();
@@ -88,6 +91,7 @@ mod test {
     struct Aligned128(u8);
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_unusual_alignment() {
         const LAYOUT: FasLayout<u8, Aligned128> = FasLayout::new();
         assert_eq!(LAYOUT.align, 128);
@@ -96,6 +100,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_zero_sized_type() {
         struct ZeroSizedType;
         const LAYOUT: FasLayout<ZeroSizedType, u8> = FasLayout::new();
@@ -104,6 +109,7 @@ mod test {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_different_combinations() {
         const LAYOUT1: FasLayout<u16, u32> = FasLayout::new();
         assert_eq!(LAYOUT1.header_size, 4); // Aligns to 4 (u32 alignment)

@@ -1,6 +1,5 @@
 mod base;
 mod info;
-mod ref_;
 
 use core::{
     alloc::GlobalAlloc,
@@ -13,7 +12,6 @@ use crate::common::fas::FasLayout;
 
 pub use self::base::{Base, Update};
 pub use self::info::Info;
-pub use self::ref_::Ref;
 
 #[repr(C)]
 pub struct Container<T: Info> {
