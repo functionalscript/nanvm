@@ -64,6 +64,7 @@ impl Drop for Value {
 }
 
 impl Value {
+    // number
     fn from_number(n: f64) -> Self {
         let n = n.to_bits();
         assert!(number::is_valid(n));
@@ -78,6 +79,7 @@ impl Value {
         }
         None
     }
+    // bool
     const fn from_bool(b: bool) -> Self {
         Self(if b { TRUE } else { FALSE })
     }
@@ -90,21 +92,59 @@ impl Value {
         }
         None
     }
+    //
     const fn is_ptr(&self) -> bool {
         PTR.has(self.0)
     }
-    const fn is_string(&self) -> bool {
-        STRING.subset().has(self.0)
-    }
+    //
     const fn null() -> Self {
         Self(OBJECT.subset().tag)
     }
     const fn is_null(&self) -> bool {
         self.0 == OBJECT.subset().tag
     }
+    //
+    fn create_container<T: Info>(
+        ps: &PtrSubset<T>,
+        info: T,
+        i: impl ExactSizeIterator<Item = T::Item>,
+    ) -> Self {
+        let p = unsafe { Container::alloc(info, i) } as u64;
+        assert!(ps.subset().mask & p == 0);
+        Self(p | ps.subset().tag)
+    }
+    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+        let v = self.0;
+        if ps.subset().has(v) {
+            let p = v & PTR_SUBSET_SUPERPOSITION;
+            if p == 0 {
+                return None;
+            }
+            return Some(unsafe { &mut *(p as *mut Container<T>) });
+        }
+        None
+    }
+    // string
+    const fn is_string(&self) -> bool {
+        STRING.subset().has(self.0)
+    }
+    fn from_string(s: impl ExactSizeIterator<Item = u16>) -> Self {
+        Self::create_container(&STRING, StringHeader(), s)
+    }
+    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
+        self.get_container(&STRING)
+    }
+    // object
     const fn is_object(&self) -> bool {
         OBJECT.subset().has(self.0)
     }
+    fn from_object(i: impl ExactSizeIterator<Item = (Value, Value)>) -> Self {
+        Self::create_container(&OBJECT, ObjectHeader(), i)
+    }
+    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
+        self.get_container(&OBJECT)
+    }
+    //
     const fn get_type(&self) -> Type {
         if self.is_ptr() {
             if self.is_string() {
@@ -119,38 +159,6 @@ impl Value {
                 Type::Bool
             }
         }
-    }
-    fn from_ptr<T: Info>(
-        ps: &PtrSubset<T>,
-        info: T,
-        i: impl ExactSizeIterator<Item = T::Item>,
-    ) -> Self {
-        let p = unsafe { Container::alloc(info, i) } as u64;
-        assert!(ps.subset().mask & p == 0);
-        Self(p | ps.subset().tag)
-    }
-    fn get_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
-        let v = self.0;
-        if ps.subset().has(v) {
-            let p = v & PTR_SUBSET_SUPERPOSITION;
-            if p == 0 {
-                return None;
-            }
-            return Some(unsafe { &mut *(p as *mut Container<T>) });
-        }
-        None
-    }
-    fn from_string(s: impl ExactSizeIterator<Item = u16>) -> Self {
-        Self::from_ptr(&STRING, StringHeader(), s)
-    }
-    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
-        self.get_ptr(&STRING)
-    }
-    fn from_object(i: impl ExactSizeIterator<Item = (Value, Value)>) -> Self {
-        Self::from_ptr(&OBJECT, ObjectHeader(), i)
-    }
-    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
-        self.get_ptr(&OBJECT)
     }
 }
 
