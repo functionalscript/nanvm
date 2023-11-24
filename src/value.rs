@@ -1,6 +1,6 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Base, Container, Info},
+    container::{Base, Container, Info, Update},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -29,7 +29,7 @@ const OBJECT_TAG: u64 = OBJECT.subset().tag;
 const FALSE: u64 = BOOL.tag;
 const TRUE: u64 = BOOL.tag | 1;
 
-fn update<const I: isize>(v: u64) -> isize {
+fn update(v: u64, u: Update) -> isize {
     if !PTR.has(v) {
         return 1;
     }
@@ -37,13 +37,13 @@ fn update<const I: isize>(v: u64) -> isize {
     if i == 0 {
         return 1;
     }
-    unsafe { Base::update::<I>(i as *mut Base) }
+    unsafe { Base::update(i as *mut Base, u) }
 }
 
 impl Clone for Value {
     fn clone(&self) -> Self {
         let c = self.0;
-        update::<1>(c);
+        update(c, Update::AddRef);
         Self(c)
     }
 }
@@ -51,7 +51,7 @@ impl Clone for Value {
 impl Drop for Value {
     fn drop(&mut self) {
         let c = self.0;
-        if update::<-1>(c) != 0 {
+        if update(c, Update::Release) != 0 {
             return;
         }
         let p = c & PTR_SUBSET_SUPERPOSITION;
@@ -64,13 +64,11 @@ impl Drop for Value {
 }
 
 impl Value {
+    // number
     fn from_number(n: f64) -> Self {
         let n = n.to_bits();
         assert!(number::is_valid(n));
         Self(n)
-    }
-    fn from_bool(b: bool) -> Self {
-        Self(if b { TRUE } else { FALSE })
     }
     const fn is_number(&self) -> bool {
         !EXTENSION.has(self.0)
@@ -81,6 +79,10 @@ impl Value {
         }
         None
     }
+    // bool
+    const fn from_bool(b: bool) -> Self {
+        Self(if b { TRUE } else { FALSE })
+    }
     const fn is_bool(&self) -> bool {
         BOOL.has(self.0)
     }
@@ -90,21 +92,59 @@ impl Value {
         }
         None
     }
+    //
     const fn is_ptr(&self) -> bool {
         PTR.has(self.0)
     }
-    const fn is_string(&self) -> bool {
-        STRING.subset().has(self.0)
-    }
+    //
     const fn null() -> Self {
         Self(OBJECT.subset().tag)
     }
     const fn is_null(&self) -> bool {
         self.0 == OBJECT.subset().tag
     }
+    //
+    fn create_container<T: Info>(
+        ps: &PtrSubset<T>,
+        info: T,
+        i: impl ExactSizeIterator<Item = T::Item>,
+    ) -> Self {
+        let p = unsafe { Container::alloc(info, i) } as u64;
+        assert!(ps.subset().mask & p == 0);
+        Self(p | ps.subset().tag)
+    }
+    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+        let v = self.0;
+        if ps.subset().has(v) {
+            let p = v & PTR_SUBSET_SUPERPOSITION;
+            if p == 0 {
+                return None;
+            }
+            return Some(unsafe { &mut *(p as *mut Container<T>) });
+        }
+        None
+    }
+    // string
+    const fn is_string(&self) -> bool {
+        STRING.subset().has(self.0)
+    }
+    fn from_string(s: impl ExactSizeIterator<Item = u16>) -> Self {
+        Self::create_container(&STRING, StringHeader(), s)
+    }
+    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
+        self.get_container(&STRING)
+    }
+    // object
     const fn is_object(&self) -> bool {
         OBJECT.subset().has(self.0)
     }
+    fn from_object(i: impl ExactSizeIterator<Item = (Value, Value)>) -> Self {
+        Self::create_container(&OBJECT, ObjectHeader(), i)
+    }
+    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
+        self.get_container(&OBJECT)
+    }
+    //
     const fn get_type(&self) -> Type {
         if self.is_ptr() {
             if self.is_string() {
@@ -119,23 +159,6 @@ impl Value {
                 Type::Bool
             }
         }
-    }
-    fn get_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
-        let v = self.0;
-        if ps.subset().has(v) {
-            let p = v & PTR_SUBSET_SUPERPOSITION;
-            if p == 0 {
-                return None;
-            }
-            return Some(unsafe { &mut *(p as *mut Container<T>) });
-        }
-        None
-    }
-    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
-        self.get_ptr(&STRING)
-    }
-    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
-        self.get_ptr(&OBJECT)
     }
 }
 

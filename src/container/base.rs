@@ -7,12 +7,14 @@ impl Default for Base {
     }
 }
 
-pub const ADD_REF: isize = 1;
-pub const RELEASE: isize = -1;
+pub enum Update {
+    AddRef = 1,
+    Release = -1,
+}
 
 impl Base {
-    pub unsafe fn update<const I: isize>(p: *mut Self) -> isize {
-        let c = (*p).0 + I;
+    pub unsafe fn update(p: *mut Self, update: Update) -> isize {
+        let c = (*p).0 + update as isize;
         (*p).0 = c;
         c
     }
