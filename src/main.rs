@@ -13,11 +13,11 @@ enum JsonToken {
 
 enum TokenizerState {
     Initial,
-    ParseString(Vec<char>),
-    ParseEscapeChar(Vec<char>),
-    //ParseUnicodeChar(Vec<char>), //todo: implement
+    ParseString(String),
+    ParseEscapeChar(String),
+    //ParseUnicodeChar(String), //todo: implement
     ParseNumber(ParseNumberState),
-    ParseOperator(Vec<char>),
+    ParseOperator(String),
     ParseMinus,
 }
 
@@ -34,7 +34,7 @@ enum ParseNumberKind {
 
 struct ParseNumberState {
     kind: ParseNumberKind,
-    value: Vec<char>,
+    value: String,
     s: Sign,
     m: i128,
     f: f64,
