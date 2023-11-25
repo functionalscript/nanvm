@@ -1,4 +1,4 @@
-use std::mem::forget;
+use std::{mem::forget, result};
 
 use crate::{
     container::{Container, ContainerRef, Info, Ref},
@@ -32,6 +32,14 @@ impl From<bool> for Unknown {
     }
 }
 
+impl TryFrom<Unknown> for bool {
+    type Error = ();
+    #[inline(always)]
+    fn try_from(u: Unknown) -> Result<Self> {
+        u.get_bool()
+    }
+}
+
 impl From<StringRef> for Unknown {
     #[inline(always)]
     fn from(s: StringRef) -> Self {
@@ -45,6 +53,8 @@ impl From<ObjectRef> for Unknown {
         Self::from_ref(OBJECT, o)
     }
 }
+
+type Result<T> = result::Result<T, ()>;
 
 impl Unknown {
     #[inline(always)]
@@ -60,11 +70,11 @@ impl Unknown {
     const fn is_number(&self) -> bool {
         !EXTENSION.has(self.u64())
     }
-    fn get_number(&self) -> Option<f64> {
+    fn get_number(&self) -> Result<f64> {
         if self.is_number() {
-            return Some(f64::from_bits(self.u64()));
+            return Ok(f64::from_bits(self.u64()));
         }
-        None
+        Err(())
     }
     // bool
     #[inline(always)]
@@ -75,11 +85,11 @@ impl Unknown {
     const fn is_bool(&self) -> bool {
         BOOL.has(self.u64())
     }
-    const fn get_bool(&self) -> Option<bool> {
+    const fn get_bool(&self) -> Result<bool> {
         if self.is_bool() {
-            return Some(self.u64() != FALSE);
+            return Ok(self.u64() != FALSE);
         }
-        None
+        Err(())
     }
     //
     #[inline(always)]
@@ -197,32 +207,29 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number() {
-        assert_eq!(Unknown::from(1.0).get_number(), Some(1.0));
+        assert_eq!(Unknown::from(1.0).get_number(), Ok(1.0));
         //let y = -1.0;
         let x: Unknown = (-1.0).into();
-        assert_eq!(x.get_number(), Some(-1.0));
-        assert_eq!(
-            Unknown::from(f64::INFINITY).get_number(),
-            Some(f64::INFINITY)
-        );
+        assert_eq!(x.get_number(), Ok(-1.0));
+        assert_eq!(Unknown::from(f64::INFINITY).get_number(), Ok(f64::INFINITY));
         assert_eq!(
             Unknown::from(f64::NEG_INFINITY).get_number(),
-            Some(f64::NEG_INFINITY)
+            Ok(f64::NEG_INFINITY)
         );
         assert!(Unknown::from(f64::NAN).get_number().unwrap().is_nan());
         //
-        assert_eq!(Unknown::from_bool(true).get_number(), None);
-        assert_eq!(Unknown::null().get_number(), None);
+        assert_eq!(Unknown::from_bool(true).get_number(), Err(()));
+        assert_eq!(Unknown::null().get_number(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(Unknown::from_bool(true).get_bool(), Some(true));
-        assert_eq!(Unknown::from(false).get_bool(), Some(false));
+        assert_eq!(Unknown::from_bool(true).get_bool(), Ok(true));
+        assert_eq!(Unknown::from(false).get_bool(), Ok(false));
         //
-        assert_eq!(Unknown::from(15.0).get_bool(), None);
-        assert_eq!(Unknown::null().get_bool(), None);
+        assert_eq!(Unknown::from(15.0).get_bool(), Err(()));
+        assert_eq!(Unknown::null().get_bool(), Err(()));
     }
 
     #[test]
