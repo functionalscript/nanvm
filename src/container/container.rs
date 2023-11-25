@@ -35,19 +35,17 @@ impl<T: Info> Container<T> {
         assert_eq!(len, 0);
         p
     }
-    fn get_items_mut(&mut self) -> &mut [T::Item] {
-        Self::FAS_LAYOUT.get_mut(self, self.len)
-    }
-    pub fn dealloc(p: *mut Self) {
-        unsafe {
-            let container = &mut *p;
-            let len = container.len;
-            for i in container.get_items_mut() {
-                read(i);
-            }
-            read(&container.info);
-            System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
+    pub unsafe fn dealloc(p: *mut Self) {
+        let container = &mut *p;
+        let len = container.len;
+        for i in container.get_items_mut() {
+            read(i);
         }
+        read(&container.info);
+        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
+    }
+    pub fn get_items_mut(&mut self) -> &mut [T::Item] {
+        Self::FAS_LAYOUT.get_mut(self, self.len)
     }
 }
 
@@ -92,10 +90,12 @@ mod test {
     }
 
     fn release<T: Info>(p: *mut Container<T>) {
-        if unsafe { Base::update(&mut (*p).base, Update::Release) } != 0 {
-            return;
+        unsafe {
+            if Base::update(&mut (*p).base, Update::Release) != 0 {
+                return;
+            }
+            Container::dealloc(p)
         }
-        Container::dealloc(p)
     }
 
     #[test]
