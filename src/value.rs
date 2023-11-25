@@ -37,7 +37,7 @@ fn update(v: u64, u: Update) -> isize {
     if i == 0 {
         return 1;
     }
-    unsafe { Base::update(i as *mut Base, u) }
+    unsafe { Base::update(&mut *(i as *mut Base), u) }
 }
 
 impl Clone for Value {
