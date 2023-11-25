@@ -17,6 +17,7 @@ use super::{
 pub type Unknown = Ref<Internal>;
 
 impl From<f64> for Unknown {
+    #[inline(always)]
     fn from(n: f64) -> Self {
         let n = n.to_bits();
         assert!(number::is_valid(n));
@@ -28,6 +29,13 @@ impl From<bool> for Unknown {
     #[inline(always)]
     fn from(b: bool) -> Self {
         Self::from_bool(b)
+    }
+}
+
+impl From<StringRef> for Unknown {
+    #[inline(always)]
+    fn from(s: StringRef) -> Self {
+        Self::from_ref(STRING, s)
     }
 }
 
@@ -82,7 +90,7 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn from_ref<T: Info>(ps: PtrSubset<T>, s: Ref<*mut Container<T>>) -> Self {
+    fn from_ref<T: Info>(ps: PtrSubset<T>, s: ContainerRef<T>) -> Self {
         let p: *mut Container<T> = *s.get();
         forget(s);
         Self::from_u64((p as u64) | ps.subset().tag)
@@ -115,10 +123,6 @@ impl Unknown {
     #[inline(always)]
     const fn is_string(&self) -> bool {
         STRING.subset().has(self.u64())
-    }
-    #[inline(always)]
-    fn from_string(s: StringRef) -> Self {
-        Self::from_ref(STRING, s)
     }
     #[inline(always)]
     fn get_string(&self) -> Option<&mut Container<StringHeader>> {
@@ -229,12 +233,6 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_object() {
-        assert!(Unknown::null().is_object());
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
     fn test_type() {
         assert_eq!(Unknown::from(15.0).get_type(), Type::Number);
         assert_eq!(Unknown::from(true).get_type(), Type::Bool);
@@ -245,12 +243,26 @@ mod test {
     #[wasm_bindgen_test]
     fn test_string() {
         let mut s = StringRef::alloc(StringHeader(), [].into_iter());
-        assert!(Unknown::from_string(s.clone()).is_string());
+        assert!(Unknown::from(s.clone()).is_string());
         let v = s.get_items_mut();
         assert!(v.is_empty());
         //
         assert!(!Unknown::from(15.0).is_string());
         assert!(!Unknown::from(true).is_string());
         assert!(!Unknown::null().is_string());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_object() {
+        assert!(Unknown::null().is_object());
+
+        let mut o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
+        assert!(Unknown::from_object(o.clone()).is_object());
+        let v = o.get_items_mut();
+        assert!(v.is_empty());
+        //
+        assert!(!Unknown::from(15.0).is_object());
+        assert!(!Unknown::from(true).is_object());
     }
 }
