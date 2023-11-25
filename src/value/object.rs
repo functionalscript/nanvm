@@ -1,4 +1,7 @@
-use crate::{container::{Info, ContainerRef}, value::unknown::Value};
+use crate::{
+    container::{ContainerRef, Info},
+    value::unknown::Value,
+};
 
 pub struct ObjectHeader();
 

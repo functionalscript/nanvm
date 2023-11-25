@@ -1,4 +1,4 @@
-use crate::container::{Info, ContainerRef};
+use crate::container::{ContainerRef, Info};
 
 pub struct StringHeader();
 

@@ -1,7 +1,7 @@
 use std::mem::forget;
 
 use crate::{
-    container::{Container, Info, Ref, ContainerRef},
+    container::{Container, ContainerRef, Info, Ref},
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     type_::Type,
     value::{number, string::StringHeader},
@@ -10,7 +10,8 @@ use crate::{
 use super::{
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
-    object::{ObjectHeader, ObjectRef}, string::StringRef,
+    object::{ObjectHeader, ObjectRef},
+    string::StringRef,
 };
 
 pub type Value = Ref<Internal>;
