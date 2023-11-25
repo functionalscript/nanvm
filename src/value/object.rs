@@ -1,12 +1,12 @@
 use crate::{
     container::{ContainerRef, Info},
-    value::unknown::Value,
+    value::unknown::Unknown,
 };
 
 pub struct ObjectHeader();
 
 impl Info for ObjectHeader {
-    type Item = (Value, Value);
+    type Item = (Unknown, Unknown);
 }
 
 pub type ObjectRef = ContainerRef<ObjectHeader>;

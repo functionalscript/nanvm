@@ -14,9 +14,17 @@ use super::{
     string::StringRef,
 };
 
-pub type Value = Ref<Internal>;
+pub type Unknown = Ref<Internal>;
 
-impl Value {
+impl From<f64> for Unknown {
+    fn from(n: f64) -> Self {
+        let n = n.to_bits();
+        assert!(number::is_valid(n));
+        Self::from_u64(n)
+    }
+}
+
+impl Unknown {
     #[inline(always)]
     const fn from_u64(u: u64) -> Self {
         Self::from_raw(Internal(u))
@@ -26,12 +34,6 @@ impl Value {
         self.get().0
     }
     // number
-    #[inline(always)]
-    fn from_number(n: f64) -> Self {
-        let n = n.to_bits();
-        assert!(number::is_valid(n));
-        Self::from_u64(n)
-    }
     #[inline(always)]
     const fn is_number(&self) -> bool {
         !EXTENSION.has(self.u64())
@@ -181,52 +183,68 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number() {
-        assert_eq!(Value::from_number(1.0).get_number(), Some(1.0));
-        assert_eq!(Value::from_number(-1.0).get_number(), Some(-1.0));
+        assert_eq!(Unknown::from(1.0).get_number(), Some(1.0));
+        assert_eq!(Unknown::from(-1.0).get_number(), Some(-1.0));
         assert_eq!(
-            Value::from_number(f64::INFINITY).get_number(),
+            Unknown::from(f64::INFINITY).get_number(),
             Some(f64::INFINITY)
         );
         assert_eq!(
-            Value::from_number(f64::NEG_INFINITY).get_number(),
+            Unknown::from(f64::NEG_INFINITY).get_number(),
             Some(f64::NEG_INFINITY)
         );
-        assert!(Value::from_number(f64::NAN).get_number().unwrap().is_nan());
+        assert!(Unknown::from(f64::NAN)
+            .get_number()
+            .unwrap()
+            .is_nan());
         //
-        assert_eq!(Value::from_bool(true).get_number(), None);
-        assert_eq!(Value::null().get_number(), None);
+        assert_eq!(Unknown::from_bool(true).get_number(), None);
+        assert_eq!(Unknown::null().get_number(), None);
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(Value::from_bool(true).get_bool(), Some(true));
-        assert_eq!(Value::from_bool(false).get_bool(), Some(false));
+        assert_eq!(Unknown::from_bool(true).get_bool(), Some(true));
+        assert_eq!(Unknown::from_bool(false).get_bool(), Some(false));
         //
-        assert_eq!(Value::from_number(15.0).get_bool(), None);
-        assert_eq!(Value::null().get_bool(), None);
+        assert_eq!(Unknown::from(15.0).get_bool(), None);
+        assert_eq!(Unknown::null().get_bool(), None);
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_null() {
-        assert!(Value::null().is_null());
+        assert!(Unknown::null().is_null());
         //
-        assert!(!Value::from_number(-15.7).is_null());
-        assert!(!Value::from_bool(false).is_null());
+        assert!(!Unknown::from(-15.7).is_null());
+        assert!(!Unknown::from_bool(false).is_null());
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
-        assert!(Value::null().is_object());
+        assert!(Unknown::null().is_object());
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_type() {
-        assert_eq!(Value::from_number(15.0).get_type(), Type::Number);
-        assert_eq!(Value::from_bool(true).get_type(), Type::Bool);
-        assert_eq!(Value::null().get_type(), Type::Object);
+        assert_eq!(Unknown::from(15.0).get_type(), Type::Number);
+        assert_eq!(Unknown::from_bool(true).get_type(), Type::Bool);
+        assert_eq!(Unknown::null().get_type(), Type::Object);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_string() {
+        let mut s = StringRef::alloc(StringHeader(), [].into_iter());
+        assert!(Unknown::from_string(s.clone()).is_string());
+        let v = s.get_items_mut();
+        assert!(v.is_empty());
+        //
+        assert!(!Unknown::from(15.0).is_string());
+        assert!(!Unknown::from_bool(true).is_string());
+        assert!(!Unknown::null().is_string());
     }
 }

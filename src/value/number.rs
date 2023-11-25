@@ -1,3 +1,5 @@
+use super::unknown::Unknown;
+
 // compatible with `f64`
 pub const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 pub const NAN: u64 = 0x7FF8_0000_0000_0000;

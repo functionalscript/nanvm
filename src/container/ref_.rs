@@ -42,7 +42,10 @@ impl<T: OptionalBase> Drop for Ref<T> {
 pub type ContainerRef<T> = Ref<*mut Container<T>>;
 
 impl<T: Info> ContainerRef<T> {
-    fn alloc(info: T, i: impl ExactSizeIterator<Item = T::Item>) -> Self {
+    pub fn alloc(info: T, i: impl ExactSizeIterator<Item = T::Item>) -> Self {
         Self::from_raw(unsafe { Container::alloc(info, i) })
+    }
+    pub fn get_items_mut(&mut self) -> &mut [T::Item] {
+        unsafe { (*self.0).get_items_mut() }
     }
 }
