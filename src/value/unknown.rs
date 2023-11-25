@@ -24,6 +24,13 @@ impl From<f64> for Unknown {
     }
 }
 
+impl From<bool> for Unknown {
+    #[inline(always)]
+    fn from(b: bool) -> Self {
+        Self::from_bool(b)
+    }
+}
+
 impl Unknown {
     #[inline(always)]
     const fn from_u64(u: u64) -> Self {
@@ -205,7 +212,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_bool() {
         assert_eq!(Unknown::from_bool(true).get_bool(), Some(true));
-        assert_eq!(Unknown::from_bool(false).get_bool(), Some(false));
+        assert_eq!(Unknown::from(false).get_bool(), Some(false));
         //
         assert_eq!(Unknown::from(15.0).get_bool(), None);
         assert_eq!(Unknown::null().get_bool(), None);
@@ -217,7 +224,7 @@ mod test {
         assert!(Unknown::null().is_null());
         //
         assert!(!Unknown::from(-15.7).is_null());
-        assert!(!Unknown::from_bool(false).is_null());
+        assert!(!Unknown::from(false).is_null());
     }
 
     #[test]
@@ -230,7 +237,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_type() {
         assert_eq!(Unknown::from(15.0).get_type(), Type::Number);
-        assert_eq!(Unknown::from_bool(true).get_type(), Type::Bool);
+        assert_eq!(Unknown::from(true).get_type(), Type::Bool);
         assert_eq!(Unknown::null().get_type(), Type::Object);
     }
 
@@ -243,7 +250,7 @@ mod test {
         assert!(v.is_empty());
         //
         assert!(!Unknown::from(15.0).is_string());
-        assert!(!Unknown::from_bool(true).is_string());
+        assert!(!Unknown::from(true).is_string());
         assert!(!Unknown::null().is_string());
     }
 }
