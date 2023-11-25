@@ -184,7 +184,9 @@ mod test {
     #[wasm_bindgen_test]
     fn test_number() {
         assert_eq!(Unknown::from(1.0).get_number(), Some(1.0));
-        assert_eq!(Unknown::from(-1.0).get_number(), Some(-1.0));
+        //let y = -1.0;
+        let x: Unknown = (-1.0).into();
+        assert_eq!(x.get_number(), Some(-1.0));
         assert_eq!(
             Unknown::from(f64::INFINITY).get_number(),
             Some(f64::INFINITY)
