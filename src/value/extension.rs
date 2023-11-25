@@ -1,6 +1,7 @@
 use crate::{
-    common::bit_subset64::BitSubset64, object::ObjectHeader, ptr_subset::PtrSubset,
-    string::StringHeader,
+    common::bit_subset64::BitSubset64,
+    ptr_subset::PtrSubset,
+    value::{object::ObjectHeader, string::StringHeader},
 };
 
 pub const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
