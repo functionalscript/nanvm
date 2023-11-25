@@ -39,6 +39,13 @@ impl From<StringRef> for Unknown {
     }
 }
 
+impl From<ObjectRef> for Unknown {
+    #[inline(always)]
+    fn from(o: ObjectRef) -> Self {
+        Self::from_ref(OBJECT, o)
+    }
+}
+
 impl Unknown {
     #[inline(always)]
     const fn from_u64(u: u64) -> Self {
@@ -136,10 +143,6 @@ impl Unknown {
     #[inline(always)]
     const fn is_object(&self) -> bool {
         OBJECT.subset().has(self.u64())
-    }
-    #[inline(always)]
-    fn from_object(s: ObjectRef) -> Self {
-        Self::from_ref(OBJECT, s)
     }
     #[inline(always)]
     fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
@@ -258,7 +261,7 @@ mod test {
         assert!(Unknown::null().is_object());
 
         let mut o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
-        assert!(Unknown::from_object(o.clone()).is_object());
+        assert!(Unknown::from(o.clone()).is_object());
         let v = o.get_items_mut();
         assert!(v.is_empty());
         //
