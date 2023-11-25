@@ -1,6 +1,8 @@
 mod extension;
 mod internal;
 
+use std::ptr::{null_mut, write};
+
 use crate::{
     container::{Base, Container, Info, Ref, Update},
     number,
@@ -70,6 +72,33 @@ impl Value {
     #[inline(always)]
     const fn is_null(&self) -> bool {
         self.u64() == OBJECT.subset().tag
+    }
+    //
+    fn from_ref<T: Info>(ps: PtrSubset<T>, s: Ref<*mut Container<T>>) -> Self {
+        let p: *mut Container<T> = *s.get();
+        // unsafe { write(&p, s) };
+        Self::from_u64((p as u64) | STRING.subset().tag)
+    }
+    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+        let v = self.u64();
+        if ps.subset().has(v) {
+            let p = v & PTR_SUBSET_SUPERPOSITION;
+            if p == 0 {
+                return None;
+            }
+            return Some(unsafe { &mut *(p as *mut Container<T>) });
+        }
+        None
+    }
+    //
+    const fn is_string(&self) -> bool {
+        STRING.subset().has(self.u64())
+    }
+    fn from_string(s: Ref<*mut Container<StringHeader>>) -> Self {
+        Self::from_ref(STRING, s)
+    }
+    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
+        self.get_container(&STRING)
     }
 }
 

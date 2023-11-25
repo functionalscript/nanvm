@@ -1,6 +1,6 @@
 use std::{
     alloc::{GlobalAlloc, System},
-    ptr::{read, write},
+    ptr::{drop_in_place, read, write},
 };
 
 use crate::common::fas::FasLayout;
@@ -38,10 +38,8 @@ impl<T: Info> Container<T> {
     pub unsafe fn dealloc(p: *mut Self) {
         let container = &mut *p;
         let len = container.len;
-        for i in container.get_items_mut() {
-            read(i);
-        }
-        read(&container.info);
+        drop_in_place(container.get_items_mut());
+        drop_in_place(p);
         System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
     }
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {

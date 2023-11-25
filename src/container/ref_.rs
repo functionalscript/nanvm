@@ -1,4 +1,4 @@
-use super::{optional_base::OptionalBase, Update};
+use super::{optional_base::OptionalBase, Container, Info, Update};
 
 #[repr(transparent)]
 pub struct Ref<T: OptionalBase>(T);
@@ -36,5 +36,11 @@ impl<T: OptionalBase> Drop for Ref<T> {
                 self.0.dealloc(base);
             }
         }
+    }
+}
+
+impl<T: Info> Ref<*mut Container<T>> {
+    fn alloc(info: T, i: impl ExactSizeIterator<Item = T::Item>) -> Self {
+        Self::new(unsafe { Container::alloc(info, i) })
     }
 }
