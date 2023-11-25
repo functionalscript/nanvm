@@ -46,9 +46,6 @@ impl<T: Info> Container<T> {
     fn get_items_mut(&mut self) -> &mut [T::Item] {
         Self::FAS_LAYOUT.get_mut(self, self.len)
     }
-    pub unsafe fn add_ref(p: *mut Self) {
-        Base::update(&mut (*p).base, Update::AddRef);
-    }
     pub fn dealloc(p: *mut Self) {
         unsafe {
             let container = &mut *p;
@@ -59,12 +56,6 @@ impl<T: Info> Container<T> {
             read(&container.info);
             System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
         }
-    }
-    pub unsafe fn release(p: *mut Self) {
-        if Base::update(&mut (*p).base, Update::Release) != 0 {
-            return;
-        }
-        Self::dealloc(p)
     }
 }
 
@@ -102,14 +93,15 @@ mod test {
 
     fn add_ref<T: Info>(p: *mut Container<T>) {
         unsafe {
-            Container::add_ref(p);
+            Base::update(&mut (*p).base, Update::AddRef);
         }
     }
 
     fn release<T: Info>(p: *mut Container<T>) {
-        unsafe {
-            Container::release(p);
+        if unsafe { Base::update(&mut (*p).base, Update::Release) } != 0 {
+            return;
         }
+        Container::dealloc(p)
     }
 
     #[test]
