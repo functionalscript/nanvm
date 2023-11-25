@@ -7,7 +7,7 @@ use super::extension::{OBJECT, PTR, STRING};
 
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct Internal(u64);
+pub struct Internal(pub u64);
 
 impl OptionalBase for Internal {
     unsafe fn get_base(&self) -> Option<*mut Base> {

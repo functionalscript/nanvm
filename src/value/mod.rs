@@ -2,7 +2,7 @@ mod extension;
 mod internal;
 
 use crate::{
-    container::{Base, Container, Info, Update},
+    container::{Base, Container, Info, Ref, Update},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -10,8 +10,70 @@ use crate::{
     type_::Type,
 };
 
-use self::extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING, TRUE};
+use self::{
+    extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING, TRUE},
+    internal::Internal,
+};
 
+pub type Value = Ref<Internal>;
+
+impl Value {
+    #[inline(always)]
+    const fn from_u64(u: u64) -> Self {
+        Self::new(Internal(u))
+    }
+    #[inline(always)]
+    const fn u64(&self) -> u64 {
+        self.get().0
+    }
+    // number
+    #[inline(always)]
+    fn from_number(n: f64) -> Self {
+        let n = n.to_bits();
+        assert!(number::is_valid(n));
+        Self::from_u64(n)
+    }
+    #[inline(always)]
+    const fn is_number(&self) -> bool {
+        !EXTENSION.has(self.u64())
+    }
+    fn get_number(&self) -> Option<f64> {
+        if self.is_number() {
+            return Some(f64::from_bits(self.u64()));
+        }
+        None
+    }
+    // bool
+    const fn from_bool(b: bool) -> Self {
+        Self::from_u64((b as u64) | BOOL.tag)
+    }
+    #[inline(always)]
+    const fn is_bool(&self) -> bool {
+        BOOL.has(self.u64())
+    }
+    const fn get_bool(&self) -> Option<bool> {
+        if self.is_bool() {
+            return Some(self.u64() != FALSE);
+        }
+        None
+    }
+    //
+    #[inline(always)]
+    const fn is_ptr(&self) -> bool {
+        PTR.has(self.u64())
+    }
+    //
+    #[inline(always)]
+    const fn null() -> Self {
+        Self::from_u64(OBJECT.subset().tag)
+    }
+    #[inline(always)]
+    const fn is_null(&self) -> bool {
+        self.u64() == OBJECT.subset().tag
+    }
+}
+
+/*
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct Value(u64);
@@ -226,3 +288,4 @@ mod test {
         assert_eq!(Value::null().get_type(), Type::Object);
     }
 }
+*/

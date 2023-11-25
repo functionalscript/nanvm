@@ -1,12 +1,16 @@
 use super::{optional_base::OptionalBase, Update};
 
 #[repr(transparent)]
-struct Ref<T: OptionalBase>(T);
+pub struct Ref<T: OptionalBase>(T);
 
 impl<T: OptionalBase> Ref<T> {
     #[inline(always)]
-    fn new(t: T) -> Self {
+    pub const fn new(t: T) -> Self {
         Self(t)
+    }
+    #[inline(always)]
+    pub const fn get(&self) -> &T {
+        &self.0
     }
 }
 
