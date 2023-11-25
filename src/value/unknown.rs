@@ -193,10 +193,7 @@ mod test {
             Unknown::from(f64::NEG_INFINITY).get_number(),
             Some(f64::NEG_INFINITY)
         );
-        assert!(Unknown::from(f64::NAN)
-            .get_number()
-            .unwrap()
-            .is_nan());
+        assert!(Unknown::from(f64::NAN).get_number().unwrap().is_nan());
         //
         assert_eq!(Unknown::from_bool(true).get_number(), None);
         assert_eq!(Unknown::null().get_number(), None);
