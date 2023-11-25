@@ -273,7 +273,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::{*, extension::TRUE};
+    use super::{extension::TRUE, *};
     use crate::number::NAN;
 
     const _: () = assert!(BOOL.has(FALSE));
