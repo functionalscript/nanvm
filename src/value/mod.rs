@@ -1,10 +1,10 @@
 mod extension;
 mod internal;
 
-use std::ptr::{null_mut, write};
+use std::mem::forget;
 
 use crate::{
-    container::{Base, Container, Info, Ref, Update},
+    container::{Container, Info, Ref},
     number,
     object::ObjectHeader,
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
@@ -13,7 +13,7 @@ use crate::{
 };
 
 use self::{
-    extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING, TRUE},
+    extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
 };
 
@@ -76,8 +76,8 @@ impl Value {
     //
     fn from_ref<T: Info>(ps: PtrSubset<T>, s: Ref<*mut Container<T>>) -> Self {
         let p: *mut Container<T> = *s.get();
-        // unsafe { write(&p, s) };
-        Self::from_u64((p as u64) | STRING.subset().tag)
+        forget(s);
+        Self::from_u64((p as u64) | ps.subset().tag)
     }
     fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
         let v = self.u64();
@@ -90,7 +90,7 @@ impl Value {
         }
         None
     }
-    //
+    // string
     const fn is_string(&self) -> bool {
         STRING.subset().has(self.u64())
     }
@@ -99,6 +99,32 @@ impl Value {
     }
     fn get_string(&self) -> Option<&mut Container<StringHeader>> {
         self.get_container(&STRING)
+    }
+    // object
+    const fn is_object(&self) -> bool {
+        OBJECT.subset().has(self.u64())
+    }
+    fn from_object(s: Ref<*mut Container<ObjectHeader>>) -> Self {
+        Self::from_ref(OBJECT, s)
+    }
+    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
+        self.get_container(&OBJECT)
+    }
+    //
+    const fn get_type(&self) -> Type {
+        if self.is_ptr() {
+            if self.is_string() {
+                Type::String
+            } else {
+                Type::Object
+            }
+        } else {
+            if self.is_number() {
+                Type::Number
+            } else {
+                Type::Bool
+            }
+        }
     }
 }
 
@@ -239,6 +265,7 @@ impl Value {
         }
     }
 }
+*/
 
 #[cfg(test)]
 mod test {
@@ -246,7 +273,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::*;
+    use super::{*, extension::TRUE};
     use crate::number::NAN;
 
     const _: () = assert!(BOOL.has(FALSE));
@@ -317,4 +344,3 @@ mod test {
         assert_eq!(Value::null().get_type(), Type::Object);
     }
 }
-*/
