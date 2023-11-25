@@ -25,6 +25,16 @@ impl From<f64> for Unknown {
     }
 }
 
+impl TryFrom<Unknown> for f64 {
+    type Error = ();
+    fn try_from(u: Unknown) -> Result<Self> {
+        if u.is_number() {
+            return Ok(f64::from_bits(u.u64()));
+        }
+        Err(())
+    }
+}
+
 impl From<bool> for Unknown {
     #[inline(always)]
     fn from(b: bool) -> Self {
@@ -69,12 +79,6 @@ impl Unknown {
     #[inline(always)]
     const fn is_number(&self) -> bool {
         !EXTENSION.has(self.u64())
-    }
-    fn get_number(&self) -> Result<f64> {
-        if self.is_number() {
-            return Ok(f64::from_bits(self.u64()));
-        }
-        Err(())
     }
     // bool
     #[inline(always)]
@@ -207,19 +211,19 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number() {
-        assert_eq!(Unknown::from(1.0).get_number(), Ok(1.0));
+        assert_eq!(Unknown::from(1.0).try_into(), Ok(1.0));
         //let y = -1.0;
         let x: Unknown = (-1.0).into();
-        assert_eq!(x.get_number(), Ok(-1.0));
-        assert_eq!(Unknown::from(f64::INFINITY).get_number(), Ok(f64::INFINITY));
+        assert_eq!(x.try_into(), Ok(-1.0));
+        assert_eq!(Unknown::from(f64::INFINITY).try_into(), Ok(f64::INFINITY));
         assert_eq!(
-            Unknown::from(f64::NEG_INFINITY).get_number(),
+            Unknown::from(f64::NEG_INFINITY).try_into(),
             Ok(f64::NEG_INFINITY)
         );
-        assert!(Unknown::from(f64::NAN).get_number().unwrap().is_nan());
+        assert!(f64::try_from(Unknown::from(f64::NAN)).unwrap().is_nan());
         //
-        assert_eq!(Unknown::from_bool(true).get_number(), Err(()));
-        assert_eq!(Unknown::null().get_number(), Err(()));
+        assert_eq!(f64::try_from(Unknown::from_bool(true)), Err(()));
+        assert_eq!(f64::try_from(Unknown::null()), Err(()));
     }
 
     #[test]
