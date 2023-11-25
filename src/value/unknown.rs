@@ -1,7 +1,7 @@
 use std::mem::forget;
 
 use crate::{
-    container::{Container, Info, Ref},
+    container::{Container, Info, Ref, ContainerRef},
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     type_::Type,
     value::{number, string::StringHeader},
@@ -10,7 +10,7 @@ use crate::{
 use super::{
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
-    object::ObjectHeader,
+    object::{ObjectHeader, ObjectRef}, string::StringRef,
 };
 
 pub type Value = Ref<Internal>;
@@ -77,14 +77,27 @@ impl Value {
         forget(s);
         Self::from_u64((p as u64) | ps.subset().tag)
     }
-    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+    fn get_container_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<*mut Container<T>> {
         let v = self.u64();
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
             if p == 0 {
                 return None;
             }
-            return Some(unsafe { &mut *(p as *mut Container<T>) });
+            return Some(p as *mut Container<T>);
+        }
+        None
+    }
+    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+        if let Some(p) = self.get_container_ptr(ps) {
+            return Some(unsafe { &mut *p });
+        }
+        None
+    }
+    fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Option<ContainerRef<T>> {
+        if let Some(c) = self.get_container_ptr(ps) {
+            forget(self);
+            return Some(ContainerRef::new(c));
         }
         None
     }
@@ -94,12 +107,16 @@ impl Value {
         STRING.subset().has(self.u64())
     }
     #[inline(always)]
-    fn from_string(s: Ref<*mut Container<StringHeader>>) -> Self {
+    fn from_string(s: StringRef) -> Self {
         Self::from_ref(STRING, s)
     }
     #[inline(always)]
     fn get_string(&self) -> Option<&mut Container<StringHeader>> {
         self.get_container(&STRING)
+    }
+    #[inline(always)]
+    fn get_string_ref(self) -> Option<StringRef> {
+        self.get_container_ref(&STRING)
     }
     // object
     #[inline(always)]
@@ -107,7 +124,7 @@ impl Value {
         OBJECT.subset().has(self.u64())
     }
     #[inline(always)]
-    fn from_object(s: Ref<*mut Container<ObjectHeader>>) -> Self {
+    fn from_object(s: ObjectRef) -> Self {
         Self::from_ref(OBJECT, s)
     }
     #[inline(always)]
