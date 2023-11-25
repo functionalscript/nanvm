@@ -19,7 +19,7 @@ pub type Value = Ref<Internal>;
 impl Value {
     #[inline(always)]
     const fn from_u64(u: u64) -> Self {
-        Self::new(Internal(u))
+        Self::from_raw(Internal(u))
     }
     #[inline(always)]
     const fn u64(&self) -> u64 {
@@ -98,7 +98,7 @@ impl Value {
     fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Option<ContainerRef<T>> {
         if let Some(c) = self.get_container_ptr(ps) {
             forget(self);
-            return Some(ContainerRef::new(c));
+            return Some(ContainerRef::from_raw(c));
         }
         None
     }
@@ -131,6 +131,10 @@ impl Value {
     #[inline(always)]
     fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
         self.get_container(&OBJECT)
+    }
+    #[inline(always)]
+    fn get_object_ref(self) -> Option<ObjectRef> {
+        self.get_container_ref(&OBJECT)
     }
     //
     const fn get_type(&self) -> Type {

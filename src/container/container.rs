@@ -1,6 +1,6 @@
 use std::{
     alloc::{GlobalAlloc, System},
-    ptr::{drop_in_place, read, write},
+    ptr::{drop_in_place, write},
 };
 
 use crate::common::fas::FasLayout;
