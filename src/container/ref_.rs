@@ -1,21 +1,16 @@
-use super::{Base, Update};
-
-trait ToBase: Clone {
-    fn get_base(&self) -> Option<&mut Base>;
-    fn dealloc(base: &mut Base);
-}
+use super::{optional_base::OptionalBase, Update};
 
 #[repr(transparent)]
-struct Ref<T: ToBase>(T);
+struct Ref<T: OptionalBase>(T);
 
-impl<T: ToBase> Ref<T> {
+impl<T: OptionalBase> Ref<T> {
     #[inline(always)]
     fn new(t: T) -> Self {
         Self(t)
     }
 }
 
-impl<T: ToBase> Clone for Ref<T> {
+impl<T: OptionalBase> Clone for Ref<T> {
     fn clone(&self) -> Self {
         let result = Self::new(self.0.clone());
         if let Some(base) = result.0.get_base() {
@@ -25,7 +20,7 @@ impl<T: ToBase> Clone for Ref<T> {
     }
 }
 
-impl<T: ToBase> Drop for Ref<T> {
+impl<T: OptionalBase> Drop for Ref<T> {
     fn drop(&mut self) {
         if let Some(base) = self.0.get_base() {
             if unsafe { base.update(Update::AddRef) } != 0 {

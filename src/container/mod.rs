@@ -1,5 +1,6 @@
 mod base;
 mod info;
+mod optional_base;
 mod ref_;
 
 use core::{
@@ -99,6 +100,18 @@ mod test {
         type Item = DebugItem;
     }
 
+    fn add_ref<T: Info>(p: *mut Container<T>) {
+        unsafe {
+            Container::add_ref(p);
+        }
+    }
+
+    fn release<T: Info>(p: *mut Container<T>) {
+        unsafe {
+            Container::release(p);
+        }
+    }
+
     #[test]
     #[wasm_bindgen_test]
     fn sequential_test() {
@@ -106,7 +119,7 @@ mod test {
             let mut i = 0;
             let p = Container::<DebugClean>::alloc(DebugClean(&mut i), [].into_iter());
             assert_eq!(i, 0);
-            Container::release(p);
+            release(p);
             assert_eq!(i, 1);
         }
         unsafe {
@@ -122,11 +135,11 @@ mod test {
                 .into_iter(),
             );
             assert_eq!((*p).len, 3);
-            Container::add_ref(p);
-            Container::release(p);
+            add_ref(p);
+            release(p);
             assert_eq!(clean_count, 0);
             assert_eq!(item_count, 0);
-            Container::release(p);
+            release(p);
             assert_eq!(clean_count, 1);
             assert_eq!(item_count, 3);
         }
