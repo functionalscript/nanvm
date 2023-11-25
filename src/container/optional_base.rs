@@ -1,6 +1,6 @@
 use super::Base;
 
 pub trait OptionalBase: Clone {
-    fn get_base(&self) -> Option<&mut Base>;
-    fn dealloc(base: &mut Base);
+    unsafe fn get_base(&self) -> Option<*mut Base>;
+    unsafe fn dealloc(&self, base: *mut Base);
 }
