@@ -133,12 +133,12 @@ impl Unknown {
         }
         Err(())
     }
-    fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Option<ContainerRef<T>> {
+    fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Result<ContainerRef<T>> {
         if let Ok(c) = self.get_container_ptr(ps) {
             forget(self);
-            return Some(ContainerRef::from_raw(c));
+            return Ok(ContainerRef::from_raw(c));
         }
-        None
+        Err(())
     }
     // string
     #[inline(always)]
@@ -150,7 +150,7 @@ impl Unknown {
         self.get_container(&STRING)
     }
     #[inline(always)]
-    fn get_string_ref(self) -> Option<StringRef> {
+    fn get_string_ref(self) -> Result<StringRef> {
         self.get_container_ref(&STRING)
     }
     // object
@@ -163,7 +163,7 @@ impl Unknown {
         self.get_container(&OBJECT)
     }
     #[inline(always)]
-    fn get_object_ref(self) -> Option<ObjectRef> {
+    fn get_object_ref(self) -> Result<ObjectRef> {
         self.get_container_ref(&OBJECT)
     }
     //
