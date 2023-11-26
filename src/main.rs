@@ -47,13 +47,26 @@ enum Sign {
     Minus
 }
 
-fn tokenize(input: String) -> Vec<JsonToken> {
+fn tokenizeEof(state: &TokenizerState) -> Vec<JsonToken> {
+    todo!()
+}
 
+fn tokenizeNextChar(c: char, state: &TokenizerState) -> Vec<JsonToken> {
+    todo!()
+}
+
+fn tokenize(input: String) -> Vec<JsonToken> {
+    let state = TokenizerState::Initial;
+    for c in input.chars() {
+        tokenizeNextChar(c, &state);
+    }
+    tokenizeEof(&state);
     todo!()
 }
 
 fn main() {
-    let res = tokenize(String::from(""));
+    let result = tokenize(String::from(""));
+
     //todo:
     //1. read text file to string
     //2. print json tokens from the string
