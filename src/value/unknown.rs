@@ -4,13 +4,13 @@ use crate::{
     container::{Container, ContainerRef, Info, Ref},
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
     type_::Type,
-    value::{number, string::StringHeader},
+    value::number,
 };
 
 use super::{
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
-    object::{ObjectContainer, ObjectHeader, ObjectRef},
+    object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
 };
 
@@ -205,6 +205,8 @@ mod test {
     use std::rc::Rc;
 
     use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::value::{object::ObjectHeader, string::StringHeader};
 
     use super::{super::extension::TRUE, number::NAN, *};
 
