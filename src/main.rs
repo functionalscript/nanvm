@@ -19,6 +19,7 @@ enum TokenizerState {
     ParseNumber(ParseNumberState),
     ParseOperator(String),
     ParseMinus,
+    Eof
 }
 
 enum ParseNumberKind {
@@ -47,20 +48,20 @@ enum Sign {
     Minus
 }
 
-fn tokenizeEof(state: &TokenizerState) -> Vec<JsonToken> {
+fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     todo!()
 }
 
-fn tokenizeNextChar(c: char, state: &TokenizerState) -> Vec<JsonToken> {
+fn tokenize_next_char(c: char, state: &TokenizerState) -> Vec<JsonToken> {
     todo!()
 }
 
 fn tokenize(input: String) -> Vec<JsonToken> {
     let state = TokenizerState::Initial;
     for c in input.chars() {
-        tokenizeNextChar(c, &state);
+        tokenize_next_char(c, &state);
     }
-    tokenizeEof(&state);
+    tokenize_eof(&state);
     todo!()
 }
 
