@@ -13,9 +13,9 @@ pub enum Update {
 }
 
 impl Base {
-    pub unsafe fn update(p: *mut Self, update: Update) -> isize {
-        let c = (*p).0 + update as isize;
-        (*p).0 = c;
+    pub unsafe fn update(&mut self, update: Update) -> isize {
+        let c = self.0 + update as isize;
+        self.0 = c;
         c
     }
 }
