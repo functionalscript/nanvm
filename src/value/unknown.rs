@@ -127,11 +127,11 @@ impl Unknown {
         }
         Err(())
     }
-    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
+    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Result<&mut Container<T>> {
         if let Ok(p) = self.get_container_ptr(ps) {
-            return Some(unsafe { &mut *p });
+            return Ok(unsafe { &mut *p });
         }
-        None
+        Err(())
     }
     fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Option<ContainerRef<T>> {
         if let Ok(c) = self.get_container_ptr(ps) {
@@ -146,7 +146,7 @@ impl Unknown {
         STRING.subset().has(self.u64())
     }
     #[inline(always)]
-    fn get_string(&self) -> Option<&mut Container<StringHeader>> {
+    fn get_string(&self) -> Result<&mut Container<StringHeader>> {
         self.get_container(&STRING)
     }
     #[inline(always)]
@@ -159,7 +159,7 @@ impl Unknown {
         OBJECT.subset().has(self.u64())
     }
     #[inline(always)]
-    fn get_object(&self) -> Option<&mut Container<ObjectHeader>> {
+    fn get_object(&self) -> Result<&mut Container<ObjectHeader>> {
         self.get_container(&OBJECT)
     }
     #[inline(always)]
