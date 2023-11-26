@@ -29,30 +29,41 @@ enum TokenizerState {
     Eof
 }
 
-enum ParseNumberKind {
+enum ParseNumberState {
     Zero,
-    Int,
-    Dot,
-    Frac,
-    Exp,
-    ExpPlus,
-    ExpMinus,
-    ExpDigits
+    Int(Integer),
+    Dot(Integer),
+    Frac(Integer),
+    Exp(Integer),
+    ExpPlus(Integer),
+    ExpMinus(Integer),
+    ExpDigits(Integer)
 }
 
-struct ParseNumberState {
-    kind: ParseNumberKind,
-    value: String,
+struct Integer {
     s: Sign,
-    m: i128,
-    f: f64,
-    es: Sign,
-    e: f64
+    m: u128,
 }
 
 enum Sign {
     Plus,
     Minus
+}
+
+fn digit_to_number(cp: u32) -> u128 {
+    u128::from(cp - u32::from('0'))
+}
+
+fn start_number(c: char) -> ParseNumberState {
+    let cp = u32::from(c);
+    ParseNumberState::Int(Integer { s: Sign::Plus, m: digit_to_number(cp) })
+}
+
+fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '1'..='9' => (vec![], TokenizerState::ParseNumber(start_number(c))),
+        _ => todo!()
+    }
 }
 
 fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
@@ -67,7 +78,10 @@ fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
 }
 
 fn tokenize_next_char(c: char, state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
-    todo!()
+    match state {
+        TokenizerState::Initial => tokenize_initial(c),
+        _ => todo!()
+    }
 }
 
 fn tokenize(input: String) -> Vec<JsonToken> {
