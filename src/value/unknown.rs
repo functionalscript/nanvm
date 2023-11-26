@@ -177,18 +177,10 @@ impl Unknown {
     const fn is_string(&self) -> bool {
         STRING.subset().has(self.u64())
     }
-    #[inline(always)]
-    fn get_string(&self) -> Result<&mut Container<StringHeader>> {
-        self.get_container(&STRING)
-    }
     // object
     #[inline(always)]
     const fn is_object(&self) -> bool {
         OBJECT.subset().has(self.u64())
-    }
-    #[inline(always)]
-    fn get_object(&self) -> Result<&mut Container<ObjectHeader>> {
-        self.get_container(&OBJECT)
     }
     //
     const fn get_type(&self) -> Type {
