@@ -74,6 +74,14 @@ impl From<ObjectRef> for Unknown {
     }
 }
 
+impl TryFrom<Unknown> for ObjectRef {
+    type Error = ();
+    #[inline(always)]
+    fn try_from(u: Unknown) -> Result<Self> {
+        u.get_container_ref(&OBJECT)
+    }
+}
+
 impl Unknown {
     #[inline(always)]
     const fn from_u64(u: u64) -> Self {
@@ -165,10 +173,6 @@ impl Unknown {
     #[inline(always)]
     fn get_object(&self) -> Result<&mut Container<ObjectHeader>> {
         self.get_container(&OBJECT)
-    }
-    #[inline(always)]
-    fn get_object_ref(self) -> Result<ObjectRef> {
-        self.get_container_ref(&OBJECT)
     }
     //
     const fn get_type(&self) -> Type {
