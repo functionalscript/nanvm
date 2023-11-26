@@ -59,6 +59,14 @@ impl From<StringRef> for Unknown {
     }
 }
 
+impl TryFrom<Unknown> for StringRef {
+    type Error = ();
+    #[inline(always)]
+    fn try_from(u: Unknown) -> Result<Self> {
+        u.get_container_ref(&STRING)
+    }
+}
+
 impl From<ObjectRef> for Unknown {
     #[inline(always)]
     fn from(o: ObjectRef) -> Self {
@@ -148,10 +156,6 @@ impl Unknown {
     #[inline(always)]
     fn get_string(&self) -> Result<&mut Container<StringHeader>> {
         self.get_container(&STRING)
-    }
-    #[inline(always)]
-    fn get_string_ref(self) -> Result<StringRef> {
-        self.get_container_ref(&STRING)
     }
     // object
     #[inline(always)]
@@ -264,6 +268,15 @@ mod test {
         assert!(!Unknown::from(15.0).is_string());
         assert!(!Unknown::from(true).is_string());
         assert!(!Unknown::null().is_string());
+
+        let s = StringRef::alloc(StringHeader(), [0x20, 0x21].into_iter());
+        assert!(Unknown::from(s.clone()).is_string());
+        let v = s.get_items_mut();
+        assert_eq!(v, [0x20, 0x21]);
+        let u = Unknown::from(s);
+        let s = StringRef::try_from(u).unwrap();
+        let items = s.get_items_mut();
+        assert_eq!(items, [0x20, 0x21]);
     }
 
     #[test]
@@ -271,7 +284,7 @@ mod test {
     fn test_object() {
         assert!(Unknown::null().is_object());
 
-        let mut o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
+        let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
         assert!(Unknown::from(o.clone()).is_object());
         let v = o.get_items_mut();
         assert!(v.is_empty());
