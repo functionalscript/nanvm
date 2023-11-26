@@ -10,7 +10,7 @@ use crate::{
 use super::{
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
-    object::{ObjectHeader, ObjectRef},
+    object::{ObjectContainer, ObjectHeader, ObjectRef},
     string::{StringContainer, StringRef},
 };
 
@@ -79,6 +79,14 @@ impl From<ObjectRef> for Unknown {
     #[inline(always)]
     fn from(o: ObjectRef) -> Self {
         Self::from_ref(OBJECT, o)
+    }
+}
+
+impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
+    type Error = ();
+    #[inline(always)]
+    fn try_from(u: &'a Unknown) -> Result<Self> {
+        u.get_container(&OBJECT)
     }
 }
 
