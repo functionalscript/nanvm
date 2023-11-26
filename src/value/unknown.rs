@@ -16,6 +16,8 @@ use super::{
 
 pub type Unknown = Ref<Internal>;
 
+type Result<T> = result::Result<T, ()>;
+
 impl From<f64> for Unknown {
     #[inline(always)]
     fn from(n: f64) -> Self {
@@ -63,8 +65,6 @@ impl From<ObjectRef> for Unknown {
         Self::from_ref(OBJECT, o)
     }
 }
-
-type Result<T> = result::Result<T, ()>;
 
 impl Unknown {
     #[inline(always)]
@@ -116,25 +116,25 @@ impl Unknown {
         forget(s);
         Self::from_u64((p as u64) | ps.subset().tag)
     }
-    fn get_container_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Option<*mut Container<T>> {
+    fn get_container_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Result<*mut Container<T>> {
         let v = self.u64();
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
             if p == 0 {
-                return None;
+                return Err(());
             }
-            return Some(p as *mut Container<T>);
+            return Ok(p as *mut Container<T>);
         }
-        None
+        Err(())
     }
     fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Option<&mut Container<T>> {
-        if let Some(p) = self.get_container_ptr(ps) {
+        if let Ok(p) = self.get_container_ptr(ps) {
             return Some(unsafe { &mut *p });
         }
         None
     }
     fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Option<ContainerRef<T>> {
-        if let Some(c) = self.get_container_ptr(ps) {
+        if let Ok(c) = self.get_container_ptr(ps) {
             forget(self);
             return Some(ContainerRef::from_raw(c));
         }
