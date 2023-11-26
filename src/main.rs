@@ -97,7 +97,8 @@ fn tokenize(input: String) -> Vec<JsonToken> {
         res.extend(tokens);
         state = new_state;
     }
-    tokenize_eof(&state);
+    let (tokens, _) = tokenize_eof(&state);
+    res.extend(tokens);
     res
 }
 
