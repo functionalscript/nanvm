@@ -62,6 +62,9 @@ fn start_number(c: char) -> ParseNumberState {
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '1'..='9' => (vec![], TokenizerState::ParseNumber(start_number(c))),
+        '\t' | '\n' | '\r' | ' ' => (vec![], TokenizerState::Initial),
+        '"' => (vec![], TokenizerState::ParseString(String::from(""))),
+
         _ => todo!()
     }
 }
