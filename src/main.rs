@@ -1,3 +1,4 @@
+#[derive(Debug)]
 enum JsonToken {
     True,
     False,
@@ -11,6 +12,7 @@ enum JsonToken {
     ErrorToken(ErrorType),
 }
 
+#[derive(Debug)]
 enum ErrorType {
     InvalidNumber,
     MissingQuotes,
@@ -101,7 +103,8 @@ fn tokenize(input: String) -> Vec<JsonToken> {
 
 fn main() {
     let result = tokenize(String::from(""));
-    print!("{}", result.len());
+    println!("{:?}", result);
+    //print!("{}", result.len());
     //todo:
     //1. read text file to string
     //2. print json tokens from the string
