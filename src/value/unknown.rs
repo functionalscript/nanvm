@@ -11,7 +11,7 @@ use super::{
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
     object::{ObjectHeader, ObjectRef},
-    string::StringRef,
+    string::{StringContainer, StringRef},
 };
 
 pub type Unknown = Ref<Internal>;
@@ -56,6 +56,14 @@ impl From<StringRef> for Unknown {
     #[inline(always)]
     fn from(s: StringRef) -> Self {
         Self::from_ref(STRING, s)
+    }
+}
+
+impl<'a> TryFrom<&'a Unknown> for &'a mut StringContainer {
+    type Error = ();
+    #[inline(always)]
+    fn try_from(u: &'a Unknown) -> Result<Self> {
+        u.get_container(&STRING)
     }
 }
 
@@ -278,6 +286,11 @@ mod test {
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);
         let u = Unknown::from(s);
+        {
+            let s = <&mut StringContainer>::try_from(&u).unwrap();
+            let items = s.get_items_mut();
+            assert_eq!(items, [0x20, 0x21]);
+        }
         let s = StringRef::try_from(u).unwrap();
         let items = s.get_items_mut();
         assert_eq!(items, [0x20, 0x21]);
