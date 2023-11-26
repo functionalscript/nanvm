@@ -1,3 +1,21 @@
+pub trait ArrayEx {
+    type Item;
+    /// Move the array into a vector.
+    /// Compare to `.to_vec()`, the function doesn't require `Clone` trait.
+    fn vec(self) -> Vec<Self::Item>;
+}
+
+impl<T: Sized, const N: usize> ArrayEx for [T; N] {
+    type Item = T;
+    fn vec(self) -> Vec<Self::Item> {
+        let mut result = Vec::with_capacity(N);
+        for i in self {
+            result.push(i);
+        }
+        result
+    }
+}
+
 #[derive(Debug)]
 enum JsonToken {
     True,
@@ -63,9 +81,9 @@ fn start_number(c: char) -> ParseNumberState {
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        '1'..='9' => (vec![], TokenizerState::ParseNumber(start_number(c))),
-        '\t' | '\n' | '\r' | ' ' => (vec![], TokenizerState::Initial),
-        '"' => (vec![], TokenizerState::ParseString(String::from(""))),
+        '1'..='9' => ([].vec(), TokenizerState::ParseNumber(start_number(c))),
+        '\t' | '\n' | '\r' | ' ' => ([].vec(), TokenizerState::Initial),
+        '"' => ([].vec(), TokenizerState::ParseString(String::from(""))),
 
         _ => todo!()
     }
@@ -73,12 +91,12 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
 
 fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     match state {
-        TokenizerState::Initial => (vec![], TokenizerState::Eof),
-        TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => (vec![JsonToken::ErrorToken(ErrorType::MissingQuotes)], TokenizerState::Eof),
-        TokenizerState::InvalidNumber | TokenizerState::ParseMinus => (vec![JsonToken::ErrorToken(ErrorType::InvalidNumber)], TokenizerState::Eof),
+        TokenizerState::Initial => ([].vec(), TokenizerState::Eof),
+        TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => ([JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(), TokenizerState::Eof),
+        TokenizerState::InvalidNumber | TokenizerState::ParseMinus => ([JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(), TokenizerState::Eof),
         TokenizerState::ParseNumber(_) => todo!(),
         TokenizerState::ParseOperator(_) => todo!(),
-        TokenizerState::Eof => (vec![JsonToken::ErrorToken(ErrorType::Eof)], TokenizerState::Eof),
+        TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof),
     }
 }
 
@@ -91,7 +109,7 @@ fn tokenize_next_char(c: char, state: &TokenizerState) -> (Vec<JsonToken>, Token
 
 fn tokenize(input: String) -> Vec<JsonToken> {
     let mut state = TokenizerState::Initial;
-    let mut res = vec![];
+    let mut res = [].vec();
     for c in input.chars() {
         let (tokens, new_state) = tokenize_next_char(c, &state);
         res.extend(tokens);
