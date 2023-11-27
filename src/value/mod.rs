@@ -3,4 +3,5 @@ mod internal;
 mod number;
 mod object;
 mod string;
+mod type_;
 mod unknown;

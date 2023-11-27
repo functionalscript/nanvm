@@ -3,15 +3,15 @@ use std::{mem::forget, result};
 use crate::{
     container::{Container, ContainerRef, Info, Ref},
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-    type_::Type,
-    value::number,
 };
 
 use super::{
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
+    number,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
+    type_::Type,
 };
 
 pub type Unknown = Ref<Internal>;
