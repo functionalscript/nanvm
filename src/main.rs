@@ -47,7 +47,6 @@ enum TokenizerState {
     ParseEscapeChar(String),
     ParseUnicodeChar(String),
     ParseNumber(ParseNumberState),
-    ParseOperator(String),
     ParseMinus,
     InvalidNumber,
     Eof
@@ -122,7 +121,6 @@ fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
         TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => ([JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(), TokenizerState::Eof),
         TokenizerState::InvalidNumber | TokenizerState::ParseMinus => ([JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(), TokenizerState::Eof),
         TokenizerState::ParseNumber(_) => todo!(),
-        TokenizerState::ParseOperator(_) => todo!(),
         TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof)
     }
 }
@@ -130,7 +128,14 @@ fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
 fn tokenize_next_char(c: char, state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     match state {
         TokenizerState::Initial => tokenize_initial(c),
-        _ => todo!()
+        TokenizerState::ParseKeyword(_) => todo!(),
+        TokenizerState::ParseString(_) => todo!(),
+        TokenizerState::ParseEscapeChar(_) => todo!(),
+        TokenizerState::ParseUnicodeChar(_) => todo!(),
+        TokenizerState::InvalidNumber => todo!(),
+        TokenizerState::ParseNumber(_) => todo!(),
+        TokenizerState::ParseMinus => todo!(),
+        TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof)
     }
 }
 
