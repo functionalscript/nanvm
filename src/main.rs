@@ -184,7 +184,7 @@ fn main() {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{tokenize, JsonToken};
+    use crate::{tokenize, JsonToken, ErrorType};
 
     #[test]
     #[wasm_bindgen_test]
@@ -229,5 +229,11 @@ mod test {
 
         let result = tokenize(String::from("null"));
         assert_eq!(&result, &[JsonToken::Null]);
+
+        let result = tokenize(String::from("true false null"));
+        assert_eq!(&result, &[JsonToken::True, JsonToken::False, JsonToken::Null]);
+
+        let result = tokenize(String::from("tru tru"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidToken), JsonToken::ErrorToken(ErrorType::InvalidToken)]);
     }
 }
