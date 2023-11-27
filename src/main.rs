@@ -179,5 +179,20 @@ mod test {
     fn test_ops() {
         let result = tokenize(String::from("{"));
         assert_eq!(&result, &[JsonToken::ObjectBegin]);
+
+        let result = tokenize(String::from("}"));
+        assert_eq!(&result, &[JsonToken::ObjectEnd]);
+
+        let result = tokenize(String::from("["));
+        assert_eq!(&result, &[JsonToken::ArrayBegin]);
+
+        let result = tokenize(String::from("]"));
+        assert_eq!(&result, &[JsonToken::ArrayEnd]);
+
+        let result = tokenize(String::from(":"));
+        assert_eq!(&result, &[JsonToken::Colon]);
+
+        let result = tokenize(String::from("[{ : }]"));
+        assert_eq!(&result, &[JsonToken::ArrayBegin, JsonToken::ObjectBegin, JsonToken::Colon, JsonToken::ObjectEnd, JsonToken::ArrayEnd]);
     }
 }
