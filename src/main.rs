@@ -16,7 +16,7 @@ impl<T: Sized, const N: usize> ArrayEx for [T; N] {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 enum JsonToken {
     True,
     False,
@@ -31,7 +31,7 @@ enum JsonToken {
     ErrorToken(ErrorType),
 }
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 enum ErrorType {
     UnexpectedCharacter,
     InvalidToken,
@@ -163,8 +163,21 @@ fn main() {
 
 #[cfg(test)]
 mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::{tokenize, JsonToken};
+
     #[test]
+    #[wasm_bindgen_test]
     fn test_empty() {
-        //let result = tokenize(String::from(""));
+        let result = tokenize(String::from(""));
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_ops() {
+        let result = tokenize(String::from("{"));
+        assert_eq!(&result, &[JsonToken::ObjectBegin]);
     }
 }
