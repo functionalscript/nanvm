@@ -110,6 +110,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         '0' => ([].vec(), TokenizerState::ParseNumber(ParseNumberState::Zero(Sign::Plus))),
         '{' | '}' | '[' | ']' | ':' => ([operator_to_token(c)].vec(), TokenizerState::Initial),
         '-' => ([].vec(), TokenizerState::ParseMinus),
+        'a'..='z' => ([].vec(), TokenizerState::ParseKeyword(c.to_string())),
         _ => ([JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].vec(), TokenizerState::Initial)
     }
 }
@@ -158,4 +159,12 @@ fn main() {
     //todo:
     //1. read text file to string
     //2. print json tokens from the string
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_empty() {
+        //let result = tokenize(String::from(""));
+    }
 }
