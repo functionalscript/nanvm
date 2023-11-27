@@ -28,6 +28,7 @@ enum JsonToken {
     ArrayBegin,
     ArrayEnd,
     Colon,
+    Comma,
     ErrorToken(ErrorType),
 }
 
@@ -89,6 +90,7 @@ fn operator_to_token(c: char) -> JsonToken {
         '[' => JsonToken::ArrayBegin,
         ']' => JsonToken::ArrayEnd,
         ':' => JsonToken::Colon,
+        ',' => JsonToken::Comma,
         _ => panic!("unexpected operator")
     }
 }
@@ -108,7 +110,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         '\t' | '\n' | '\r' | ' ' => ([].vec(), TokenizerState::Initial),
         '"' => ([].vec(), TokenizerState::ParseString(String::from(""))),
         '0' => ([].vec(), TokenizerState::ParseNumber(ParseNumberState::Zero(Sign::Plus))),
-        '{' | '}' | '[' | ']' | ':' => ([operator_to_token(c)].vec(), TokenizerState::Initial),
+        '{' | '}' | '[' | ']' | ':' | ',' => ([operator_to_token(c)].vec(), TokenizerState::Initial),
         '-' => ([].vec(), TokenizerState::ParseMinus),
         'a'..='z' => ([].vec(), TokenizerState::ParseKeyword(c.to_string())),
         _ => ([JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].vec(), TokenizerState::Initial)
@@ -209,8 +211,11 @@ mod test {
         let result = tokenize(String::from(":"));
         assert_eq!(&result, &[JsonToken::Colon]);
 
-        let result = tokenize(String::from("[{ : }]"));
-        assert_eq!(&result, &[JsonToken::ArrayBegin, JsonToken::ObjectBegin, JsonToken::Colon, JsonToken::ObjectEnd, JsonToken::ArrayEnd]);
+        let result = tokenize(String::from(","));
+        assert_eq!(&result, &[JsonToken::Comma]);
+
+        let result = tokenize(String::from("[{ :, }]"));
+        assert_eq!(&result, &[JsonToken::ArrayBegin, JsonToken::ObjectBegin, JsonToken::Colon, JsonToken::Comma, JsonToken::ObjectEnd, JsonToken::ArrayEnd]);
     }
 
     #[test]
