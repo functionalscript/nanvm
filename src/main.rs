@@ -134,6 +134,18 @@ fn tokenize_keyword(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
+fn tokenize_string(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '"' => ([JsonToken::String(s.to_string())].vec(), TokenizerState::Initial),
+        '\\' => todo!(),
+        _ => {
+            let mut new_string = s.clone();
+            new_string.push(c);
+            ([].vec(), TokenizerState::ParseString(new_string))
+        }
+    }
+}
+
 fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     match state {
         TokenizerState::Initial => ([].vec(), TokenizerState::Eof),
@@ -149,7 +161,7 @@ fn tokenize_next_char(c: char, state: &TokenizerState) -> (Vec<JsonToken>, Token
     match state {
         TokenizerState::Initial => tokenize_initial(c),
         TokenizerState::ParseKeyword(s) => tokenize_keyword(c, s),
-        TokenizerState::ParseString(_) => todo!(),
+        TokenizerState::ParseString(s) => tokenize_string(c, s),
         TokenizerState::ParseEscapeChar(_) => todo!(),
         TokenizerState::ParseUnicodeChar(_) => todo!(),
         TokenizerState::InvalidNumber => todo!(),
@@ -242,5 +254,15 @@ mod test {
     fn test_whitespace() {
         let result = tokenize(String::from(" \t\n\r"));
         assert_eq!(&result, &[]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_string() {
+        let result = tokenize(String::from("\"\""));
+        assert_eq!(&result, &[JsonToken::String("".to_string())]);
+
+        let result = tokenize(String::from("\"value\""));
+        assert_eq!(&result, &[JsonToken::String("value".to_string())]);
     }
 }
