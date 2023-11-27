@@ -27,11 +27,14 @@ enum JsonToken {
     ObjectEnd,
     ArrayBegin,
     ArrayEnd,
+    Colon,
     ErrorToken(ErrorType),
 }
 
 #[derive(Debug)]
 enum ErrorType {
+    UnexpectedCharacter,
+    InvalidToken,
     InvalidNumber,
     MissingQuotes,
     Eof
@@ -39,6 +42,7 @@ enum ErrorType {
 
 enum TokenizerState {
     Initial,
+    ParseKeyword(String),
     ParseString(String),
     ParseEscapeChar(String),
     ParseUnicodeChar(String),
@@ -50,7 +54,7 @@ enum TokenizerState {
 }
 
 enum ParseNumberState {
-    Zero,
+    Zero(Sign),
     Int(Integer),
     Dot(Integer),
     Frac(Integer),
@@ -79,24 +83,47 @@ fn start_number(c: char) -> ParseNumberState {
     ParseNumberState::Int(Integer { s: Sign::Plus, m: digit_to_number(cp) })
 }
 
+fn operator_to_token(c: char) -> JsonToken {
+    match c {
+        '{' => JsonToken::ObjectBegin,
+        '}' => JsonToken::ObjectEnd,
+        '[' => JsonToken::ArrayBegin,
+        ']' => JsonToken::ArrayEnd,
+        ':' => JsonToken::Colon,
+        _ => panic!("unexpected operator")
+    }
+}
+
+fn keyword_to_token(s: &String) -> JsonToken {
+    match s.as_str() {
+        "true" => JsonToken::True,
+        "false" => JsonToken::False,
+        "null" => JsonToken::Null,
+        _ => JsonToken::ErrorToken(ErrorType::InvalidToken)
+    }
+}
+
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '1'..='9' => ([].vec(), TokenizerState::ParseNumber(start_number(c))),
         '\t' | '\n' | '\r' | ' ' => ([].vec(), TokenizerState::Initial),
         '"' => ([].vec(), TokenizerState::ParseString(String::from(""))),
-
-        _ => todo!()
+        '0' => ([].vec(), TokenizerState::ParseNumber(ParseNumberState::Zero(Sign::Plus))),
+        '{' | '}' | '[' | ']' | ':' => ([operator_to_token(c)].vec(), TokenizerState::Initial),
+        '-' => ([].vec(), TokenizerState::ParseMinus),
+        _ => ([JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].vec(), TokenizerState::Initial)
     }
 }
 
 fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     match state {
         TokenizerState::Initial => ([].vec(), TokenizerState::Eof),
+        TokenizerState::ParseKeyword(s) => ([keyword_to_token(s)].vec(), TokenizerState::Eof),
         TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => ([JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(), TokenizerState::Eof),
         TokenizerState::InvalidNumber | TokenizerState::ParseMinus => ([JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(), TokenizerState::Eof),
         TokenizerState::ParseNumber(_) => todo!(),
         TokenizerState::ParseOperator(_) => todo!(),
-        TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof),
+        TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof)
     }
 }
 
@@ -123,7 +150,6 @@ fn tokenize(input: String) -> Vec<JsonToken> {
 fn main() {
     let result = tokenize(String::from(""));
     println!("{:?}", result);
-    //print!("{}", result.len());
     //todo:
     //1. read text file to string
     //2. print json tokens from the string
