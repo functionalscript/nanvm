@@ -236,4 +236,11 @@ mod test {
         let result = tokenize(String::from("tru tru"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidToken), JsonToken::ErrorToken(ErrorType::InvalidToken)]);
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_whitespace() {
+        let result = tokenize(String::from(" \t\n\r"));
+        assert_eq!(&result, &[]);
+    }
 }
