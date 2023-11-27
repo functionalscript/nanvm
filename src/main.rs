@@ -115,6 +115,23 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
+fn tokenize_keyword(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        'a'..='z' => {
+            let mut new_string = s.clone();
+            new_string.push(c);
+            ([].vec(), TokenizerState::ParseKeyword(new_string))
+        }
+        _ => {
+            let token = keyword_to_token(s);
+            let (next_tokens, next_state) = tokenize_initial(c);
+            let mut vec = [token].vec();
+            vec.extend(next_tokens);
+            (vec, next_state)
+        }
+    }
+}
+
 fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     match state {
         TokenizerState::Initial => ([].vec(), TokenizerState::Eof),
@@ -129,7 +146,7 @@ fn tokenize_eof(state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
 fn tokenize_next_char(c: char, state: &TokenizerState) -> (Vec<JsonToken>, TokenizerState) {
     match state {
         TokenizerState::Initial => tokenize_initial(c),
-        TokenizerState::ParseKeyword(_) => todo!(),
+        TokenizerState::ParseKeyword(s) => tokenize_keyword(c, s),
         TokenizerState::ParseString(_) => todo!(),
         TokenizerState::ParseEscapeChar(_) => todo!(),
         TokenizerState::ParseUnicodeChar(_) => todo!(),
@@ -194,5 +211,18 @@ mod test {
 
         let result = tokenize(String::from("[{ : }]"));
         assert_eq!(&result, &[JsonToken::ArrayBegin, JsonToken::ObjectBegin, JsonToken::Colon, JsonToken::ObjectEnd, JsonToken::ArrayEnd]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_keyword() {
+        let result = tokenize(String::from("true"));
+        assert_eq!(&result, &[JsonToken::True]);
+
+        let result = tokenize(String::from("false"));
+        assert_eq!(&result, &[JsonToken::False]);
+
+        let result = tokenize(String::from("null"));
+        assert_eq!(&result, &[JsonToken::Null]);
     }
 }
