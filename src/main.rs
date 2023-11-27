@@ -264,5 +264,11 @@ mod test {
 
         let result = tokenize(String::from("\"value\""));
         assert_eq!(&result, &[JsonToken::String("value".to_string())]);
+
+        let result = tokenize(String::from("\"value1\" \"value2\""));
+        assert_eq!(&result, &[JsonToken::String("value1".to_string()), JsonToken::String("value2".to_string())]);
+
+        let result = tokenize(String::from("\"value"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
     }
 }
