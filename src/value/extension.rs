@@ -29,5 +29,5 @@ const STRING_TAG: u64 = STRING.subset().tag;
 pub const OBJECT: PtrSubset<ObjectHeader> = RC_SPLIT.1.ptr_subset();
 const OBJECT_TAG: u64 = OBJECT.subset().tag;
 
-pub const FALSE: u64 = BOOL.tag;
-pub const TRUE: u64 = BOOL.tag | 1;
+pub const FALSE: u64 = BOOL.tag | (false as u64);
+pub const TRUE: u64 = BOOL.tag | (true as u64);

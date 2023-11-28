@@ -69,11 +69,6 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn from_ref<T: Info>(ps: PtrSubset<T>, s: ContainerRef<T>) -> Self {
-        let p: *mut Container<T> = *s.get();
-        forget(s);
-        unsafe { Self::from_u64((p as u64) | ps.subset().tag) }
-    }
     fn get_container_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Result<*mut Container<T>> {
         let v = unsafe { self.u64() };
         if ps.subset().has(v) {
@@ -85,13 +80,6 @@ impl Unknown {
     fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Result<&mut Container<T>> {
         if let Ok(p) = self.get_container_ptr(ps) {
             return Ok(unsafe { &mut *p });
-        }
-        Err(())
-    }
-    fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Result<ContainerRef<T>> {
-        if let Ok(c) = self.get_container_ptr(ps) {
-            forget(self);
-            return Ok(unsafe { ContainerRef::from_raw(c) });
         }
         Err(())
     }
