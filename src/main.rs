@@ -38,8 +38,7 @@ enum ErrorType {
     InvalidToken,
     InvalidNumber,
     InvalidHex,
-    MissingQuotes,
-    Eof
+    MissingQuotes
 }
 
 enum TokenizerState {
@@ -50,38 +49,31 @@ enum TokenizerState {
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseNumber(ParseNumberState),
     ParseMinus,
-    InvalidNumber,
-    Eof
+    InvalidNumber
 }
 
 impl TokenizerState {
-    fn push(&mut self, c: char) -> Vec<JsonToken> {
-        let state = match self {
+    fn push(self, c: char) -> (Vec<JsonToken>, TokenizerState) {
+        match self {
             TokenizerState::Initial => tokenize_initial(c),
-            TokenizerState::ParseKeyword(s) => tokenize_keyword(c, s),
-            TokenizerState::ParseString(s) => tokenize_string(c, s),
-            TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, s),
-            TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, s),
+            TokenizerState::ParseKeyword(s) => tokenize_keyword(c, &s),
+            TokenizerState::ParseString(s) => tokenize_string(c, &s),
+            TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, &s),
+            TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, &s),
             TokenizerState::InvalidNumber => todo!(),
             TokenizerState::ParseNumber(_) => todo!(),
-            TokenizerState::ParseMinus => todo!(),
-            TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof)
-        };
-        *self = state.1;
-        state.0
+            TokenizerState::ParseMinus => todo!()
+        }
     }
 
-    fn end(&mut self) -> Vec<JsonToken> {
-        let state = match self {
-            TokenizerState::Initial => ([].vec(), TokenizerState::Eof),
-            TokenizerState::ParseKeyword(s) => ([keyword_to_token(s)].vec(), TokenizerState::Eof),
-            TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => ([JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(), TokenizerState::Eof),
-            TokenizerState::InvalidNumber | TokenizerState::ParseMinus => ([JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(), TokenizerState::Eof),
-            TokenizerState::ParseNumber(_) => todo!(),
-            TokenizerState::Eof => ([JsonToken::ErrorToken(ErrorType::Eof)].vec(), TokenizerState::Eof)
-        };
-        *self = state.1;
-        state.0
+    fn end(self) -> Vec<JsonToken> {
+        match self {
+            TokenizerState::Initial => [].vec(),
+            TokenizerState::ParseKeyword(s) => [keyword_to_token(&s)].vec(),
+            TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => [JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(),
+            TokenizerState::InvalidNumber | TokenizerState::ParseMinus => [JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(),
+            TokenizerState::ParseNumber(_) => todo!()
+        }
     }
 }
 
@@ -247,7 +239,9 @@ fn tokenize(input: String) -> Vec<JsonToken> {
     let mut state = TokenizerState::Initial;
     let mut res = [].vec();
     for c in input.chars() {
-        res.extend(state.push(c));
+        let tokens;
+        (tokens, state) = state.push(c);
+        res.extend(tokens);
     }
     res.extend(state.end());
     res
