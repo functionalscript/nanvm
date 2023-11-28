@@ -34,26 +34,11 @@ impl<'a> TryFrom<&'a Unknown> for &'a mut StringContainer {
     }
 }
 
-impl From<ObjectRef> for Unknown {
-    #[inline(always)]
-    fn from(o: ObjectRef) -> Self {
-        Self::from_ref(OBJECT, o)
-    }
-}
-
 impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
     type Error = ();
     #[inline(always)]
     fn try_from(u: &'a Unknown) -> Result<Self> {
         u.get_container(&OBJECT)
-    }
-}
-
-impl TryFrom<Unknown> for ObjectRef {
-    type Error = ();
-    #[inline(always)]
-    fn try_from(u: Unknown) -> Result<Self> {
-        u.get_container_ref(&OBJECT)
     }
 }
 
@@ -253,5 +238,14 @@ mod test {
         //
         assert!(!15.0.unknown().is_object());
         assert!(!true.unknown().is_object());
+
+        let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
+        let u = o.unknown();
+        assert_eq!(u.get_type(), Type::Object);
+        {
+            let o = u.try_to::<ObjectRef>().unwrap();
+            let items = o.get_items_mut();
+            assert!(items.is_empty());
+        }
     }
 }
