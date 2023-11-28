@@ -95,11 +95,6 @@ impl Unknown {
         }
         Err(())
     }
-    // object
-    #[inline(always)]
-    fn is_object(&self) -> bool {
-        OBJECT.subset().has(unsafe { self.u64() })
-    }
     //
     fn get_type(&self) -> Type {
         if self.is_rc() {
@@ -229,15 +224,15 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
-        assert!(!Null().unknown().is_object());
+        assert!(!Null().unknown().is::<ObjectRef>());
 
         let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
-        assert!(Unknown::from(o.clone()).is_object());
+        assert!(Unknown::from(o.clone()).is::<ObjectRef>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!15.0.unknown().is_object());
-        assert!(!true.unknown().is_object());
+        assert!(!15.0.unknown().is::<ObjectRef>());
+        assert!(!true.unknown().is::<ObjectRef>());
 
         let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
         let u = o.unknown();
