@@ -280,7 +280,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
-        let mut s = StringRef::alloc(StringHeader(), [].into_iter());
+        let s = StringRef::alloc(StringHeader(), [].into_iter());
         assert!(Unknown::from(s.clone()).is_string());
         let v = s.get_items_mut();
         assert!(v.is_empty());

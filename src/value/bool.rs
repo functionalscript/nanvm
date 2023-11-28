@@ -1,6 +1,6 @@
 use crate::common::bit_subset64::BitSubset64;
 
-use super::{tag::Tag, extension::BOOL};
+use super::{extension::BOOL, tag::Tag};
 
 impl Tag for bool {
     const SUBSET: BitSubset64 = BOOL;

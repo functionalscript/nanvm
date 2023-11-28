@@ -1,3 +1,4 @@
+mod bool;
 mod extension;
 mod internal;
 mod number;
@@ -6,4 +7,3 @@ mod string;
 mod tag;
 mod type_;
 mod unknown;
-mod bool;
