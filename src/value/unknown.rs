@@ -21,7 +21,7 @@ type Result<T> = result::Result<T, ()>;
 impl<T: Cast> From<T> for Unknown {
     #[inline(always)]
     fn from(t: T) -> Self {
-        Self::from_u64(t.cast_into())
+        unsafe { Self::from_u64(t.cast_into()) }
     }
 }
 
@@ -73,47 +73,47 @@ impl TryFrom<Unknown> for ObjectRef {
 
 impl Unknown {
     #[inline(always)]
-    pub const fn from_u64(u: u64) -> Self {
+    pub unsafe fn from_u64(u: u64) -> Self {
         Self::from_raw(Internal(u))
     }
     #[inline(always)]
-    const fn u64(&self) -> u64 {
+    unsafe fn u64(&self) -> u64 {
         self.get().0
     }
     // generic
     #[inline(always)]
     fn is<T: Cast>(&self) -> bool {
-        T::cast_is(self.u64())
+        unsafe { T::cast_is(self.u64()) }
     }
     fn try_to<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            return Ok(T::cast_from(self.move_to_raw().0));
+            return Ok(unsafe { T::cast_from(self.move_to_raw().0) });
         }
         Err(())
     }
     //
     #[inline(always)]
-    const fn is_ptr(&self) -> bool {
-        PTR.has(self.u64())
+    fn is_ptr(&self) -> bool {
+        PTR.has(unsafe { self.u64() })
     }
     //
     #[inline(always)]
-    const fn null() -> Self {
-        Self::from_u64(OBJECT.subset().tag)
+    fn null() -> Self {
+        unsafe { Self::from_u64(OBJECT.subset().tag) }
     }
     #[inline(always)]
-    const fn is_null(&self) -> bool {
-        self.u64() == OBJECT.subset().tag
+    fn is_null(&self) -> bool {
+        unsafe { self.u64() == OBJECT.subset().tag }
     }
     //
     #[inline(always)]
     fn from_ref<T: Info>(ps: PtrSubset<T>, s: ContainerRef<T>) -> Self {
         let p: *mut Container<T> = *s.get();
         forget(s);
-        Self::from_u64((p as u64) | ps.subset().tag)
+        unsafe { Self::from_u64((p as u64) | ps.subset().tag) }
     }
     fn get_container_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Result<*mut Container<T>> {
-        let v = self.u64();
+        let v = unsafe { self.u64() };
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
             if p == 0 {
@@ -132,19 +132,19 @@ impl Unknown {
     fn get_container_ref<T: Info>(self, ps: &PtrSubset<T>) -> Result<ContainerRef<T>> {
         if let Ok(c) = self.get_container_ptr(ps) {
             forget(self);
-            return Ok(ContainerRef::from_raw(c));
+            return Ok(unsafe { ContainerRef::from_raw(c) });
         }
         Err(())
     }
     // string
     #[inline(always)]
-    const fn is_string(&self) -> bool {
-        STRING.subset().has(self.u64())
+    fn is_string(&self) -> bool {
+        STRING.subset().has(unsafe { self.u64() })
     }
     // object
     #[inline(always)]
-    const fn is_object(&self) -> bool {
-        OBJECT.subset().has(self.u64())
+    fn is_object(&self) -> bool {
+        OBJECT.subset().has(unsafe { self.u64() })
     }
     //
     fn get_type(&self) -> Type {

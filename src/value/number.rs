@@ -13,15 +13,15 @@ pub const fn is_valid(v: u64) -> bool {
 
 impl Cast for f64 {
     #[inline(always)]
-    fn cast_is(u: u64) -> bool {
+    unsafe fn cast_is(u: u64) -> bool {
         !EXTENSION.has(u)
     }
     #[inline(always)]
-    fn cast_into(self) -> u64 {
+    unsafe fn cast_into(self) -> u64 {
         self.to_bits()
     }
     #[inline(always)]
-    fn cast_from(u: u64) -> Self {
+    unsafe fn cast_from(u: u64) -> Self {
         Self::from_bits(u)
     }
 }
