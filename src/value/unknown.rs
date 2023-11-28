@@ -7,8 +7,7 @@ use super::{
     extension::{PTR_SUBSET_SUPERPOSITION, RC},
     internal::Internal,
     null::Null,
-    object::ObjectContainer,
-    string::{StringContainer, StringRc},
+    string::StringRc,
     tag::TagRc,
     type_::Type,
 };
@@ -24,24 +23,6 @@ impl<T: Cast> From<T> for Unknown {
     }
 }
 
-/*
-impl<'a, T: TagRc> TryFrom<&'a Unknown> for &'a mut T {
-    type Error = ();
-    #[inline(always)]
-    fn try_from(u: &'a Unknown) -> Result<Self> {
-        u.try_ref()
-    }
-}
-
-impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
-    type Error = ();
-    #[inline(always)]
-    fn try_from(u: &'a Unknown) -> Result<Self> {
-        u.try_ref()
-    }
-}
-*/
-
 impl Unknown {
     #[inline(always)]
     unsafe fn u64(&self) -> u64 {
@@ -49,10 +30,10 @@ impl Unknown {
     }
     // generic
     #[inline(always)]
-    fn is<T: Cast>(&self) -> bool {
+    pub fn is<T: Cast>(&self) -> bool {
         unsafe { T::cast_is(self.u64()) }
     }
-    fn try_move<T: Cast>(self) -> Result<T> {
+    pub fn try_move<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
             return Ok(unsafe { T::from_unknown_internal(self.move_to_internal().0) });
         }
@@ -60,12 +41,12 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn is_rc(&self) -> bool {
+    pub fn is_rc(&self) -> bool {
         RC.has(unsafe { self.u64() })
     }
     //
     #[inline(always)]
-    fn try_ref<T: TagRc>(&self) -> Result<&mut Container<T>> {
+    pub fn try_ref<T: TagRc>(&self) -> Result<&mut Container<T>> {
         let v = unsafe { self.u64() };
         if T::RC_SUBSET.has(v) {
             let p = (v & PTR_SUBSET_SUPERPOSITION) as *mut Container<T>;
@@ -74,7 +55,7 @@ impl Unknown {
         Err(())
     }
     //
-    fn get_type(&self) -> Type {
+    pub fn get_type(&self) -> Type {
         if self.is_rc() {
             if self.is::<StringRc>() {
                 Type::String
