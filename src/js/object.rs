@@ -2,7 +2,7 @@ use crate::{
     allocator::GlobalAllocator,
     common::bit_subset64::BitSubset64,
     container::{Container, Info, Rc},
-    js::unknown::Unknown,
+    js::any::Any,
 };
 
 use super::{extension::OBJECT, tag_rc::TagRc};
@@ -10,7 +10,7 @@ use super::{extension::OBJECT, tag_rc::TagRc};
 pub struct ObjectHeader();
 
 impl Info for ObjectHeader {
-    type Item = (Unknown, Unknown);
+    type Item = (Any, Any);
     type Allocator = GlobalAllocator;
 }
 

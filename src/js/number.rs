@@ -17,11 +17,11 @@ impl Cast for f64 {
         !EXTENSION.has(u)
     }
     #[inline(always)]
-    unsafe fn move_to_unknown_internal(self) -> u64 {
+    unsafe fn move_to_any_internal(self) -> u64 {
         self.to_bits()
     }
     #[inline(always)]
-    unsafe fn from_unknown_internal(u: u64) -> Self {
+    unsafe fn from_any_internal(u: u64) -> Self {
         Self::from_bits(u)
     }
 }

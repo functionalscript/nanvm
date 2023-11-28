@@ -1,4 +1,4 @@
-# Unknown
+# Any Type
 
 |S|E, 11 bit    |FM|FV, 51 bit|
 |-|-------------|--|----------|

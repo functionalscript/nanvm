@@ -12,18 +12,18 @@ use super::{
     type_::Type,
 };
 
-pub type Unknown = OptionalRc<Internal>;
+pub type Any = OptionalRc<Internal>;
 
 type Result<T> = result::Result<T, ()>;
 
-impl<T: Cast> From<T> for Unknown {
+impl<T: Cast> From<T> for Any {
     #[inline(always)]
     fn from(t: T) -> Self {
-        t.move_to_unknown()
+        t.move_to_any()
     }
 }
 
-impl Unknown {
+impl Any {
     #[inline(always)]
     unsafe fn u64(&self) -> u64 {
         self.internal().0
@@ -35,7 +35,7 @@ impl Unknown {
     }
     pub fn try_move<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            return Ok(unsafe { T::from_unknown_internal(self.move_to_internal().0) });
+            return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
         }
         Err(())
     }
@@ -114,65 +114,65 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number() {
-        assert_eq!(Unknown::from(1.0).try_move(), Ok(1.0));
+        assert_eq!(Any::from(1.0).try_move(), Ok(1.0));
         //let y = -1.0;
-        let x: Unknown = (-1.0).into();
+        let x: Any = (-1.0).into();
         assert_eq!(x.try_move(), Ok(-1.0));
-        assert_eq!(Unknown::from(f64::INFINITY).try_move(), Ok(f64::INFINITY));
+        assert_eq!(Any::from(f64::INFINITY).try_move(), Ok(f64::INFINITY));
         assert_eq!(
-            Unknown::from(f64::NEG_INFINITY).try_move(),
+            Any::from(f64::NEG_INFINITY).try_move(),
             Ok(f64::NEG_INFINITY)
         );
-        assert!(Unknown::from(f64::NAN).try_move::<f64>().unwrap().is_nan());
+        assert!(Any::from(f64::NAN).try_move::<f64>().unwrap().is_nan());
         //
-        assert_eq!(Unknown::from(true).try_move::<f64>(), Err(()));
-        assert_eq!(Unknown::from(Null()).try_move::<f64>(), Err(()));
+        assert_eq!(Any::from(true).try_move::<f64>(), Err(()));
+        assert_eq!(Any::from(Null()).try_move::<f64>(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(true.move_to_unknown().try_move(), Ok(true));
-        assert_eq!(Unknown::from(false).try_move(), Ok(false));
+        assert_eq!(true.move_to_any().try_move(), Ok(true));
+        assert_eq!(Any::from(false).try_move(), Ok(false));
         //
-        assert_eq!(Unknown::from(15.0).try_move::<bool>(), Err(()));
-        assert_eq!(Unknown::from(Null()).try_move::<bool>(), Err(()));
+        assert_eq!(Any::from(15.0).try_move::<bool>(), Err(()));
+        assert_eq!(Any::from(Null()).try_move::<bool>(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_null() {
-        assert!(Unknown::from(Null()).is::<Null>());
+        assert!(Any::from(Null()).is::<Null>());
         //
-        assert!(!Unknown::from(-15.7).is::<Null>());
-        assert!(!Unknown::from(false).is::<Null>());
+        assert!(!Any::from(-15.7).is::<Null>());
+        assert!(!Any::from(false).is::<Null>());
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_type() {
-        assert_eq!(Unknown::from(15.0).get_type(), Type::Number);
-        assert_eq!(Unknown::from(true).get_type(), Type::Bool);
-        assert_eq!(Null().move_to_unknown().get_type(), Type::Null);
+        assert_eq!(Any::from(15.0).get_type(), Type::Number);
+        assert_eq!(Any::from(true).get_type(), Type::Bool);
+        assert_eq!(Null().move_to_any().get_type(), Type::Null);
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
         let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [].into_iter());
-        assert!(Unknown::from(s.clone()).is::<StringRc>());
+        assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!Unknown::from(15.0).is::<StringRc>());
-        assert!(!Unknown::from(true).is::<StringRc>());
-        assert!(!Null().move_to_unknown().is::<StringRc>());
+        assert!(!Any::from(15.0).is::<StringRc>());
+        assert!(!Any::from(true).is::<StringRc>());
+        assert!(!Null().move_to_any().is::<StringRc>());
 
         let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [0x20, 0x21].into_iter());
-        assert!(Unknown::from(s.clone()).is::<StringRc>());
+        assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);
-        let u = Unknown::from(s);
+        let u = Any::from(s);
         {
             let s = u.try_ref::<StringHeader>().unwrap();
             let items = s.get_items_mut();
@@ -186,18 +186,18 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
-        assert!(!Null().move_to_unknown().is::<ObjectRc>());
+        assert!(!Null().move_to_any().is::<ObjectRc>());
 
         let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
-        assert!(Unknown::from(o.clone()).is::<ObjectRc>());
+        assert!(Any::from(o.clone()).is::<ObjectRc>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!15.0.move_to_unknown().is::<ObjectRc>());
-        assert!(!true.move_to_unknown().is::<ObjectRc>());
+        assert!(!15.0.move_to_any().is::<ObjectRc>());
+        assert!(!true.move_to_any().is::<ObjectRc>());
 
         let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
-        let u = o.move_to_unknown();
+        let u = o.move_to_any();
         assert_eq!(u.get_type(), Type::Object);
         {
             let o = u.try_move::<ObjectRc>().unwrap();
