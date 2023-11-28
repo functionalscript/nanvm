@@ -1,3 +1,5 @@
+use super::{cast::Cast, extension::EXTENSION};
+
 // compatible with `f64`
 pub const INFINITY: u64 = 0x7FF0_0000_0000_0000;
 pub const NAN: u64 = 0x7FF8_0000_0000_0000;
@@ -7,6 +9,21 @@ pub const EF: u64 = 0x7FFF_FFFF_FFFF_FFFF;
 
 pub const fn is_valid(v: u64) -> bool {
     v & E != E || v & EF == INFINITY || v == NAN
+}
+
+impl Cast for f64 {
+    #[inline(always)]
+    fn cast_is(u: u64) -> bool {
+        !EXTENSION.has(u)
+    }
+    #[inline(always)]
+    fn cast_into(self) -> u64 {
+        self.to_bits()
+    }
+    #[inline(always)]
+    fn cast_from(u: u64) -> Self {
+        Self::from_bits(u)
+    }
 }
 
 #[cfg(test)]

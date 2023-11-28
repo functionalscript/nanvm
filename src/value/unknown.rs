@@ -6,9 +6,9 @@ use crate::{
 };
 
 use super::{
+    cast::Cast,
     extension::{BOOL, EXTENSION, FALSE, OBJECT, PTR, STRING},
     internal::Internal,
-    number,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
     tag::Tag,
@@ -19,19 +19,10 @@ pub type Unknown = Ref<Internal>;
 
 type Result<T> = result::Result<T, ()>;
 
-impl<T: Tag> From<T> for Unknown {
+impl<T: Cast> From<T> for Unknown {
     #[inline(always)]
     fn from(t: T) -> Self {
-        Self::from_u64(t.to_unknown() | T::SUBSET.tag)
-    }
-}
-
-impl From<f64> for Unknown {
-    #[inline(always)]
-    fn from(n: f64) -> Self {
-        let n = n.to_bits();
-        assert!(number::is_valid(n));
-        Self::from_u64(n)
+        Self::from_u64(t.cast_into())
     }
 }
 
@@ -42,23 +33,6 @@ impl TryFrom<Unknown> for f64 {
             return Ok(f64::from_bits(u.u64()));
         }
         Err(())
-    }
-}
-
-/*
-impl From<bool> for Unknown {
-    #[inline(always)]
-    fn from(b: bool) -> Self {
-        Self::from_bool(b)
-    }
-}
-*/
-
-impl TryFrom<Unknown> for bool {
-    type Error = ();
-    #[inline(always)]
-    fn try_from(u: Unknown) -> Result<Self> {
-        u.get_bool()
     }
 }
 
@@ -110,7 +84,7 @@ impl TryFrom<Unknown> for ObjectRef {
 
 impl Unknown {
     #[inline(always)]
-    const fn from_u64(u: u64) -> Self {
+    pub const fn from_u64(u: u64) -> Self {
         Self::from_raw(Internal(u))
     }
     #[inline(always)]
@@ -121,6 +95,19 @@ impl Unknown {
     #[inline(always)]
     const fn is_number(&self) -> bool {
         !EXTENSION.has(self.u64())
+    }
+    // generic
+    #[inline(always)]
+    fn is<T: Tag>(&self) -> bool {
+        T::SUBSET.has(self.u64())
+    }
+    #[inline(always)]
+    fn try_to<T: Tag>(self) -> Result<T> {
+        let v = self.u64();
+        if self.is::<T>() {
+            return Ok(T::from_unknown_raw(v & T::SUBSET.superposition()));
+        }
+        Err(())
     }
     // bool
     #[inline(always)]
@@ -214,7 +201,10 @@ mod test {
 
     use crate::value::{object::ObjectHeader, string::StringHeader};
 
-    use super::{super::extension::TRUE, number::NAN, *};
+    use super::{
+        super::{extension::TRUE, number::NAN},
+        *,
+    };
 
     const _: () = assert!(BOOL.has(FALSE));
     const _: () = assert!(BOOL.has(TRUE));

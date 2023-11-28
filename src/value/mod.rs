@@ -1,4 +1,5 @@
 mod bool;
+mod cast;
 mod extension;
 mod internal;
 mod number;
