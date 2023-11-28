@@ -1,9 +1,9 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Container, ContainerRef, Info},
+    container::{Container, Info, Rc},
 };
 
-use super::{extension::STRING, tag::TagPtr};
+use super::{extension::STRING, tag::TagRc};
 
 pub struct StringHeader();
 
@@ -13,8 +13,8 @@ impl Info for StringHeader {
 
 pub type StringContainer = Container<StringHeader>;
 
-pub type StringRef = ContainerRef<StringHeader>;
+pub type StringRc = Rc<StringHeader>;
 
-impl TagPtr for StringHeader {
+impl TagRc for StringHeader {
     const PTR_SUBSET: BitSubset64 = STRING.subset();
 }

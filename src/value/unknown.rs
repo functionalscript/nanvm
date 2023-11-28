@@ -1,7 +1,7 @@
 use std::{mem::forget, result};
 
 use crate::{
-    container::{Container, ContainerRef, Info, Ref},
+    container::{Container, Info, OptionalRc, Rc},
     ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
 };
 
@@ -11,11 +11,11 @@ use super::{
     internal::Internal,
     null::Null,
     object::ObjectContainer,
-    string::{StringContainer, StringRef},
+    string::{StringContainer, StringRc},
     type_::Type,
 };
 
-pub type Unknown = Ref<Internal>;
+pub type Unknown = OptionalRc<Internal>;
 
 type Result<T> = result::Result<T, ()>;
 
@@ -45,16 +45,16 @@ impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
 impl Unknown {
     #[inline(always)]
     unsafe fn u64(&self) -> u64 {
-        self.ref_internal().0
+        self.internal().0
     }
     // generic
     #[inline(always)]
     fn is<T: Cast>(&self) -> bool {
         unsafe { T::cast_is(self.u64()) }
     }
-    fn try_to<T: Cast>(self) -> Result<T> {
+    fn try_move<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            return Ok(unsafe { T::cast_from(self.move_to_ref_internal().0) });
+            return Ok(unsafe { T::from_unknown_internal(self.move_to_internal().0) });
         }
         Err(())
     }
@@ -82,7 +82,7 @@ impl Unknown {
     //
     fn get_type(&self) -> Type {
         if self.is_rc() {
-            if self.is::<StringRef>() {
+            if self.is::<StringRc>() {
                 Type::String
             } else {
                 Type::Object
@@ -108,7 +108,7 @@ mod test {
     use crate::value::{
         extension::{BOOL, EXTENSION, FALSE},
         null::Null,
-        object::{ObjectHeader, ObjectRef},
+        object::{ObjectHeader, ObjectRc},
         string::StringHeader,
     };
 
@@ -136,29 +136,29 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number() {
-        assert_eq!(Unknown::from(1.0).try_to(), Ok(1.0));
+        assert_eq!(Unknown::from(1.0).try_move(), Ok(1.0));
         //let y = -1.0;
         let x: Unknown = (-1.0).into();
-        assert_eq!(x.try_to(), Ok(-1.0));
-        assert_eq!(Unknown::from(f64::INFINITY).try_to(), Ok(f64::INFINITY));
+        assert_eq!(x.try_move(), Ok(-1.0));
+        assert_eq!(Unknown::from(f64::INFINITY).try_move(), Ok(f64::INFINITY));
         assert_eq!(
-            Unknown::from(f64::NEG_INFINITY).try_to(),
+            Unknown::from(f64::NEG_INFINITY).try_move(),
             Ok(f64::NEG_INFINITY)
         );
-        assert!(Unknown::from(f64::NAN).try_to::<f64>().unwrap().is_nan());
+        assert!(Unknown::from(f64::NAN).try_move::<f64>().unwrap().is_nan());
         //
-        assert_eq!(Unknown::from(true).try_to::<f64>(), Err(()));
-        assert_eq!(Unknown::from(Null()).try_to::<f64>(), Err(()));
+        assert_eq!(Unknown::from(true).try_move::<f64>(), Err(()));
+        assert_eq!(Unknown::from(Null()).try_move::<f64>(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(Unknown::from(true).try_to(), Ok(true));
-        assert_eq!(Unknown::from(false).try_to(), Ok(false));
+        assert_eq!(Unknown::from(true).try_move(), Ok(true));
+        assert_eq!(Unknown::from(false).try_move(), Ok(false));
         //
-        assert_eq!(Unknown::from(15.0).try_to::<bool>(), Err(()));
-        assert_eq!(Unknown::from(Null()).try_to::<bool>(), Err(()));
+        assert_eq!(Unknown::from(15.0).try_move::<bool>(), Err(()));
+        assert_eq!(Unknown::from(Null()).try_move::<bool>(), Err(()));
     }
 
     #[test]
@@ -181,17 +181,17 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
-        let s = StringRef::alloc(StringHeader(), [].into_iter());
-        assert!(Unknown::from(s.clone()).is::<StringRef>());
+        let s = StringRc::alloc(StringHeader(), [].into_iter());
+        assert!(Unknown::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!Unknown::from(15.0).is::<StringRef>());
-        assert!(!Unknown::from(true).is::<StringRef>());
-        assert!(!Null().unknown().is::<StringRef>());
+        assert!(!Unknown::from(15.0).is::<StringRc>());
+        assert!(!Unknown::from(true).is::<StringRc>());
+        assert!(!Null().unknown().is::<StringRc>());
 
-        let s = StringRef::alloc(StringHeader(), [0x20, 0x21].into_iter());
-        assert!(Unknown::from(s.clone()).is::<StringRef>());
+        let s = StringRc::alloc(StringHeader(), [0x20, 0x21].into_iter());
+        assert!(Unknown::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);
         let u = Unknown::from(s);
@@ -200,7 +200,7 @@ mod test {
             let items = s.get_items_mut();
             assert_eq!(items, [0x20, 0x21]);
         }
-        let s = u.try_to::<StringRef>().unwrap();
+        let s = u.try_move::<StringRc>().unwrap();
         let items = s.get_items_mut();
         assert_eq!(items, [0x20, 0x21]);
     }
@@ -208,21 +208,21 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
-        assert!(!Null().unknown().is::<ObjectRef>());
+        assert!(!Null().unknown().is::<ObjectRc>());
 
-        let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
-        assert!(Unknown::from(o.clone()).is::<ObjectRef>());
+        let o = ObjectRc::alloc(ObjectHeader(), [].into_iter());
+        assert!(Unknown::from(o.clone()).is::<ObjectRc>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!15.0.unknown().is::<ObjectRef>());
-        assert!(!true.unknown().is::<ObjectRef>());
+        assert!(!15.0.unknown().is::<ObjectRc>());
+        assert!(!true.unknown().is::<ObjectRc>());
 
-        let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(ObjectHeader(), [].into_iter());
         let u = o.unknown();
         assert_eq!(u.get_type(), Type::Object);
         {
-            let o = u.try_to::<ObjectRef>().unwrap();
+            let o = u.try_move::<ObjectRc>().unwrap();
             let items = o.get_items_mut();
             assert!(items.is_empty());
         }

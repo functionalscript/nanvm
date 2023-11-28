@@ -16,9 +16,6 @@ impl OptionalBase for Internal {
             return None;
         }
         let i = v & PTR_SUBSET_SUPERPOSITION;
-        if i == 0 {
-            return None;
-        }
         Some(i as *mut Base)
     }
     unsafe fn dealloc(&self, base: *mut Base) {

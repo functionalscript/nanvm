@@ -1,10 +1,10 @@
 use crate::{
     common::bit_subset64::BitSubset64,
-    container::{Container, ContainerRef, Info},
+    container::{Container, Info, Rc},
     value::unknown::Unknown,
 };
 
-use super::{extension::OBJECT, tag::TagPtr};
+use super::{extension::OBJECT, tag::TagRc};
 
 pub struct ObjectHeader();
 
@@ -14,8 +14,8 @@ impl Info for ObjectHeader {
 
 pub type ObjectContainer = Container<ObjectHeader>;
 
-pub type ObjectRef = ContainerRef<ObjectHeader>;
+pub type ObjectRc = Rc<ObjectHeader>;
 
-impl TagPtr for ObjectHeader {
+impl TagRc for ObjectHeader {
     const PTR_SUBSET: BitSubset64 = OBJECT.subset();
 }
