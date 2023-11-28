@@ -7,15 +7,15 @@ pub struct Ref<T: OptionalBase>(T);
 
 impl<T: OptionalBase> Ref<T> {
     #[inline(always)]
-    pub unsafe fn from_raw(t: T) -> Self {
+    pub unsafe fn from_ref_internal(t: T) -> Self {
         Self(t)
     }
     #[inline(always)]
-    pub const fn get(&self) -> &T {
+    pub unsafe fn ref_internal(&self) -> &T {
         &self.0
     }
     #[inline(always)]
-    pub unsafe fn move_to_raw(mut self) -> T {
+    pub unsafe fn move_to_ref_internal(mut self) -> T {
         let result = read(&mut self.0);
         forget(self);
         result
@@ -25,7 +25,7 @@ impl<T: OptionalBase> Ref<T> {
 impl<T: OptionalBase> Clone for Ref<T> {
     fn clone(&self) -> Self {
         unsafe {
-            let result = Self::from_raw(self.0.clone());
+            let result = Self::from_ref_internal(self.0.clone());
             if let Some(base) = result.0.get_base() {
                 (&mut *base).update(Update::AddRef);
             }
@@ -51,7 +51,7 @@ pub type ContainerRef<T> = Ref<*mut Container<T>>;
 
 impl<T: Info> ContainerRef<T> {
     pub fn alloc(info: T, i: impl ExactSizeIterator<Item = T::Item>) -> Self {
-        unsafe { Self::from_raw(Container::alloc(info, i)) }
+        unsafe { Self::from_ref_internal(Container::alloc(info, i)) }
     }
     pub fn get_items_mut(&self) -> &mut [T::Item] {
         unsafe { (*self.0).get_items_mut() }

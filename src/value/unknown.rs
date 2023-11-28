@@ -44,12 +44,8 @@ impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
 
 impl Unknown {
     #[inline(always)]
-    pub unsafe fn from_u64(u: u64) -> Self {
-        Self::from_raw(Internal(u))
-    }
-    #[inline(always)]
     unsafe fn u64(&self) -> u64 {
-        self.get().0
+        self.ref_internal().0
     }
     // generic
     #[inline(always)]
@@ -58,7 +54,7 @@ impl Unknown {
     }
     fn try_to<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            return Ok(unsafe { T::cast_from(self.move_to_raw().0) });
+            return Ok(unsafe { T::cast_from(self.move_to_ref_internal().0) });
         }
         Err(())
     }

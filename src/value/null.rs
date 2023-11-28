@@ -7,11 +7,11 @@ pub struct Null();
 impl Tag for Null {
     const SUBSET: BitSubset64 = NULL;
     #[inline(always)]
-    unsafe fn move_to_unknown_raw(self) -> u64 {
+    unsafe fn move_to_unknown_superposition(self) -> u64 {
         0
     }
     #[inline(always)]
-    unsafe fn from_unknown_raw(_: u64) -> Self {
+    unsafe fn from_unknown_superposition(_: u64) -> Self {
         Self()
     }
 }
