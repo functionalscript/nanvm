@@ -1,7 +1,4 @@
-use std::{
-    alloc::{GlobalAlloc, System},
-    ptr::{drop_in_place, write},
-};
+use std::ptr::{drop_in_place, write};
 
 use crate::{allocator::Allocator, common::fas::FasLayout};
 
