@@ -3,7 +3,7 @@ use crate::{
     ptr_subset::PTR_SUBSET_SUPERPOSITION,
 };
 
-use super::extension::{OBJECT, PTR, STRING};
+use super::extension::{OBJECT, RC, STRING};
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
@@ -12,7 +12,7 @@ pub struct Internal(pub u64);
 impl OptionalBase for Internal {
     unsafe fn get_base(&self) -> Option<*mut Base> {
         let v = self.0;
-        if !PTR.has(v) {
+        if !RC.has(v) {
             return None;
         }
         let i = v & PTR_SUBSET_SUPERPOSITION;

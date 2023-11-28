@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     cast::Cast,
-    extension::{EXTENSION, OBJECT, PTR, STRING},
+    extension::{EXTENSION, OBJECT, RC, STRING},
     internal::Internal,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
@@ -94,7 +94,7 @@ impl Unknown {
     //
     #[inline(always)]
     fn is_ptr(&self) -> bool {
-        PTR.has(unsafe { self.u64() })
+        RC.has(unsafe { self.u64() })
     }
     //
     #[inline(always)]

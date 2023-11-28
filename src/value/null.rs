@@ -1,15 +1,17 @@
+use crate::common::bit_subset64::BitSubset64;
+
+use super::{extension::NULL, tag::Tag};
+
 pub struct Null();
 
-/*
-impl Tag for bool {
-    const SUBSET: BitSubset64 = BOOL;
+impl Tag for Null {
+    const SUBSET: BitSubset64 = NULL;
     #[inline(always)]
     unsafe fn move_to_unknown_raw(self) -> u64 {
-        self as u64
+        0
     }
     #[inline(always)]
-    unsafe fn from_unknown_raw(u: u64) -> Self {
-        u != 0
+    unsafe fn from_unknown_raw(_: u64) -> Self {
+        Self()
     }
 }
-*/
