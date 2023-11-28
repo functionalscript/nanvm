@@ -87,9 +87,7 @@ impl Unknown {
     }
     fn try_to<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            let u = T::cast_from(self.u64());
-            forget(self);
-            return Ok(u);
+            return Ok(T::cast_from(self.move_to_raw().0));
         }
         Err(())
     }

@@ -1,3 +1,5 @@
+use std::mem::forget;
+
 use super::{optional_base::OptionalBase, Container, Info, Update};
 
 #[repr(transparent)]
@@ -11,6 +13,12 @@ impl<T: OptionalBase> Ref<T> {
     #[inline(always)]
     pub const fn get(&self) -> &T {
         &self.0
+    }
+    #[inline(always)]
+    pub const fn move_to_raw(self) -> T {
+        let result = self.0;
+        forget(self);
+        result
     }
 }
 

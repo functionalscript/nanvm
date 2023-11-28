@@ -6,7 +6,7 @@ use crate::{
 use super::extension::{OBJECT, PTR, STRING};
 
 #[repr(transparent)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Internal(pub u64);
 
 impl OptionalBase for Internal {

@@ -5,7 +5,7 @@ use super::{extension::BOOL, tag::Tag};
 impl Tag for bool {
     const SUBSET: BitSubset64 = BOOL;
     #[inline(always)]
-    fn to_unknown_raw(self) -> u64 {
+    fn move_to_unknown_raw(self) -> u64 {
         self as u64
     }
     #[inline(always)]

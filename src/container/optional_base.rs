@@ -1,6 +1,6 @@
 use super::{Base, Container, Info};
 
-pub trait OptionalBase: Clone {
+pub trait OptionalBase: Copy {
     unsafe fn get_base(&self) -> Option<*mut Base>;
     unsafe fn dealloc(&self, base: *mut Base);
 }

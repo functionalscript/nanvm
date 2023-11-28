@@ -7,7 +7,7 @@ use crate::{
 
 pub trait Tag {
     const SUBSET: BitSubset64;
-    fn to_unknown_raw(self) -> u64;
+    fn move_to_unknown_raw(self) -> u64;
     fn from_unknown_raw(u: u64) -> Self;
 }
 
@@ -18,13 +18,11 @@ pub trait TagPtr: Info {
 impl<T: TagPtr> Tag for ContainerRef<T> {
     const SUBSET: BitSubset64 = T::PTR_SUBSET;
     #[inline(always)]
-    fn to_unknown_raw(self) -> u64 {
-        let p: *mut Container<T> = *self.get();
-        forget(self);
-        p as u64
+    fn move_to_unknown_raw(self) -> u64 {
+        self.move_to_raw() as u64
     }
     #[inline(always)]
     fn from_unknown_raw(u: u64) -> Self {
-        todo!();
+        Self::from_raw(u as *mut Container<T>)
     }
 }

@@ -18,7 +18,7 @@ impl<T: Tag> Cast for T {
     }
     #[inline(always)]
     fn cast_into(self) -> u64 {
-        T::to_unknown_raw(self) | T::SUBSET.tag
+        T::move_to_unknown_raw(self) | T::SUBSET.tag
     }
     #[inline(always)]
     fn cast_from(u: u64) -> Self {
