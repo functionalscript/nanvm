@@ -26,26 +26,11 @@ impl<T: Cast> From<T> for Unknown {
     }
 }
 
-impl From<StringRef> for Unknown {
-    #[inline(always)]
-    fn from(s: StringRef) -> Self {
-        Self::from_ref(STRING, s)
-    }
-}
-
 impl<'a> TryFrom<&'a Unknown> for &'a mut StringContainer {
     type Error = ();
     #[inline(always)]
     fn try_from(u: &'a Unknown) -> Result<Self> {
         u.get_container(&STRING)
-    }
-}
-
-impl TryFrom<Unknown> for StringRef {
-    type Error = ();
-    #[inline(always)]
-    fn try_from(u: Unknown) -> Result<Self> {
-        u.get_container_ref(&STRING)
     }
 }
 
@@ -125,11 +110,6 @@ impl Unknown {
         }
         Err(())
     }
-    // string
-    #[inline(always)]
-    fn is_string(&self) -> bool {
-        STRING.subset().has(unsafe { self.u64() })
-    }
     // object
     #[inline(always)]
     fn is_object(&self) -> bool {
@@ -138,7 +118,7 @@ impl Unknown {
     //
     fn get_type(&self) -> Type {
         if self.is_ptr() {
-            if self.is_string() {
+            if self.is::<StringRef>() {
                 Type::String
             } else {
                 Type::Object
@@ -238,16 +218,16 @@ mod test {
     #[wasm_bindgen_test]
     fn test_string() {
         let s = StringRef::alloc(StringHeader(), [].into_iter());
-        assert!(Unknown::from(s.clone()).is_string());
+        assert!(Unknown::from(s.clone()).is::<StringRef>());
         let v = s.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!Unknown::from(15.0).is_string());
-        assert!(!Unknown::from(true).is_string());
-        assert!(!Null().unknown().is_string());
+        assert!(!Unknown::from(15.0).is::<StringRef>());
+        assert!(!Unknown::from(true).is::<StringRef>());
+        assert!(!Null().unknown().is::<StringRef>());
 
         let s = StringRef::alloc(StringHeader(), [0x20, 0x21].into_iter());
-        assert!(Unknown::from(s.clone()).is_string());
+        assert!(Unknown::from(s.clone()).is::<StringRef>());
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);
         let u = Unknown::from(s);
@@ -256,7 +236,7 @@ mod test {
             let items = s.get_items_mut();
             assert_eq!(items, [0x20, 0x21]);
         }
-        let s = StringRef::try_from(u).unwrap();
+        let s = u.try_to::<StringRef>().unwrap();
         let items = s.get_items_mut();
         assert_eq!(items, [0x20, 0x21]);
     }
