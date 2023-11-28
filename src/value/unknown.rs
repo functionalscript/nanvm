@@ -24,11 +24,12 @@ impl<T: Cast> From<T> for Unknown {
     }
 }
 
-impl<'a> TryFrom<&'a Unknown> for &'a mut StringContainer {
+/*
+impl<'a, T: TagRc> TryFrom<&'a Unknown> for &'a mut T {
     type Error = ();
     #[inline(always)]
     fn try_from(u: &'a Unknown) -> Result<Self> {
-        u.get_container()
+        u.try_ref()
     }
 }
 
@@ -36,9 +37,10 @@ impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
     type Error = ();
     #[inline(always)]
     fn try_from(u: &'a Unknown) -> Result<Self> {
-        u.get_container()
+        u.try_ref()
     }
 }
+*/
 
 impl Unknown {
     #[inline(always)]
@@ -63,16 +65,10 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn get_container_ptr<T: TagRc>(&self) -> Result<*mut Container<T>> {
+    fn try_ref<T: TagRc>(&self) -> Result<&mut Container<T>> {
         let v = unsafe { self.u64() };
         if T::RC_SUBSET.has(v) {
-            let p = v & PTR_SUBSET_SUPERPOSITION;
-            return Ok(p as *mut Container<T>);
-        }
-        Err(())
-    }
-    fn get_container<T: TagRc>(&self) -> Result<&mut Container<T>> {
-        if let Ok(p) = self.get_container_ptr() {
+            let p = (v & PTR_SUBSET_SUPERPOSITION) as *mut Container<T>;
             return Ok(unsafe { &mut *p });
         }
         Err(())
@@ -194,7 +190,7 @@ mod test {
         assert_eq!(v, [0x20, 0x21]);
         let u = Unknown::from(s);
         {
-            let s = <&mut StringContainer>::try_from(&u).unwrap();
+            let s = u.try_ref::<StringHeader>().unwrap();
             let items = s.get_items_mut();
             assert_eq!(items, [0x20, 0x21]);
         }
