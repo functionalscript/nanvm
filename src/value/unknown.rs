@@ -129,7 +129,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(Unknown::from(true).try_move(), Ok(true));
+        assert_eq!(true.unknown().try_move(), Ok(true));
         assert_eq!(Unknown::from(false).try_move(), Ok(false));
         //
         assert_eq!(Unknown::from(15.0).try_move::<bool>(), Err(()));
