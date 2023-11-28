@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     cast::Cast,
-    extension::{EXTENSION, OBJECT, RC, STRING},
+    extension::{OBJECT, RC, STRING},
     internal::Internal,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
@@ -171,7 +171,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::value::{
-        extension::{BOOL, FALSE},
+        extension::{BOOL, EXTENSION, FALSE},
         object::ObjectHeader,
         string::StringHeader,
     };
