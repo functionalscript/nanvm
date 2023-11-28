@@ -17,5 +17,5 @@ pub type ObjectContainer = Container<ObjectHeader>;
 pub type ObjectRc = Rc<ObjectHeader>;
 
 impl TagRc for ObjectHeader {
-    const PTR_SUBSET: BitSubset64 = OBJECT.subset();
+    const RC_SUBSET: BitSubset64 = OBJECT.subset();
 }

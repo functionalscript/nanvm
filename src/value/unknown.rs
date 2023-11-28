@@ -12,6 +12,7 @@ use super::{
     null::Null,
     object::ObjectContainer,
     string::{StringContainer, StringRc},
+    tag::TagRc,
     type_::Type,
 };
 
@@ -30,7 +31,7 @@ impl<'a> TryFrom<&'a Unknown> for &'a mut StringContainer {
     type Error = ();
     #[inline(always)]
     fn try_from(u: &'a Unknown) -> Result<Self> {
-        u.get_container(&STRING)
+        u.get_container()
     }
 }
 
@@ -38,7 +39,7 @@ impl<'a> TryFrom<&'a Unknown> for &'a mut ObjectContainer {
     type Error = ();
     #[inline(always)]
     fn try_from(u: &'a Unknown) -> Result<Self> {
-        u.get_container(&OBJECT)
+        u.get_container()
     }
 }
 
@@ -65,16 +66,16 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn get_container_ptr<T: Info>(&self, ps: &PtrSubset<T>) -> Result<*mut Container<T>> {
+    fn get_container_ptr<T: TagRc>(&self) -> Result<*mut Container<T>> {
         let v = unsafe { self.u64() };
-        if ps.subset().has(v) {
+        if T::RC_SUBSET.has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
             return Ok(p as *mut Container<T>);
         }
         Err(())
     }
-    fn get_container<T: Info>(&self, ps: &PtrSubset<T>) -> Result<&mut Container<T>> {
-        if let Ok(p) = self.get_container_ptr(ps) {
+    fn get_container<T: TagRc>(&self) -> Result<&mut Container<T>> {
+        if let Ok(p) = self.get_container_ptr() {
             return Ok(unsafe { &mut *p });
         }
         Err(())

@@ -1,3 +1,3 @@
-pub trait Info {
+pub trait Info: Sized {
     type Item;
 }

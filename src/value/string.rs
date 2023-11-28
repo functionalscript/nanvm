@@ -16,5 +16,5 @@ pub type StringContainer = Container<StringHeader>;
 pub type StringRc = Rc<StringHeader>;
 
 impl TagRc for StringHeader {
-    const PTR_SUBSET: BitSubset64 = STRING.subset();
+    const RC_SUBSET: BitSubset64 = STRING.subset();
 }

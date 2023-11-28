@@ -3,7 +3,12 @@ use crate::{
     ptr_subset::PTR_SUBSET_SUPERPOSITION,
 };
 
-use super::extension::{OBJECT, RC, STRING};
+use super::{
+    extension::{RC, STRING},
+    object::ObjectHeader,
+    string::StringHeader,
+    tag::TagRc,
+};
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
@@ -20,9 +25,9 @@ impl OptionalBase for Internal {
     }
     unsafe fn dealloc(&self, base: *mut Base) {
         if STRING.subset().has(self.0) {
-            STRING.dealloc(base);
+            StringHeader::dealloc(base);
         } else {
-            OBJECT.dealloc(base);
+            ObjectHeader::dealloc(base);
         }
     }
 }
