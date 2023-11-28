@@ -5,7 +5,7 @@ use crate::{
     js::any::Any,
 };
 
-use super::{bitset::OBJECT, extension_rc::TagRc};
+use super::{bitset::OBJECT, extension_rc::ExtensionRc};
 
 pub struct ObjectHeader();
 
@@ -18,6 +18,6 @@ pub type ObjectContainer = Container<ObjectHeader>;
 
 pub type ObjectRc = Rc<ObjectHeader>;
 
-impl TagRc for ObjectHeader {
+impl ExtensionRc for ObjectHeader {
     const RC_SUBSET: BitSubset64 = OBJECT;
 }

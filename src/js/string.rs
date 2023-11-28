@@ -4,7 +4,7 @@ use crate::{
     container::{Container, Info, Rc},
 };
 
-use super::{bitset::STRING, extension_rc::TagRc};
+use super::{bitset::STRING, extension_rc::ExtensionRc};
 
 pub struct StringHeader();
 
@@ -17,6 +17,6 @@ pub type StringContainer = Container<StringHeader>;
 
 pub type StringRc = Rc<StringHeader>;
 
-impl TagRc for StringHeader {
+impl ExtensionRc for StringHeader {
     const RC_SUBSET: BitSubset64 = STRING;
 }

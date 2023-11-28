@@ -1,4 +1,4 @@
-use super::{any::Any, extension::Extension, internal::Internal};
+use super::{any::Any, any_internal::AnyInternal, extension::Extension};
 
 pub trait Cast: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
@@ -7,7 +7,7 @@ pub trait Cast: Sized {
     //
     #[inline(always)]
     fn move_to_any(self) -> Any {
-        unsafe { Any::from_internal(Internal(self.move_to_any_internal())) }
+        unsafe { Any::from_optional_base(AnyInternal(self.move_to_any_internal())) }
     }
 }
 
