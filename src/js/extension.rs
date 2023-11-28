@@ -28,5 +28,5 @@ pub const STRING: BitSubset64 = RC_SPLIT.0;
 pub const OBJECT: BitSubset64 = RC_SPLIT.1;
 // const OBJECT_TAG: u64 = OBJECT.tag;
 
-pub const FALSE: u64 = BOOL.tag | (false as u64);
+ pub const FALSE: u64 = BOOL.tag | (false as u64);
 pub const TRUE: u64 = BOOL.tag | (true as u64);
