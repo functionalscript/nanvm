@@ -25,16 +25,6 @@ impl<T: Cast> From<T> for Unknown {
     }
 }
 
-impl TryFrom<Unknown> for f64 {
-    type Error = ();
-    fn try_from(u: Unknown) -> Result<Self> {
-        if u.is_number() {
-            return Ok(f64::from_bits(u.u64()));
-        }
-        Err(())
-    }
-}
-
 impl From<StringRef> for Unknown {
     #[inline(always)]
     fn from(s: StringRef) -> Self {
@@ -89,11 +79,6 @@ impl Unknown {
     #[inline(always)]
     const fn u64(&self) -> u64 {
         self.get().0
-    }
-    // number
-    #[inline(always)]
-    const fn is_number(&self) -> bool {
-        !EXTENSION.has(self.u64())
     }
     // generic
     #[inline(always)]
@@ -162,7 +147,7 @@ impl Unknown {
         OBJECT.subset().has(self.u64())
     }
     //
-    const fn get_type(&self) -> Type {
+    fn get_type(&self) -> Type {
         if self.is_ptr() {
             if self.is_string() {
                 Type::String
@@ -170,7 +155,7 @@ impl Unknown {
                 Type::Object
             }
         } else {
-            if self.is_number() {
+            if self.is::<f64>() {
                 Type::Number
             } else {
                 Type::Bool
@@ -185,7 +170,11 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::value::{object::ObjectHeader, string::StringHeader, extension::{BOOL, FALSE}};
+    use crate::value::{
+        extension::{BOOL, FALSE},
+        object::ObjectHeader,
+        string::StringHeader,
+    };
 
     use super::{
         super::{extension::TRUE, number::NAN},
@@ -211,19 +200,19 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number() {
-        assert_eq!(Unknown::from(1.0).try_into(), Ok(1.0));
+        assert_eq!(Unknown::from(1.0).try_to(), Ok(1.0));
         //let y = -1.0;
         let x: Unknown = (-1.0).into();
-        assert_eq!(x.try_into(), Ok(-1.0));
-        assert_eq!(Unknown::from(f64::INFINITY).try_into(), Ok(f64::INFINITY));
+        assert_eq!(x.try_to(), Ok(-1.0));
+        assert_eq!(Unknown::from(f64::INFINITY).try_to(), Ok(f64::INFINITY));
         assert_eq!(
-            Unknown::from(f64::NEG_INFINITY).try_into(),
+            Unknown::from(f64::NEG_INFINITY).try_to(),
             Ok(f64::NEG_INFINITY)
         );
-        assert!(f64::try_from(Unknown::from(f64::NAN)).unwrap().is_nan());
+        assert!(Unknown::from(f64::NAN).try_to::<f64>().unwrap().is_nan());
         //
-        assert_eq!(f64::try_from(Unknown::from(true)), Err(()));
-        assert_eq!(f64::try_from(Unknown::null()), Err(()));
+        assert_eq!(Unknown::from(true).try_to::<f64>(), Err(()));
+        assert_eq!(Unknown::null().try_to::<f64>(), Err(()));
     }
 
     #[test]
