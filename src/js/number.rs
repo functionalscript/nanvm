@@ -1,4 +1,4 @@
-use super::{cast::Cast, extension::EXTENSION};
+use super::{bitset::EXTENSION, cast::Cast};
 
 // compatible with `f64`
 pub const INFINITY: u64 = 0x7FF0_0000_0000_0000;

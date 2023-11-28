@@ -3,17 +3,17 @@ use crate::{
     container::{Base, Container, Info, Rc},
 };
 
-use super::{extension::PTR_SUBSET_SUPERPOSITION, tag::Tag};
+use super::{bitset::RC_SUBSET_SUPERPOSITION, extension::Extension};
 
 pub trait TagRc: Info {
     const RC_SUBSET: BitSubset64;
-    const _0: () = assert!(Self::RC_SUBSET.superposition() == PTR_SUBSET_SUPERPOSITION);
+    const _0: () = assert!(Self::RC_SUBSET.superposition() == RC_SUBSET_SUPERPOSITION);
     unsafe fn delete(p: *mut Base) {
         Container::delete(p as *mut Container<Self>);
     }
 }
 
-impl<T: TagRc> Tag for Rc<T> {
+impl<T: TagRc> Extension for Rc<T> {
     const SUBSET: BitSubset64 = T::RC_SUBSET;
     #[inline(always)]
     unsafe fn move_to_superposition(self) -> u64 {

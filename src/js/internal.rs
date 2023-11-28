@@ -1,10 +1,10 @@
 use crate::container::{Base, OptionalBase};
 
 use super::{
-    extension::{PTR_SUBSET_SUPERPOSITION, RC, STRING},
+    bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
+    extension_rc::TagRc,
     object::ObjectHeader,
     string::StringHeader,
-    tag_rc::TagRc,
 };
 
 #[repr(transparent)]
@@ -17,7 +17,7 @@ impl OptionalBase for Internal {
         if !RC.has(v) {
             return None;
         }
-        let i = v & PTR_SUBSET_SUPERPOSITION;
+        let i = v & RC_SUBSET_SUPERPOSITION;
         Some(i as *mut Base)
     }
     unsafe fn delete(&self, base: *mut Base) {

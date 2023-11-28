@@ -5,7 +5,7 @@ use crate::{
     js::any::Any,
 };
 
-use super::{extension::OBJECT, tag_rc::TagRc};
+use super::{bitset::OBJECT, extension_rc::TagRc};
 
 pub struct ObjectHeader();
 

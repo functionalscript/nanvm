@@ -4,7 +4,7 @@ use crate::{
     container::{Container, Info, Rc},
 };
 
-use super::{extension::STRING, tag_rc::TagRc};
+use super::{bitset::STRING, extension_rc::TagRc};
 
 pub struct StringHeader();
 

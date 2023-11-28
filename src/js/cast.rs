@@ -1,4 +1,4 @@
-use super::{any::Any, internal::Internal, tag::Tag};
+use super::{any::Any, extension::Extension, internal::Internal};
 
 pub trait Cast: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
@@ -11,7 +11,7 @@ pub trait Cast: Sized {
     }
 }
 
-impl<T: Tag> Cast for T {
+impl<T: Extension> Cast for T {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::SUBSET.has(u)

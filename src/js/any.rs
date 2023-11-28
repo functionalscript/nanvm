@@ -3,12 +3,12 @@ use std::result;
 use crate::container::{Container, OptionalRc};
 
 use super::{
+    bitset::{RC, RC_SUBSET_SUPERPOSITION},
     cast::Cast,
-    extension::{PTR_SUBSET_SUPERPOSITION, RC},
+    extension_rc::TagRc,
     internal::Internal,
     null::Null,
     string::StringRc,
-    tag_rc::TagRc,
     type_::Type,
 };
 
@@ -49,7 +49,7 @@ impl Any {
     pub fn try_ref<T: TagRc>(&self) -> Result<&mut Container<T>> {
         let v = unsafe { self.u64() };
         if T::RC_SUBSET.has(v) {
-            let p = (v & PTR_SUBSET_SUPERPOSITION) as *mut Container<T>;
+            let p = (v & RC_SUBSET_SUPERPOSITION) as *mut Container<T>;
             return Ok(unsafe { &mut *p });
         }
         Err(())
@@ -83,7 +83,7 @@ mod test {
     use crate::{
         allocator::GlobalAllocator,
         js::{
-            extension::{BOOL, EXTENSION, FALSE},
+            bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
             object::{ObjectHeader, ObjectRc},
             string::StringHeader,
@@ -91,7 +91,7 @@ mod test {
     };
 
     use super::{
-        super::{extension::TRUE, number::NAN},
+        super::{bitset::TRUE, number::NAN},
         *,
     };
 
