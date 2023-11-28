@@ -359,5 +359,11 @@ mod test {
 
         let result = tokenize(String::from("\"\\uaBcDEeFf\""));
         assert_eq!(&result, &[JsonToken::String("ꯍEeFf".to_string())]);
+
+        let result = tokenize(String::from("\"\\uEeFg\""));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidHex), JsonToken::String("g".to_string())]);
+
+        let result = tokenize(String::from("\"\\uEeF"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
     }
 }
