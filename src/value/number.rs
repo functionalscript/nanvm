@@ -13,7 +13,7 @@ pub const fn is_valid(v: u64) -> bool {
 
 impl Cast for f64 {
     #[inline(always)]
-    unsafe fn cast_is(u: u64) -> bool {
+    unsafe fn is_type_of(u: u64) -> bool {
         !EXTENSION.has(u)
     }
     #[inline(always)]

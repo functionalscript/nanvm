@@ -31,7 +31,7 @@ impl Unknown {
     // generic
     #[inline(always)]
     pub fn is<T: Cast>(&self) -> bool {
-        unsafe { T::cast_is(self.u64()) }
+        unsafe { T::is_type_of(self.u64()) }
     }
     pub fn try_move<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {

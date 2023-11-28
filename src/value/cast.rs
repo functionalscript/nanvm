@@ -1,7 +1,7 @@
 use super::{internal::Internal, tag::Tag, unknown::Unknown};
 
 pub trait Cast: Sized {
-    unsafe fn cast_is(u: u64) -> bool;
+    unsafe fn is_type_of(u: u64) -> bool;
     unsafe fn move_to_unknown_internal(self) -> u64;
     unsafe fn from_unknown_internal(u: u64) -> Self;
     //
@@ -13,7 +13,7 @@ pub trait Cast: Sized {
 
 impl<T: Tag> Cast for T {
     #[inline(always)]
-    unsafe fn cast_is(u: u64) -> bool {
+    unsafe fn is_type_of(u: u64) -> bool {
         T::SUBSET.has(u)
     }
     #[inline(always)]
