@@ -1,8 +1,9 @@
 use crate::{
     common::bit_subset64::BitSubset64,
     container::{Base, Container, Info, Rc},
-    ptr_subset::PTR_SUBSET_SUPERPOSITION,
 };
+
+use super::extension::PTR_SUBSET_SUPERPOSITION;
 
 pub trait Tag {
     const SUBSET: BitSubset64;

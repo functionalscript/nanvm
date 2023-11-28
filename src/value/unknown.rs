@@ -1,13 +1,10 @@
-use std::{mem::forget, result};
+use std::result;
 
-use crate::{
-    container::{Container, Info, OptionalRc, Rc},
-    ptr_subset::{PtrSubset, PTR_SUBSET_SUPERPOSITION},
-};
+use crate::container::{Container, OptionalRc};
 
 use super::{
     cast::Cast,
-    extension::{OBJECT, RC, STRING},
+    extension::{PTR_SUBSET_SUPERPOSITION, RC},
     internal::Internal,
     null::Null,
     object::ObjectContainer,

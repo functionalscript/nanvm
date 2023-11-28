@@ -1,8 +1,4 @@
-use crate::{
-    common::bit_subset64::BitSubset64,
-    ptr_subset::PtrSubset,
-    value::{object::ObjectHeader, string::StringHeader},
-};
+use crate::common::bit_subset64::BitSubset64;
 
 // EXTENSION
 
@@ -22,12 +18,15 @@ pub const NULL: BitSubset64 = SIMPLE_SPLIT.1;
 
 // RC
 
+// 49 bits for now
+pub const PTR_SUBSET_SUPERPOSITION: u64 = 0x1_FFFF_FFFF_FFFF;
+
 const RC_SPLIT: (BitSubset64, BitSubset64) = RC.split(0x0002_0000_0000_0000);
 
-pub const STRING: PtrSubset<StringHeader> = RC_SPLIT.0.ptr_subset();
-const STRING_TAG: u64 = STRING.subset().tag;
-pub const OBJECT: PtrSubset<ObjectHeader> = RC_SPLIT.1.ptr_subset();
-const OBJECT_TAG: u64 = OBJECT.subset().tag;
+pub const STRING: BitSubset64 = RC_SPLIT.0;
+const STRING_TAG: u64 = STRING.tag;
+pub const OBJECT: BitSubset64 = RC_SPLIT.1;
+const OBJECT_TAG: u64 = OBJECT.tag;
 
 pub const FALSE: u64 = BOOL.tag | (false as u64);
 pub const TRUE: u64 = BOOL.tag | (true as u64);

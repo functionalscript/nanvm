@@ -1,5 +1,3 @@
-use crate::{container::Info, ptr_subset::PtrSubset};
-
 /// A bit subset of `u64`.
 ///
 /// This structure represents a subset of bits within a 64-bit unsigned integer,
@@ -83,10 +81,6 @@ impl BitSubset64 {
             BitSubset64::from_tag_and_mask(self.tag, mask),
             BitSubset64::from_tag_and_mask(self.tag | m, mask),
         )
-    }
-    #[inline(always)]
-    pub const fn ptr_subset<T: Info>(self) -> PtrSubset<T> {
-        PtrSubset::new(self)
     }
 }
 

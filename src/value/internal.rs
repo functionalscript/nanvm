@@ -1,10 +1,7 @@
-use crate::{
-    container::{Base, OptionalBase},
-    ptr_subset::PTR_SUBSET_SUPERPOSITION,
-};
+use crate::container::{Base, OptionalBase};
 
 use super::{
-    extension::{RC, STRING},
+    extension::{PTR_SUBSET_SUPERPOSITION, RC, STRING},
     object::ObjectHeader,
     string::StringHeader,
     tag::TagRc,
@@ -24,7 +21,7 @@ impl OptionalBase for Internal {
         Some(i as *mut Base)
     }
     unsafe fn dealloc(&self, base: *mut Base) {
-        if STRING.subset().has(self.0) {
+        if STRING.has(self.0) {
             StringHeader::dealloc(base);
         } else {
             ObjectHeader::dealloc(base);
