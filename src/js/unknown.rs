@@ -80,7 +80,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::value::{
+    use crate::js::{
         extension::{BOOL, EXTENSION, FALSE},
         null::Null,
         object::{ObjectHeader, ObjectRc},
