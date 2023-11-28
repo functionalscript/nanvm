@@ -56,10 +56,10 @@ impl TokenizerState {
     fn push(self, c: char) -> (Vec<JsonToken>, TokenizerState) {
         match self {
             TokenizerState::Initial => tokenize_initial(c),
-            TokenizerState::ParseKeyword(s) => tokenize_keyword(c, &s),
-            TokenizerState::ParseString(s) => tokenize_string(c, &s),
-            TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, &s),
-            TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, &s),
+            TokenizerState::ParseKeyword(s) => tokenize_keyword(c, s),
+            TokenizerState::ParseString(s) => tokenize_string(c, s),
+            TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, s),
+            TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, s),
             TokenizerState::InvalidNumber => todo!(),
             TokenizerState::ParseNumber(_) => todo!(),
             TokenizerState::ParseMinus => todo!()
@@ -142,7 +142,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '1'..='9' => ([].vec(), TokenizerState::ParseNumber(start_number(c))),
         '\t' | '\n' | '\r' | ' ' => ([].vec(), TokenizerState::Initial),
-        '"' => ([].vec(), TokenizerState::ParseString(String::from(""))),
+        '"' => ([].vec(), TokenizerState::ParseString(String::default())),
         '0' => ([].vec(), TokenizerState::ParseNumber(ParseNumberState::Zero(Sign::Plus))),
         '{' | '}' | '[' | ']' | ':' | ',' => ([operator_to_token(c)].vec(), TokenizerState::Initial),
         '-' => ([].vec(), TokenizerState::ParseMinus),
@@ -151,15 +151,14 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_keyword(c: char, s: &str) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_keyword(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         'a'..='z' => {
-            let mut new_string = s.to_owned();
-            new_string.push(c);
-            ([].vec(), TokenizerState::ParseKeyword(new_string))
+            s.push(c);
+            ([].vec(), TokenizerState::ParseKeyword(s))
         }
         _ => {
-            let token = keyword_to_token(s);
+            let token = keyword_to_token(&s);
             let (next_tokens, next_state) = tokenize_initial(c);
             let mut vec = [token].vec();
             vec.extend(next_tokens);
@@ -168,25 +167,23 @@ fn tokenize_keyword(c: char, s: &str) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_string(c: char, s: &str) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_string(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        '"' => ([JsonToken::String(s.to_owned())].vec(), TokenizerState::Initial),
-        '\\' => ([].vec(), TokenizerState::ParseEscapeChar(s.to_owned())),
+        '"' => ([JsonToken::String(s)].vec(), TokenizerState::Initial),
+        '\\' => ([].vec(), TokenizerState::ParseEscapeChar(s)),
         _ => {
-            let mut new_string = s.to_owned();
-            new_string.push(c);
-            ([].vec(), TokenizerState::ParseString(new_string))
+            s.push(c);
+            ([].vec(), TokenizerState::ParseString(s))
         }
     }
 }
 
-fn continue_string_state(c: char, s: &str) -> (Vec<JsonToken>, TokenizerState) {
-    let mut new_string = s.to_owned();
-    new_string.push(c);
-    ([].vec(), TokenizerState::ParseString(new_string))
+fn continue_string_state(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
+    s.push(c);
+    ([].vec(), TokenizerState::ParseString(s))
 }
 
-fn tokenize_escape_char(c: char, s: &str) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_escape_char(c: char, s: String) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '\"' | '\\' | '/' => continue_string_state(c, s),
         'b' => continue_string_state('\u{8}', s),
@@ -204,30 +201,30 @@ fn tokenize_escape_char(c: char, s: &str) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn continue_unicode_state(i: u32, state: &ParseUnicodeCharState) -> (Vec<JsonToken>, TokenizerState) {
+fn continue_unicode_state(i: u32, state: ParseUnicodeCharState) -> (Vec<JsonToken>, TokenizerState) {
     let new_unicode = state.unicode | (i << (3 - state.index) * 4);
     match state.index {
         3 => {
             let c = char::from_u32(new_unicode);
             match c {
-                Some(c) => continue_string_state(c, &state.s),
+                Some(c) => continue_string_state(c, state.s),
                 None => panic!("invalid hex")
             }
         },
         0..=2 => {
-            ([].vec(), TokenizerState::ParseUnicodeChar(ParseUnicodeCharState { s: state.s.clone(), unicode: new_unicode, index: state.index + 1 }))
+            ([].vec(), TokenizerState::ParseUnicodeChar(ParseUnicodeCharState { s: state.s, unicode: new_unicode, index: state.index + 1 }))
         },
         _ => panic!("invalid index")
     }
 }
 
-fn tokenize_unicode_char(c: char, state: &ParseUnicodeCharState) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_unicode_char(c: char, state: ParseUnicodeCharState) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => continue_unicode_state(u32::from(c) - CP_0, state),
         'a'..='f' => continue_unicode_state(u32::from(c) - CP_SMALL_A + 10, state),
         'A'..='F' => continue_unicode_state(u32::from(c) - CP_CAPITAL_A + 10, state),
         _ => {
-            let (next_tokens, next_state) = tokenize_string(c, &state.s);
+            let (next_tokens, next_state) = tokenize_string(c, state.s);
             let mut vec = [JsonToken::ErrorToken(ErrorType::InvalidHex)].vec();
             vec.extend(next_tokens);
             (vec, next_state)
