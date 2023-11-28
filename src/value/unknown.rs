@@ -108,9 +108,6 @@ impl Unknown {
         let v = unsafe { self.u64() };
         if ps.subset().has(v) {
             let p = v & PTR_SUBSET_SUPERPOSITION;
-            if p == 0 {
-                return Err(());
-            }
             return Ok(p as *mut Container<T>);
         }
         Err(())
