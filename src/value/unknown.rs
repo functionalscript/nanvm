@@ -19,7 +19,7 @@ type Result<T> = result::Result<T, ()>;
 impl<T: Cast> From<T> for Unknown {
     #[inline(always)]
     fn from(t: T) -> Self {
-        t.unknown()
+        t.move_to_unknown()
     }
 }
 
@@ -129,7 +129,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(true.unknown().try_move(), Ok(true));
+        assert_eq!(true.move_to_unknown().try_move(), Ok(true));
         assert_eq!(Unknown::from(false).try_move(), Ok(false));
         //
         assert_eq!(Unknown::from(15.0).try_move::<bool>(), Err(()));
@@ -150,7 +150,7 @@ mod test {
     fn test_type() {
         assert_eq!(Unknown::from(15.0).get_type(), Type::Number);
         assert_eq!(Unknown::from(true).get_type(), Type::Bool);
-        assert_eq!(Null().unknown().get_type(), Type::Null);
+        assert_eq!(Null().move_to_unknown().get_type(), Type::Null);
     }
 
     #[test]
@@ -163,7 +163,7 @@ mod test {
         //
         assert!(!Unknown::from(15.0).is::<StringRc>());
         assert!(!Unknown::from(true).is::<StringRc>());
-        assert!(!Null().unknown().is::<StringRc>());
+        assert!(!Null().move_to_unknown().is::<StringRc>());
 
         let s = StringRc::alloc(StringHeader(), [0x20, 0x21].into_iter());
         assert!(Unknown::from(s.clone()).is::<StringRc>());
@@ -183,18 +183,18 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
-        assert!(!Null().unknown().is::<ObjectRc>());
+        assert!(!Null().move_to_unknown().is::<ObjectRc>());
 
         let o = ObjectRc::alloc(ObjectHeader(), [].into_iter());
         assert!(Unknown::from(o.clone()).is::<ObjectRc>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!15.0.unknown().is::<ObjectRc>());
-        assert!(!true.unknown().is::<ObjectRc>());
+        assert!(!15.0.move_to_unknown().is::<ObjectRc>());
+        assert!(!true.move_to_unknown().is::<ObjectRc>());
 
         let o = ObjectRc::alloc(ObjectHeader(), [].into_iter());
-        let u = o.unknown();
+        let u = o.move_to_unknown();
         assert_eq!(u.get_type(), Type::Object);
         {
             let o = u.try_move::<ObjectRc>().unwrap();

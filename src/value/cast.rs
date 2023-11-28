@@ -6,7 +6,7 @@ pub trait Cast: Sized {
     unsafe fn from_unknown_internal(u: u64) -> Self;
     //
     #[inline(always)]
-    fn unknown(self) -> Unknown {
+    fn move_to_unknown(self) -> Unknown {
         unsafe { Unknown::from_internal(Internal(self.move_to_unknown_internal())) }
     }
 }
