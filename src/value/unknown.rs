@@ -10,7 +10,7 @@ use super::{
     extension::{OBJECT, RC, STRING},
     internal::Internal,
     null::Null,
-    object::{ObjectContainer, ObjectRef},
+    object::ObjectContainer,
     string::{StringContainer, StringRef},
     type_::Type,
 };
@@ -22,7 +22,7 @@ type Result<T> = result::Result<T, ()>;
 impl<T: Cast> From<T> for Unknown {
     #[inline(always)]
     fn from(t: T) -> Self {
-        unsafe { Self::from_u64(t.cast_into()) }
+        t.unknown()
     }
 }
 
@@ -124,7 +124,7 @@ mod test {
     use crate::value::{
         extension::{BOOL, EXTENSION, FALSE},
         null::Null,
-        object::ObjectHeader,
+        object::{ObjectHeader, ObjectRef},
         string::StringHeader,
     };
 
