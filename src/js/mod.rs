@@ -1,3 +1,4 @@
+mod any;
 mod bool;
 mod cast;
 mod extension;
@@ -9,4 +10,3 @@ mod string;
 mod tag;
 mod tag_rc;
 mod type_;
-mod any;

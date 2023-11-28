@@ -1,4 +1,4 @@
-use super::{internal::Internal, tag::Tag, any::Any};
+use super::{any::Any, internal::Internal, tag::Tag};
 
 pub trait Cast: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
