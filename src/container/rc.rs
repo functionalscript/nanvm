@@ -1,6 +1,6 @@
 use std::{mem::forget, ptr::read};
 
-use super::{optional_base::OptionalBase, Container, Info, Update, optional_rc::OptionalRc};
+use super::{optional_base::OptionalBase, optional_rc::OptionalRc, Container, Info, Update};
 
 pub type Rc<T> = OptionalRc<*mut Container<T>>;
 

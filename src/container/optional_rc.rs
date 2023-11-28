@@ -1,4 +1,4 @@
-use std::{ptr::read, mem::forget};
+use std::{mem::forget, ptr::read};
 
 use super::{OptionalBase, Update};
 
