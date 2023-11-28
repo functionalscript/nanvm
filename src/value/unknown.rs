@@ -11,12 +11,20 @@ use super::{
     number,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
+    tag::Tag,
     type_::Type,
 };
 
 pub type Unknown = Ref<Internal>;
 
 type Result<T> = result::Result<T, ()>;
+
+impl<T: Tag> From<T> for Unknown {
+    #[inline(always)]
+    fn from(t: T) -> Self {
+        Self::from_u64(t.to_unknown() | T::SUBSET.tag)
+    }
+}
 
 impl From<f64> for Unknown {
     #[inline(always)]
@@ -37,12 +45,14 @@ impl TryFrom<Unknown> for f64 {
     }
 }
 
+/*
 impl From<bool> for Unknown {
     #[inline(always)]
     fn from(b: bool) -> Self {
         Self::from_bool(b)
     }
 }
+*/
 
 impl TryFrom<Unknown> for bool {
     type Error = ();
@@ -113,10 +123,6 @@ impl Unknown {
         !EXTENSION.has(self.u64())
     }
     // bool
-    #[inline(always)]
-    const fn from_bool(b: bool) -> Self {
-        Self::from_u64((b as u64) | BOOL.tag)
-    }
     #[inline(always)]
     const fn is_bool(&self) -> bool {
         BOOL.has(self.u64())
@@ -240,14 +246,14 @@ mod test {
         );
         assert!(f64::try_from(Unknown::from(f64::NAN)).unwrap().is_nan());
         //
-        assert_eq!(f64::try_from(Unknown::from_bool(true)), Err(()));
+        assert_eq!(f64::try_from(Unknown::from(true)), Err(()));
         assert_eq!(f64::try_from(Unknown::null()), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(Unknown::from_bool(true).get_bool(), Ok(true));
+        assert_eq!(Unknown::from(true).get_bool(), Ok(true));
         assert_eq!(Unknown::from(false).get_bool(), Ok(false));
         //
         assert_eq!(Unknown::from(15.0).get_bool(), Err(()));
