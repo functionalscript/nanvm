@@ -91,7 +91,7 @@ mod test {
     };
 
     use super::{
-        super::{bitset::TRUE, number::NAN},
+        super::{bitset::TRUE, number::test::NAN},
         *,
     };
 
