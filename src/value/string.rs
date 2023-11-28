@@ -3,7 +3,7 @@ use crate::{
     container::{Container, Info, Rc},
 };
 
-use super::{extension::STRING, tag::TagRc};
+use super::{extension::STRING, tag_rc::TagRc};
 
 pub struct StringHeader();
 

@@ -8,7 +8,7 @@ use super::{
     internal::Internal,
     null::Null,
     string::StringRc,
-    tag::TagRc,
+    tag_rc::TagRc,
     type_::Type,
 };
 

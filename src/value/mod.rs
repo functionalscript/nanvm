@@ -7,5 +7,6 @@ mod number;
 mod object;
 mod string;
 mod tag;
+mod tag_rc;
 mod type_;
 mod unknown;

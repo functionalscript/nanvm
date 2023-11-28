@@ -4,7 +4,7 @@ use super::{
     extension::{PTR_SUBSET_SUPERPOSITION, RC, STRING},
     object::ObjectHeader,
     string::StringHeader,
-    tag::TagRc,
+    tag_rc::TagRc,
 };
 
 #[repr(transparent)]
