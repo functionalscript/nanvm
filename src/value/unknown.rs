@@ -11,7 +11,6 @@ use super::{
     internal::Internal,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
-    tag::Tag,
     type_::Type,
 };
 
@@ -98,25 +97,12 @@ impl Unknown {
     }
     // generic
     #[inline(always)]
-    fn is<T: Tag>(&self) -> bool {
-        T::SUBSET.has(self.u64())
+    fn is<T: Cast>(&self) -> bool {
+        T::cast_is(self.u64())
     }
-    #[inline(always)]
-    fn try_to<T: Tag>(self) -> Result<T> {
-        let v = self.u64();
+    fn try_to<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            return Ok(T::from_unknown_raw(v & T::SUBSET.superposition()));
-        }
-        Err(())
-    }
-    // bool
-    #[inline(always)]
-    const fn is_bool(&self) -> bool {
-        BOOL.has(self.u64())
-    }
-    const fn get_bool(&self) -> Result<bool> {
-        if self.is_bool() {
-            return Ok(self.u64() != FALSE);
+            return Ok(T::cast_from(self.u64()));
         }
         Err(())
     }
@@ -243,11 +229,11 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_bool() {
-        assert_eq!(Unknown::from(true).get_bool(), Ok(true));
-        assert_eq!(Unknown::from(false).get_bool(), Ok(false));
+        assert_eq!(Unknown::from(true).try_to(), Ok(true));
+        assert_eq!(Unknown::from(false).try_to(), Ok(false));
         //
-        assert_eq!(Unknown::from(15.0).get_bool(), Err(()));
-        assert_eq!(Unknown::null().get_bool(), Err(()));
+        assert_eq!(Unknown::from(15.0).try_to::<bool>(), Err(()));
+        assert_eq!(Unknown::null().try_to::<bool>(), Err(()));
     }
 
     #[test]
