@@ -12,6 +12,6 @@ impl<T: Info> OptionalBase for *mut Container<T> {
     }
     #[inline(always)]
     unsafe fn dealloc(&self, _: *mut Base) {
-        Container::dealloc(*self);
+        Container::delete(*self);
     }
 }

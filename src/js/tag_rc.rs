@@ -9,7 +9,7 @@ pub trait TagRc: Info {
     const RC_SUBSET: BitSubset64;
     const _0: () = assert!(Self::RC_SUBSET.superposition() == PTR_SUBSET_SUPERPOSITION);
     unsafe fn dealloc(p: *mut Base) {
-        Container::dealloc(p as *mut Container<Self>);
+        Container::delete(p as *mut Container<Self>);
     }
 }
 

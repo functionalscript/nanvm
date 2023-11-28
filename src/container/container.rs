@@ -16,7 +16,7 @@ pub struct Container<T: Info> {
 
 impl<T: Info> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn alloc(info: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
+    pub unsafe fn new(info: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
         let mut len = items.len();
         let p = System.alloc(Self::FAS_LAYOUT.layout(len)) as *mut Self;
         let container = &mut *p;
@@ -35,7 +35,7 @@ impl<T: Info> Container<T> {
         assert_eq!(len, 0);
         p
     }
-    pub unsafe fn dealloc(p: *mut Self) {
+    pub unsafe fn delete(p: *mut Self) {
         let container = &mut *p;
         let len = container.len;
         drop_in_place(container.get_items_mut());
@@ -92,7 +92,7 @@ mod test {
             if Base::update(&mut (*p).base, Update::Release) != 0 {
                 return;
             }
-            Container::dealloc(p)
+            Container::delete(p)
         }
     }
 
@@ -101,7 +101,7 @@ mod test {
     fn sequential_test() {
         unsafe {
             let mut i = 0;
-            let p = Container::<DebugClean>::alloc(DebugClean(&mut i), [].into_iter());
+            let p = Container::<DebugClean>::new(DebugClean(&mut i), [].into_iter());
             assert_eq!(i, 0);
             release(p);
             assert_eq!(i, 1);
@@ -109,7 +109,7 @@ mod test {
         unsafe {
             let mut item_count = 0;
             let mut clean_count = 0;
-            let p = Container::<DebugClean>::alloc(
+            let p = Container::<DebugClean>::new(
                 DebugClean(&mut clean_count),
                 [
                     DebugItem(&mut item_count),
