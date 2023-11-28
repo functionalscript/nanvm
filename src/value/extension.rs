@@ -4,12 +4,23 @@ use crate::{
     value::{object::ObjectHeader, string::StringHeader},
 };
 
+// EXTENSION
+
 pub const EXTENSION: BitSubset64 = BitSubset64::from_tag(0xFFF8_0000_0000_0000);
 
 const EXTENSION_SPLIT: (BitSubset64, BitSubset64) = EXTENSION.split(0x0004_0000_0000_0000);
 
-pub const BOOL: BitSubset64 = EXTENSION_SPLIT.0;
+pub const SIMPLE: BitSubset64 = EXTENSION_SPLIT.0;
 pub const PTR: BitSubset64 = EXTENSION_SPLIT.1;
+
+// SIMPLE
+
+pub const SIMPLE_SPLIT: (BitSubset64, BitSubset64) = SIMPLE.split(0x0002_0000_0000_0000);
+
+pub const BOOL: BitSubset64 = SIMPLE_SPLIT.0;
+pub const NULL: BitSubset64 = SIMPLE_SPLIT.1;
+
+// PTR
 
 const PTR_SPLIT: (BitSubset64, BitSubset64) = PTR.split(0x0002_0000_0000_0000);
 

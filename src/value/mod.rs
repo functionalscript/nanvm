@@ -2,6 +2,7 @@ mod bool;
 mod cast;
 mod extension;
 mod internal;
+mod null;
 mod number;
 mod object;
 mod string;
