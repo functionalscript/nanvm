@@ -9,6 +9,7 @@ use super::{
     cast::Cast,
     extension::{OBJECT, RC, STRING},
     internal::Internal,
+    null::Null,
     object::{ObjectContainer, ObjectRef},
     string::{StringContainer, StringRef},
     type_::Type,
@@ -98,15 +99,6 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn null() -> Self {
-        unsafe { Self::from_u64(OBJECT.subset().tag) }
-    }
-    #[inline(always)]
-    fn is_null(&self) -> bool {
-        unsafe { self.u64() == OBJECT.subset().tag }
-    }
-    //
-    #[inline(always)]
     fn from_ref<T: Info>(ps: PtrSubset<T>, s: ContainerRef<T>) -> Self {
         let p: *mut Container<T> = *s.get();
         forget(s);
@@ -157,6 +149,8 @@ impl Unknown {
         } else {
             if self.is::<f64>() {
                 Type::Number
+            } else if self.is::<Null>() {
+                Type::Null
             } else {
                 Type::Bool
             }
@@ -172,6 +166,7 @@ mod test {
 
     use crate::value::{
         extension::{BOOL, EXTENSION, FALSE},
+        null::Null,
         object::ObjectHeader,
         string::StringHeader,
     };
@@ -212,7 +207,7 @@ mod test {
         assert!(Unknown::from(f64::NAN).try_to::<f64>().unwrap().is_nan());
         //
         assert_eq!(Unknown::from(true).try_to::<f64>(), Err(()));
-        assert_eq!(Unknown::null().try_to::<f64>(), Err(()));
+        assert_eq!(Unknown::from(Null()).try_to::<f64>(), Err(()));
     }
 
     #[test]
@@ -222,16 +217,16 @@ mod test {
         assert_eq!(Unknown::from(false).try_to(), Ok(false));
         //
         assert_eq!(Unknown::from(15.0).try_to::<bool>(), Err(()));
-        assert_eq!(Unknown::null().try_to::<bool>(), Err(()));
+        assert_eq!(Unknown::from(Null()).try_to::<bool>(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_null() {
-        assert!(Unknown::null().is_null());
+        assert!(Unknown::from(Null()).is::<Null>());
         //
-        assert!(!Unknown::from(-15.7).is_null());
-        assert!(!Unknown::from(false).is_null());
+        assert!(!Unknown::from(-15.7).is::<Null>());
+        assert!(!Unknown::from(false).is::<Null>());
     }
 
     #[test]
@@ -239,7 +234,7 @@ mod test {
     fn test_type() {
         assert_eq!(Unknown::from(15.0).get_type(), Type::Number);
         assert_eq!(Unknown::from(true).get_type(), Type::Bool);
-        assert_eq!(Unknown::null().get_type(), Type::Object);
+        assert_eq!(Null().unknown().get_type(), Type::Null);
     }
 
     #[test]
@@ -252,7 +247,7 @@ mod test {
         //
         assert!(!Unknown::from(15.0).is_string());
         assert!(!Unknown::from(true).is_string());
-        assert!(!Unknown::null().is_string());
+        assert!(!Null().unknown().is_string());
 
         let s = StringRef::alloc(StringHeader(), [0x20, 0x21].into_iter());
         assert!(Unknown::from(s.clone()).is_string());
@@ -272,14 +267,14 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
-        assert!(Unknown::null().is_object());
+        assert!(!Null().unknown().is_object());
 
         let o = ObjectRef::alloc(ObjectHeader(), [].into_iter());
         assert!(Unknown::from(o.clone()).is_object());
         let v = o.get_items_mut();
         assert!(v.is_empty());
         //
-        assert!(!Unknown::from(15.0).is_object());
-        assert!(!Unknown::from(true).is_object());
+        assert!(!15.0.unknown().is_object());
+        assert!(!true.unknown().is_object());
     }
 }
