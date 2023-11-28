@@ -8,7 +8,7 @@ use super::{extension::PTR_SUBSET_SUPERPOSITION, tag::Tag};
 pub trait TagRc: Info {
     const RC_SUBSET: BitSubset64;
     const _0: () = assert!(Self::RC_SUBSET.superposition() == PTR_SUBSET_SUPERPOSITION);
-    unsafe fn dealloc(p: *mut Base) {
+    unsafe fn delete(p: *mut Base) {
         Container::delete(p as *mut Container<Self>);
     }
 }

@@ -39,7 +39,7 @@ impl<T: OptionalBase> Drop for OptionalRc<T> {
         unsafe {
             if let Some(base) = self.0.get_base() {
                 if (&mut *base).update(Update::Release) == 0 {
-                    self.0.dealloc(base)
+                    self.0.delete(base)
                 }
             }
         }

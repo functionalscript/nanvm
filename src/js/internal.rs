@@ -20,11 +20,11 @@ impl OptionalBase for Internal {
         let i = v & PTR_SUBSET_SUPERPOSITION;
         Some(i as *mut Base)
     }
-    unsafe fn dealloc(&self, base: *mut Base) {
+    unsafe fn delete(&self, base: *mut Base) {
         if STRING.has(self.0) {
-            StringHeader::dealloc(base);
+            StringHeader::delete(base);
         } else {
-            ObjectHeader::dealloc(base);
+            ObjectHeader::delete(base);
         }
     }
 }

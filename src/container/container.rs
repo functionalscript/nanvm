@@ -89,10 +89,9 @@ mod test {
 
     fn release<T: Info>(p: *mut Container<T>) {
         unsafe {
-            if Base::update(&mut (*p).base, Update::Release) != 0 {
-                return;
+            if Base::update(&mut (*p).base, Update::Release) == 0 {
+                Container::delete(p)
             }
-            Container::delete(p)
         }
     }
 
