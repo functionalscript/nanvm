@@ -3,27 +3,33 @@ use std::{
     ptr::{drop_in_place, write},
 };
 
-use crate::common::fas::FasLayout;
+use crate::{allocator::Allocator, common::fas::FasLayout};
 
 use super::{Base, Info};
 
 #[repr(C)]
 pub struct Container<T: Info> {
     base: Base,
+    allocator: T::Allocator,
     len: usize,
     pub info: T,
 }
 
 impl<T: Info> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
-    pub unsafe fn new(info: T, items: impl ExactSizeIterator<Item = T::Item>) -> *mut Self {
+    pub unsafe fn new(
+        allocator: T::Allocator,
+        info: T,
+        items: impl ExactSizeIterator<Item = T::Item>,
+    ) -> *mut Self {
         let mut len = items.len();
-        let p = System.alloc(Self::FAS_LAYOUT.layout(len)) as *mut Self;
+        let p = allocator.alloc(Self::FAS_LAYOUT.layout(len)) as *mut Self;
         let container = &mut *p;
         write(
             container,
             Container {
                 base: Base::default(),
+                allocator,
                 len,
                 info,
             },
@@ -38,9 +44,10 @@ impl<T: Info> Container<T> {
     pub unsafe fn delete(p: *mut Self) {
         let container = &mut *p;
         let len = container.len;
+        let allocator = container.allocator.clone();
         drop_in_place(container.get_items_mut());
         drop_in_place(p);
-        System.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
+        allocator.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
     }
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         Self::FAS_LAYOUT.get_mut(self, self.len)
@@ -53,7 +60,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::container::Update;
+    use crate::{allocator::GlobalAllocator, container::Update};
 
     use super::*;
 
@@ -79,6 +86,7 @@ mod test {
 
     impl Info for DebugClean {
         type Item = DebugItem;
+        type Allocator = GlobalAllocator;
     }
 
     fn add_ref<T: Info>(p: *mut Container<T>) {
@@ -100,7 +108,8 @@ mod test {
     fn sequential_test() {
         unsafe {
             let mut i = 0;
-            let p = Container::<DebugClean>::new(DebugClean(&mut i), [].into_iter());
+            let p =
+                Container::<DebugClean>::new(GlobalAllocator(), DebugClean(&mut i), [].into_iter());
             assert_eq!(i, 0);
             release(p);
             assert_eq!(i, 1);
@@ -109,6 +118,7 @@ mod test {
             let mut item_count = 0;
             let mut clean_count = 0;
             let p = Container::<DebugClean>::new(
+                GlobalAllocator(),
                 DebugClean(&mut clean_count),
                 [
                     DebugItem(&mut item_count),

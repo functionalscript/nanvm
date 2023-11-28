@@ -1,11 +1,11 @@
 use std::alloc::{alloc, dealloc, Layout};
 
-pub trait Allocator: Clone {
+pub trait Allocator: Clone + Copy {
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
     unsafe fn dealloc(self, ptr: *mut u8, layout: Layout);
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct GlobalAllocator();
 
 impl Allocator for GlobalAllocator {

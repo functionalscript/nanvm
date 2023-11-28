@@ -1,4 +1,5 @@
 use crate::{
+    allocator::GlobalAllocator,
     common::bit_subset64::BitSubset64,
     container::{Container, Info, Rc},
     js::unknown::Unknown,
@@ -10,6 +11,7 @@ pub struct ObjectHeader();
 
 impl Info for ObjectHeader {
     type Item = (Unknown, Unknown);
+    type Allocator = GlobalAllocator;
 }
 
 pub type ObjectContainer = Container<ObjectHeader>;

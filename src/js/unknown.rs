@@ -80,11 +80,14 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::js::{
-        extension::{BOOL, EXTENSION, FALSE},
-        null::Null,
-        object::{ObjectHeader, ObjectRc},
-        string::StringHeader,
+    use crate::{
+        allocator::GlobalAllocator,
+        js::{
+            extension::{BOOL, EXTENSION, FALSE},
+            null::Null,
+            object::{ObjectHeader, ObjectRc},
+            string::StringHeader,
+        },
     };
 
     use super::{
@@ -156,7 +159,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
-        let s = StringRc::alloc(StringHeader(), [].into_iter());
+        let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [].into_iter());
         assert!(Unknown::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert!(v.is_empty());
@@ -165,7 +168,7 @@ mod test {
         assert!(!Unknown::from(true).is::<StringRc>());
         assert!(!Null().move_to_unknown().is::<StringRc>());
 
-        let s = StringRc::alloc(StringHeader(), [0x20, 0x21].into_iter());
+        let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [0x20, 0x21].into_iter());
         assert!(Unknown::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);
@@ -185,7 +188,7 @@ mod test {
     fn test_object() {
         assert!(!Null().move_to_unknown().is::<ObjectRc>());
 
-        let o = ObjectRc::alloc(ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
         assert!(Unknown::from(o.clone()).is::<ObjectRc>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
@@ -193,7 +196,7 @@ mod test {
         assert!(!15.0.move_to_unknown().is::<ObjectRc>());
         assert!(!true.move_to_unknown().is::<ObjectRc>());
 
-        let o = ObjectRc::alloc(ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
         let u = o.move_to_unknown();
         assert_eq!(u.get_type(), Type::Object);
         {
