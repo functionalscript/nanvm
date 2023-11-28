@@ -79,7 +79,7 @@ impl Unknown {
     }
     //
     #[inline(always)]
-    fn is_ptr(&self) -> bool {
+    fn is_rc(&self) -> bool {
         RC.has(unsafe { self.u64() })
     }
     //
@@ -117,7 +117,7 @@ impl Unknown {
     }
     //
     fn get_type(&self) -> Type {
-        if self.is_ptr() {
+        if self.is_rc() {
             if self.is::<StringRef>() {
                 Type::String
             } else {
