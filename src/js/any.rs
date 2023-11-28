@@ -81,7 +81,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        allocator::GlobalAllocator,
+        common::allocator::GlobalAllocator,
         js::{
             bitset::{BOOL, EXTENSION, FALSE},
             null::Null,

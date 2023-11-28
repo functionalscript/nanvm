@@ -1,6 +1,5 @@
 use crate::{
-    allocator::GlobalAllocator,
-    common::bit_subset64::BitSubset64,
+    common::{allocator::GlobalAllocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
     js::any::Any,
 };

@@ -1,6 +1,6 @@
 use std::ptr::{drop_in_place, write};
 
-use crate::{allocator::Allocator, common::fas::FasLayout};
+use crate::common::{allocator::Allocator, fas::FasLayout};
 
 use super::{Base, Info};
 
@@ -57,7 +57,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{allocator::GlobalAllocator, container::Update};
+    use crate::{common::allocator::GlobalAllocator, container::Update};
 
     use super::*;
 
