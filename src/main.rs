@@ -137,11 +137,35 @@ fn tokenize_keyword(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
 fn tokenize_string(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '"' => ([JsonToken::String(s.to_string())].vec(), TokenizerState::Initial),
-        '\\' => todo!(),
+        '\\' => ([].vec(), TokenizerState::ParseEscapeChar(s.to_string())),
         _ => {
             let mut new_string = s.clone();
             new_string.push(c);
             ([].vec(), TokenizerState::ParseString(new_string))
+        }
+    }
+}
+
+fn continue_string_state(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
+    let mut new_string = s.clone();
+    new_string.push(c);
+    ([].vec(), TokenizerState::ParseString(new_string))
+}
+
+fn tokenize_escape_char(c: char, s: &String) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '\"' | '\\' | '/' => continue_string_state(c, &s),
+        'b' => continue_string_state('\u{8}', s),
+        'f' => continue_string_state('\u{c}', s),
+        'n' => continue_string_state('\n', s),
+        'r' => continue_string_state('\r', s),
+        't' => continue_string_state('\t', s),
+        'u' => todo!(),
+        _ => {
+            let (next_tokens, next_state) = tokenize_string(c, s);
+            let mut vec = [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].vec();
+            vec.extend(next_tokens);
+            (vec, next_state)
         }
     }
 }
@@ -162,7 +186,7 @@ fn tokenize_next_char(c: char, state: &TokenizerState) -> (Vec<JsonToken>, Token
         TokenizerState::Initial => tokenize_initial(c),
         TokenizerState::ParseKeyword(s) => tokenize_keyword(c, s),
         TokenizerState::ParseString(s) => tokenize_string(c, s),
-        TokenizerState::ParseEscapeChar(_) => todo!(),
+        TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, s),
         TokenizerState::ParseUnicodeChar(_) => todo!(),
         TokenizerState::InvalidNumber => todo!(),
         TokenizerState::ParseNumber(_) => todo!(),
@@ -269,6 +293,19 @@ mod test {
         assert_eq!(&result, &[JsonToken::String("value1".to_string()), JsonToken::String("value2".to_string())]);
 
         let result = tokenize(String::from("\"value"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_escaped_characters() {
+        let result = tokenize(String::from("\"\\b\\f\\n\\r\\t\""));
+        assert_eq!(&result, &[JsonToken::String("\u{8}\u{c}\n\r\t".to_string())]);
+
+        let result = tokenize(String::from("\"\\x\""));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::UnexpectedCharacter), JsonToken::String("x".to_string())]);
+
+        let result = tokenize(String::from("\"\\"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
     }
 }
