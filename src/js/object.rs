@@ -4,12 +4,12 @@ use crate::{
     js::any::Any,
 };
 
-use super::{bitset::OBJECT, extension_rc::ExtensionRc};
+use super::{bitset::OBJECT, extension_rc::ExtensionRc, string::StringRc};
 
 pub struct ObjectHeader();
 
 impl Info for ObjectHeader {
-    type Item = (Any, Any);
+    type Item = (StringRc, Any);
     type Allocator = GlobalAllocator;
 }
 
