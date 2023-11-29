@@ -7,7 +7,6 @@ use super::{Base, Info};
 #[repr(C)]
 pub struct Container<T: Info> {
     base: Base,
-    allocator: T::Allocator,
     len: usize,
     pub info: T,
 }
@@ -26,7 +25,6 @@ impl<T: Info> Container<T> {
             container,
             Container {
                 base: Base::default(),
-                allocator,
                 len,
                 info,
             },
@@ -40,10 +38,10 @@ impl<T: Info> Container<T> {
     }
     pub unsafe fn delete(p: *mut Self) {
         let container = &mut *p;
+        let len = container.len;
         drop_in_place(container.get_items_mut());
-        let mut tmp = read(container);
-        tmp.allocator
-            .dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(tmp.len));
+        drop_in_place(container);
+        T::Allocator::dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
     }
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         Self::FAS_LAYOUT.get_mut(self, self.len)
