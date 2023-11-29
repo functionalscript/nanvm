@@ -49,7 +49,9 @@ enum TokenizerState {
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
     ParseZero(Sign),
-    ParseInt(IntegerState)
+    ParseInt(IntegerState),
+    ParseFracBegin(IntegerState),
+    ParseFrac(FloatState),
 }
 
 impl TokenizerState {
@@ -63,6 +65,8 @@ impl TokenizerState {
             TokenizerState::ParseZero(s) => tokenize_zero(c, s),
             TokenizerState::ParseInt(s) => tokenize_integer(c, s),
             TokenizerState::ParseMinus => tokenize_minus(c),
+            TokenizerState::ParseFracBegin(s) => tokenize_frac_begin(c, s),
+            TokenizerState::ParseFrac(s) => tokenize_frac(c, s)
         }
     }
 
@@ -79,6 +83,17 @@ impl TokenizerState {
     }
 }
 
+struct ParseUnicodeCharState {
+    s: String,
+    unicode: u32,
+    index: u8,
+}
+
+struct IntegerState {
+    s: Sign,
+    m: u128,
+}
+
 impl IntegerState {
     fn add_digit(mut self, c: char) -> IntegerState {
         self.m = self.m * 10 + u128::from(c) - CP_0 as u128;
@@ -93,15 +108,25 @@ impl IntegerState {
     }
 }
 
-struct ParseUnicodeCharState {
-    s: String,
-    unicode: u32,
-    index: u8,
-}
-
-struct IntegerState {
+struct FloatState {
     s: Sign,
     m: u128,
+    f: u128,
+}
+
+impl FloatState {
+    fn add_digit(mut self, c: char) -> FloatState {
+        self.m = self.m * 10 + u128::from(c) - CP_0 as u128;
+        self.f = self.f - 1;
+        self
+    }
+
+    fn to_float(self) -> f64 {
+        match self.s {
+            Sign::Plus => self.m as f64,
+            Sign::Minus => -1.0 * self.m as f64
+        }
+    }
 }
 
 enum Sign {
@@ -257,7 +282,7 @@ fn tokenize_unicode_char(c: char, state: ParseUnicodeCharState) -> (Vec<JsonToke
 fn tokenize_zero(c: char, s: Sign) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => tokenize_invalid_number(c),
-        '.' => todo!("start float"),
+        '.' => ([].vec(), TokenizerState::ParseFracBegin(IntegerState { s: s, m: 0 })),
         'e' | 'E' => todo!("start exp"),
         c if is_terminal_for_number(c) => transfer_state([JsonToken::Number(0.0)].vec(), TokenizerState::Initial, c),
         _ => tokenize_invalid_number(c),
@@ -267,9 +292,28 @@ fn tokenize_zero(c: char, s: Sign) -> (Vec<JsonToken>, TokenizerState) {
 fn tokenize_integer(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => ([].vec(), TokenizerState::ParseInt(s.add_digit(c))),
-        '.' => todo!("start float"),
+        '.' => ([].vec(), TokenizerState::ParseFracBegin(s)),
         'e' | 'E' => todo!("start exp"),
         c if is_terminal_for_number(c) => transfer_state([JsonToken::Number(s.to_float())].vec(), TokenizerState::Initial, c),
+        _ => tokenize_invalid_number(c),
+    }
+}
+
+fn tokenize_frac_begin(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '0'..='9' => {
+            let float_state = FloatState { s: s.s, m: s.m, f: 0 };
+            ([].vec(), TokenizerState::ParseFrac(float_state.add_digit(c)))
+        },
+        _ => tokenize_invalid_number(c),
+    }
+}
+
+fn tokenize_frac(c: char, s: FloatState) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '0'..='9' => ([].vec(), TokenizerState::ParseFrac(s.add_digit(c))),
+        'e' | 'E' => todo!("start exp"),
+        c if is_terminal_for_number(c) => todo!("create number token"),
         _ => tokenize_invalid_number(c),
     }
 }
@@ -442,4 +486,5 @@ mod test {
         let result = tokenize(String::from("-{}"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::ObjectBegin, JsonToken::ObjectEnd]);
     }
+
 }
