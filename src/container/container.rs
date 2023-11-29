@@ -1,6 +1,6 @@
-use std::ptr::{drop_in_place, write};
+use std::ptr::{drop_in_place, read, write};
 
-use crate::{allocator::Allocator, common::fas::FasLayout};
+use crate::common::{allocator::Allocator, fas::FasLayout};
 
 use super::{Base, Info};
 
@@ -15,7 +15,7 @@ pub struct Container<T: Info> {
 impl<T: Info> Container<T> {
     const FAS_LAYOUT: FasLayout<Container<T>, T::Item> = FasLayout::new();
     pub unsafe fn new(
-        allocator: T::Allocator,
+        mut allocator: T::Allocator,
         info: T,
         items: impl ExactSizeIterator<Item = T::Item>,
     ) -> *mut Self {
@@ -40,11 +40,10 @@ impl<T: Info> Container<T> {
     }
     pub unsafe fn delete(p: *mut Self) {
         let container = &mut *p;
-        let len = container.len;
-        let allocator = container.allocator.clone();
         drop_in_place(container.get_items_mut());
-        drop_in_place(p);
-        allocator.dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(len));
+        let mut tmp = read(container);
+        tmp.allocator
+            .dealloc(p as *mut u8, Self::FAS_LAYOUT.layout(tmp.len));
     }
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         Self::FAS_LAYOUT.get_mut(self, self.len)
@@ -57,7 +56,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{allocator::GlobalAllocator, container::Update};
+    use crate::{common::allocator::GlobalAllocator, container::Update};
 
     use super::*;
 

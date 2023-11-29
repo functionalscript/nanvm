@@ -1,24 +1,23 @@
 use crate::container::{Base, OptionalBase};
 
 use super::{
-    extension::{PTR_SUBSET_SUPERPOSITION, RC, STRING},
+    bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
+    extension_rc::ExtensionRc,
     object::ObjectHeader,
     string::StringHeader,
-    tag_rc::TagRc,
 };
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Internal(pub u64);
+pub struct AnyInternal(pub u64);
 
-impl OptionalBase for Internal {
+impl OptionalBase for AnyInternal {
     unsafe fn get_base(&self) -> Option<*mut Base> {
         let v = self.0;
         if !RC.has(v) {
             return None;
         }
-        let i = v & PTR_SUBSET_SUPERPOSITION;
-        Some(i as *mut Base)
+        Some((v & RC_SUBSET_SUPERPOSITION) as *mut Base)
     }
     unsafe fn delete(&self, base: *mut Base) {
         if STRING.has(self.0) {

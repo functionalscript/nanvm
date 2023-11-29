@@ -8,9 +8,9 @@ impl<T: Info> Rc<T> {
         info: T,
         i: impl ExactSizeIterator<Item = T::Item>,
     ) -> Self {
-        unsafe { Self::from_internal(Container::new(allocator, info, i)) }
+        unsafe { Self::from_optional_base(Container::new(allocator, info, i)) }
     }
     pub fn get_items_mut(&self) -> &mut [T::Item] {
-        unsafe { (**self.internal()).get_items_mut() }
+        unsafe { (**self.optional_base()).get_items_mut() }
     }
 }

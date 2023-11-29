@@ -1,10 +1,9 @@
 use crate::{
-    allocator::GlobalAllocator,
-    common::bit_subset64::BitSubset64,
+    common::{allocator::GlobalAllocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
 };
 
-use super::{extension::STRING, tag_rc::TagRc};
+use super::{bitset::STRING, extension_rc::ExtensionRc};
 
 pub struct StringHeader();
 
@@ -17,6 +16,6 @@ pub type StringContainer = Container<StringHeader>;
 
 pub type StringRc = Rc<StringHeader>;
 
-impl TagRc for StringHeader {
+impl ExtensionRc for StringHeader {
     const RC_SUBSET: BitSubset64 = STRING;
 }

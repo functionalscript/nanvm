@@ -1,4 +1,4 @@
-use crate::allocator::Allocator;
+use crate::common::allocator::Allocator;
 
 pub trait Info: Sized {
     type Item;

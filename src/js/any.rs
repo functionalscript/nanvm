@@ -3,16 +3,16 @@ use std::result;
 use crate::container::{Container, OptionalRc};
 
 use super::{
+    any_internal::AnyInternal,
+    bitset::{RC, RC_SUBSET_SUPERPOSITION},
     cast::Cast,
-    extension::{PTR_SUBSET_SUPERPOSITION, RC},
-    internal::Internal,
+    extension_rc::ExtensionRc,
     null::Null,
     string::StringRc,
-    tag_rc::TagRc,
     type_::Type,
 };
 
-pub type Any = OptionalRc<Internal>;
+pub type Any = OptionalRc<AnyInternal>;
 
 type Result<T> = result::Result<T, ()>;
 
@@ -26,7 +26,7 @@ impl<T: Cast> From<T> for Any {
 impl Any {
     #[inline(always)]
     unsafe fn u64(&self) -> u64 {
-        self.internal().0
+        self.optional_base().0
     }
     // generic
     #[inline(always)]
@@ -35,7 +35,7 @@ impl Any {
     }
     pub fn try_move<T: Cast>(self) -> Result<T> {
         if self.is::<T>() {
-            return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
+            return Ok(unsafe { T::from_any_internal(self.move_to_optional_base().0) });
         }
         Err(())
     }
@@ -46,10 +46,10 @@ impl Any {
     }
     //
     #[inline(always)]
-    pub fn try_ref<T: TagRc>(&self) -> Result<&mut Container<T>> {
+    pub fn try_ref<T: ExtensionRc>(&self) -> Result<&mut Container<T>> {
         let v = unsafe { self.u64() };
         if T::RC_SUBSET.has(v) {
-            let p = (v & PTR_SUBSET_SUPERPOSITION) as *mut Container<T>;
+            let p = (v & RC_SUBSET_SUPERPOSITION) as *mut Container<T>;
             return Ok(unsafe { &mut *p });
         }
         Err(())
@@ -81,9 +81,9 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        allocator::GlobalAllocator,
+        common::allocator::GlobalAllocator,
         js::{
-            extension::{BOOL, EXTENSION, FALSE},
+            bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
             object::{ObjectHeader, ObjectRc},
             string::StringHeader,
@@ -91,7 +91,7 @@ mod test {
     };
 
     use super::{
-        super::{extension::TRUE, number::NAN},
+        super::{bitset::TRUE, number::test::NAN},
         *,
     };
 

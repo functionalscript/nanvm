@@ -1,15 +1,4 @@
-use super::{cast::Cast, extension::EXTENSION};
-
-// compatible with `f64`
-pub const INFINITY: u64 = 0x7FF0_0000_0000_0000;
-pub const NAN: u64 = 0x7FF8_0000_0000_0000;
-pub const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
-pub const E: u64 = 0x7FF0_0000_0000_0000;
-pub const EF: u64 = 0x7FFF_FFFF_FFFF_FFFF;
-
-pub const fn is_valid(v: u64) -> bool {
-    v & E != E || v & EF == INFINITY || v == NAN
-}
+use super::{bitset::EXTENSION, cast::Cast};
 
 impl Cast for f64 {
     #[inline(always)]
@@ -27,10 +16,19 @@ impl Cast for f64 {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::*;
+    // compatible with `f64`
+    pub const INFINITY: u64 = 0x7FF0_0000_0000_0000;
+    pub const NAN: u64 = 0x7FF8_0000_0000_0000;
+    pub const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000;
+    pub const E: u64 = 0x7FF0_0000_0000_0000;
+    pub const EF: u64 = 0x7FFF_FFFF_FFFF_FFFF;
+
+    pub const fn is_valid(v: u64) -> bool {
+        v & E != E || v & EF == INFINITY || v == NAN
+    }
 
     #[test]
     #[wasm_bindgen_test]
