@@ -49,8 +49,7 @@ enum TokenizerState {
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
     ParseZero(Sign),
-    ParseInt(IntegerState),
-    InvalidNumber
+    ParseInt(IntegerState)
 }
 
 impl TokenizerState {
@@ -61,10 +60,9 @@ impl TokenizerState {
             TokenizerState::ParseString(s) => tokenize_string(c, s),
             TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, s),
             TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, s),
-            TokenizerState::InvalidNumber => todo!(),
             TokenizerState::ParseZero(s) => tokenize_zero(c, s),
             TokenizerState::ParseInt(s) => tokenize_integer(c, s),
-            TokenizerState::ParseMinus => todo!()
+            TokenizerState::ParseMinus => tokenize_minus(c),
         }
     }
 
@@ -75,7 +73,7 @@ impl TokenizerState {
             TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => [JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(),
             TokenizerState::ParseZero(_) => [JsonToken::Number(0.0)].vec(),
             TokenizerState::ParseInt(s) => [JsonToken::Number(s.to_float())].vec(),
-            TokenizerState::InvalidNumber | TokenizerState::ParseMinus => [JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(),
+            TokenizerState::ParseMinus => [JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(),
             _ => todo!()
         }
     }
@@ -276,6 +274,14 @@ fn tokenize_integer(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerState
     }
 }
 
+fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '0' => ([].vec(), TokenizerState::ParseZero(Sign::Minus)),
+        '1'..='9' => ([].vec(), TokenizerState::ParseInt(start_number(Sign::Minus, c))),
+        _ => tokenize_invalid_number(c),
+    }
+}
+
 fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
     transfer_state([JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(), TokenizerState::Initial, c)
 }
@@ -415,13 +421,25 @@ mod test {
         let result = tokenize(String::from("0"));
         assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
+        let result = tokenize(String::from("-0"));
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
+
         let result = tokenize(String::from("1234567890"));
         assert_eq!(&result, &[JsonToken::Number(1234567890.0)]);
+
+        let result = tokenize(String::from("-1234567890"));
+        assert_eq!(&result, &[JsonToken::Number(-1234567890.0)]);
 
         let result = tokenize(String::from("[0,1]"));
         assert_eq!(&result, &[JsonToken::ArrayBegin, JsonToken::Number(0.0), JsonToken::Comma, JsonToken::Number(1.0), JsonToken::ArrayEnd]);
 
         let result = tokenize(String::from("001"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::Number(1.0),]);
+
+        let result = tokenize(String::from("-"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+
+        let result = tokenize(String::from("-{}"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::ObjectBegin, JsonToken::ObjectEnd]);
     }
 }
