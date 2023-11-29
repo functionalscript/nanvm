@@ -43,8 +43,8 @@ enum ErrorType {
 
 #[derive(Debug,PartialEq)]
 struct BigFloat {
-    m: i64,
-    e: i64
+    m: i128,
+    e: i16
 }
 
 enum TokenizerState {
@@ -98,40 +98,40 @@ struct ParseUnicodeCharState {
 
 struct IntegerState {
     s: Sign,
-    m: u64,
+    m: u128,
 }
 
 impl IntegerState {
     fn add_digit(mut self, c: char) -> IntegerState {
-        self.m = self.m * 10 + u64::from(c) - CP_0 as u64;
+        self.m = self.m * 10 + u128::from(c) - CP_0 as u128;
         self
     }
 
     fn to_big_float(self) -> BigFloat {
         match self.s {
-            Sign::Plus => BigFloat { m: self.m as i64, e: 0 },
-            Sign::Minus =>  BigFloat { m: -1 * self.m as i64, e: 0 }
+            Sign::Plus => BigFloat { m: self.m as i128, e: 0 },
+            Sign::Minus =>  BigFloat { m: -1 * self.m as i128, e: 0 }
         }
     }
 }
 
 struct FloatState {
     s: Sign,
-    m: u64,
-    e: i64,
+    m: u128,
+    e: i16,
 }
 
 impl FloatState {
     fn add_digit(mut self, c: char) -> FloatState {
-        self.m = self.m * 10 + u64::from(c) - CP_0 as u64;
+        self.m = self.m * 10 + u128::from(c) - CP_0 as u128;
         self.e = self.e - 1;
         self
     }
 
     fn to_big_float(self) -> BigFloat {
         match self.s {
-            Sign::Plus => BigFloat { m: self.m as i64, e: self.e },
-            Sign::Minus => BigFloat { m: -1 * self.m as i64, e: self.e }
+            Sign::Plus => BigFloat { m: self.m as i128, e: self.e },
+            Sign::Minus => BigFloat { m: -1 * self.m as i128, e: self.e }
         }
     }
 }
@@ -168,13 +168,13 @@ fn is_terminal_for_number(c: char) -> bool {
     }
 }
 
-fn digit_to_number(cp: u32) -> u64 {
-    u64::from(cp - CP_0)
+fn digit_to_number(cp: u32) -> u32 {
+    u32::from(cp - CP_0)
 }
 
 fn start_number(s: Sign, c: char) -> IntegerState {
     let cp = u32::from(c);
-    IntegerState { s: s, m: digit_to_number(cp) }
+    IntegerState { s: s, m: digit_to_number(cp) as u128 }
 }
 
 fn operator_to_token(c: char) -> JsonToken {
@@ -492,6 +492,15 @@ mod test {
 
         let result = tokenize(String::from("-{}"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::ObjectBegin, JsonToken::ObjectEnd]);
+
+        let result = tokenize(String::from("9007199254740991"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m:9007199254740991, e: 0 })]);
+
+        let result = tokenize(String::from("9007199254740992"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m:9007199254740992, e: 0 })]);
+
+        let result = tokenize(String::from("9007199254740993"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m:9007199254740993, e: 0 })]);
     }
 
     #[test]
