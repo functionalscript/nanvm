@@ -47,8 +47,9 @@ enum TokenizerState {
     ParseString(String),
     ParseEscapeChar(String),
     ParseUnicodeChar(ParseUnicodeCharState),
-    ParseNumber(ParseNumberState),
     ParseMinus,
+    ParseZero(Sign),
+    ParseInt(IntegerState),
     InvalidNumber
 }
 
@@ -61,7 +62,8 @@ impl TokenizerState {
             TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, s),
             TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, s),
             TokenizerState::InvalidNumber => todo!(),
-            TokenizerState::ParseNumber(_) => todo!(),
+            TokenizerState::ParseZero(s) => tokenize_zero(c, s),
+            TokenizerState::ParseInt(s) => todo!("tokenize_int"),
             TokenizerState::ParseMinus => todo!()
         }
     }
@@ -71,21 +73,17 @@ impl TokenizerState {
             TokenizerState::Initial => [].vec(),
             TokenizerState::ParseKeyword(s) => [keyword_to_token(&s)].vec(),
             TokenizerState::ParseString(_) | TokenizerState::ParseEscapeChar(_) | TokenizerState::ParseUnicodeChar(_) => [JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec(),
+            TokenizerState::ParseZero(_) => [JsonToken::Number(0.0)].vec(),
             TokenizerState::InvalidNumber | TokenizerState::ParseMinus => [JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(),
-            TokenizerState::ParseNumber(_) => todo!()
+            _ => todo!()
         }
     }
 }
 
-enum ParseNumberState {
-    Zero(Sign),
-    Int(Integer),
-    Dot(Integer),
-    Frac(Integer),
-    Exp(Integer),
-    ExpPlus(Integer),
-    ExpMinus(Integer),
-    ExpDigits(Integer)
+impl IntegerState {
+    fn add_digit(mut self, c: char) {
+        self.m = self.m * 10 + u128::from(c) - CP_0 as u128;
+    }
 }
 
 struct ParseUnicodeCharState {
@@ -94,7 +92,7 @@ struct ParseUnicodeCharState {
     index: u8,
 }
 
-struct Integer {
+struct IntegerState {
     s: Sign,
     m: u128,
 }
@@ -108,13 +106,36 @@ const CP_0: u32 = 0x30;
 const CP_SMALL_A: u32 = 0x61;
 const CP_CAPITAL_A: u32 = 0x41;
 
+fn is_white_space(c: char) -> bool {
+    match c {
+        ' ' | '\n' | '\t' | '\r' => true,
+        _ => false,
+    }
+}
+
+fn is_operator(c: char) -> bool {
+    match c {
+        '[' | ']' | '{' | '}' | ',' | ':' => true,
+        _ => false,
+    }
+}
+
+fn is_terminal_for_number(c: char) -> bool {
+    match c {
+        '"'  => true,
+        c if is_white_space(c) => true,
+        c if is_operator(c) => true,
+        _ => false,
+    }
+}
+
 fn digit_to_number(cp: u32) -> u128 {
     u128::from(cp - CP_0)
 }
 
-fn start_number(c: char) -> ParseNumberState {
+fn start_number(s: Sign, c: char) -> IntegerState {
     let cp = u32::from(c);
-    ParseNumberState::Int(Integer { s: Sign::Plus, m: digit_to_number(cp) })
+    IntegerState { s: s, m: digit_to_number(cp) }
 }
 
 fn operator_to_token(c: char) -> JsonToken {
@@ -140,13 +161,13 @@ fn keyword_to_token(s: &str) -> JsonToken {
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        '1'..='9' => ([].vec(), TokenizerState::ParseNumber(start_number(c))),
-        '\t' | '\n' | '\r' | ' ' => ([].vec(), TokenizerState::Initial),
+        '1'..='9' => ([].vec(), TokenizerState::ParseInt(start_number(Sign::Plus, c))),
         '"' => ([].vec(), TokenizerState::ParseString(String::default())),
-        '0' => ([].vec(), TokenizerState::ParseNumber(ParseNumberState::Zero(Sign::Plus))),
-        '{' | '}' | '[' | ']' | ':' | ',' => ([operator_to_token(c)].vec(), TokenizerState::Initial),
+        '0' => ([].vec(), TokenizerState::ParseZero(Sign::Plus)),
         '-' => ([].vec(), TokenizerState::ParseMinus),
         'a'..='z' => ([].vec(), TokenizerState::ParseKeyword(c.to_string())),
+        c if is_operator(c) => ([operator_to_token(c)].vec(), TokenizerState::Initial),
+        c if is_white_space(c) => ([].vec(), TokenizerState::Initial),
         _ => ([JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].vec(), TokenizerState::Initial)
     }
 }
@@ -230,6 +251,28 @@ fn tokenize_unicode_char(c: char, state: ParseUnicodeCharState) -> (Vec<JsonToke
             (vec, next_state)
         }
     }
+}
+
+fn tokenize_zero(c: char, s: Sign)  -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '0'..='9' => tokenize_invalid_number(c),
+        '.' => todo!("start float"),
+        'e' | 'E' => todo!("start exp"),
+        c if is_terminal_for_number(c) => {
+            let (next_tokens, next_state) = tokenize_initial(c);
+            let mut vec = [JsonToken::Number(0.0)].vec();
+            vec.extend(next_tokens);
+            (vec, next_state)
+        },
+        _ => tokenize_invalid_number(c),
+    }
+}
+
+fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    let (next_tokens, next_state) = tokenize_initial(c);
+    let mut vec = [JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec();
+    vec.extend(next_tokens);
+    (vec, next_state)
 }
 
 fn tokenize(input: String) -> Vec<JsonToken> {
@@ -359,5 +402,18 @@ mod test {
 
         let result = tokenize(String::from("\"\\uEeF"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_zero() {
+        let result = tokenize(String::from("0"));
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
+
+        let result = tokenize(String::from("[0,0]"));
+        assert_eq!(&result, &[JsonToken::ArrayBegin, JsonToken::Number(0.0), JsonToken::Comma, JsonToken::Number(0.0), JsonToken::ArrayEnd]);
+
+        let result = tokenize(String::from("00"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::Number(0.0)]);
     }
 }
