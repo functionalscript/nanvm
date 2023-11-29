@@ -73,13 +73,16 @@ impl BitSubset64 {
         BitSubset64::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
     }
     #[inline(always)]
-    pub const fn split(self, m: u64) -> (BitSubset64, BitSubset64) {
-        assert!(m != 0);
-        assert!(m & self.mask == 0);
-        let mask = self.mask | m;
+    pub const fn split(self, sub_mask: u64) -> (BitSubset64, BitSubset64) {
+        // we need at least one bit to distinguish the two subsets.
+        assert!(sub_mask != 0);
+        // the bit shouldn't be a part of the original set mask.
+        assert!(sub_mask & self.mask == 0);
+        let mask = self.mask | sub_mask;
+        // the subsets should have different tags.
         (
             BitSubset64::from_tag_and_mask(self.tag, mask),
-            BitSubset64::from_tag_and_mask(self.tag | m, mask),
+            BitSubset64::from_tag_and_mask(self.tag | sub_mask, mask),
         )
     }
 }
