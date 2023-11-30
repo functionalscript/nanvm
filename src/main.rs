@@ -550,7 +550,8 @@ fn tokenize(input: String) -> Vec<JsonToken> {
 }
 
 fn main() {
-    let result = tokenize(String::from(""));
+    let s = "";
+    let result = tokenize(s.to_string());
     println!("{:?}", result);
     //todo:
     //1. read text file to string
