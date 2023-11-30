@@ -27,11 +27,8 @@ impl<T> RegionLayout for T {
 }
 
 trait Region: Sized {
-    unsafe fn alloc<T: RegionLayout, F: FnOnce(*mut T)>(
-        self,
-        size: usize,
-        init: F,
-    ) -> Ref<T, Self>;
+    unsafe fn alloc<T: RegionLayout, F: FnOnce(*mut T)>(self, size: usize, init: F)
+        -> Ref<T, Self>;
     unsafe fn add_ref<T: RegionLayout>(p: *mut T);
     unsafe fn release<T: RegionLayout>(p: *mut T);
 }
@@ -80,10 +77,7 @@ impl GlobalRegion {
     }
     #[inline(always)]
     const unsafe fn layout<T>(size: usize) -> Layout {
-        Layout::from_size_align_unchecked(
-            T::RC_LAYOUT.size() + size,
-            T::RC_LAYOUT.align(),
-        )
+        Layout::from_size_align_unchecked(T::RC_LAYOUT.size() + size, T::RC_LAYOUT.align())
     }
 }
 
