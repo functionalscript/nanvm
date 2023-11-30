@@ -89,8 +89,8 @@ impl TokenizerState {
             TokenizerState::ParseZero(_) => [JsonToken::Number(BigFloat { m: 0, e: 0})].vec(),
             TokenizerState::ParseInt(s) => [JsonToken::Number(s.to_big_float())].vec(),
             TokenizerState::ParseFrac(s) => [JsonToken::Number(s.to_big_float())].vec(),
+            TokenizerState::ParseExp(s) => [JsonToken::Number(s.to_big_float())].vec(),
             TokenizerState::ParseMinus | TokenizerState::ParseFracBegin(_) | TokenizerState::ParseExpBegin(_) | TokenizerState::ParseExpSign(_) => [JsonToken::ErrorToken(ErrorType::InvalidNumber)].vec(),
-            _ => todo!()
         }
     }
 }
@@ -385,7 +385,7 @@ fn tokenize_exp_begin(c: char, mut s: ExpState) -> (Vec<JsonToken>, TokenizerSta
             s.es = Sign::Minus;
             TokenizerState::ParseExpSign(s)
         }),
-        c if is_terminal_for_number(c) =>transfer_state([JsonToken::Number(s.to_big_float())].vec(), TokenizerState::Initial, c),
+        c if is_terminal_for_number(c) => transfer_state([JsonToken::Number(s.to_big_float())].vec(), TokenizerState::Initial, c),
         _ => tokenize_invalid_number(c),
     }
 }
@@ -393,7 +393,7 @@ fn tokenize_exp_begin(c: char, mut s: ExpState) -> (Vec<JsonToken>, TokenizerSta
 fn tokenize_exp(c: char, s: ExpState) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => ([].vec(), TokenizerState::ParseExp(s.add_digit(c))),
-        c if is_terminal_for_number(c) =>transfer_state([JsonToken::Number(s.to_big_float())].vec(), TokenizerState::Initial, c),
+        c if is_terminal_for_number(c) => transfer_state([JsonToken::Number(s.to_big_float())].vec(), TokenizerState::Initial, c),
         _ => tokenize_invalid_number(c),
     }
 }
@@ -573,6 +573,22 @@ mod test {
     fn test_float() {
         let result = tokenize(String::from("0.01"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m:1, e: -2 })]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_exp() {
+        let result = tokenize(String::from("1e2"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 1, e: 2 })]);
+
+        let result = tokenize(String::from("1e+2"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 1, e: 2 })]);
+
+        let result = tokenize(String::from("1e-2"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 1, e: -2 })]);
+
+        let result = tokenize(String::from("1.2e+2"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 12, e: 1 })]);
     }
 
 }
