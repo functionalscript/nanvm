@@ -1,10 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    common::{
-        allocator::{Allocator, GlobalAllocator},
-        bit_subset64::BitSubset64,
-    },
+    common::{allocator::Allocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
 };
 
