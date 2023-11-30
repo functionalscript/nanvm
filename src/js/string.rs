@@ -10,9 +10,9 @@ use crate::{
 
 use super::{bitset::STRING, extension_rc::ExtensionRc};
 
-pub struct StringHeader<A: Allocator = GlobalAllocator>(PhantomData<A>);
+pub struct StringHeader<A = GlobalAllocator>(PhantomData<A>);
 
-impl Default for StringHeader {
+impl<A> Default for StringHeader<A> {
     fn default() -> Self {
         Self(PhantomData)
     }

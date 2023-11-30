@@ -13,7 +13,7 @@ use super::{bitset::OBJECT, extension_rc::ExtensionRc, string::StringRc};
 
 pub struct ObjectHeader<A = GlobalAllocator>(PhantomData<A>);
 
-impl Default for ObjectHeader {
+impl<A> Default for ObjectHeader<A> {
     fn default() -> Self {
         Self(PhantomData)
     }
