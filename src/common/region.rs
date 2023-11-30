@@ -10,6 +10,8 @@ use std::{
 
 use super::usize::max;
 
+// Region Layout
+
 trait RegionLayout {
     const ALIGN: usize;
     fn size(&self) -> usize;
@@ -26,41 +28,62 @@ impl<T> RegionLayout for T {
     }
 }
 
-trait Region: Sized {
-    unsafe fn alloc<T: RegionLayout, F: FnOnce(*mut T)>(self, size: usize, init: F)
-        -> Ref<T, Self>;
-    unsafe fn add_ref<T: RegionLayout>(p: *mut T);
-    unsafe fn release<T: RegionLayout>(p: *mut T);
+enum Update {
+    AddRef = 1,
+    Release = -1,
 }
 
-struct Ref<T, R: Region>(*mut T, PhantomData<R>);
+trait Header {
+    unsafe fn update(&self, i: Update) -> isize;
+    unsafe fn get<T>(&mut self) -> &mut T;
+    unsafe fn delete<T>(&mut self);
+}
+
+trait Region: Sized {
+    type Header: Header;
+    unsafe fn new<T: RegionLayout, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self>;
+}
+
+#[repr(transparent)]
+struct Ref<T, R: Region>(*mut R::Header, PhantomData<T>);
 
 impl<T, R: Region> Clone for Ref<T, R> {
     fn clone(&self) -> Self {
         let v = self.0;
-        unsafe { R::add_ref(v) };
+        unsafe { (*v).update(Update::AddRef) };
         Self(v, PhantomData)
     }
 }
 
 impl<T, R: Region> Drop for Ref<T, R> {
     fn drop(&mut self) {
-        unsafe { R::release(self.0) };
+        unsafe {
+            let p = &mut *self.0;
+            if p.update(Update::Release) == 0 {
+                p.delete::<T>();
+            }
+        }
     }
 }
 
+const fn aligned_size<T>(align: usize) -> usize {
+    let mask = align - 1;
+    (size_of::<T>() + mask) & !mask
+}
+
 const fn aligned_layout<T>(align: usize) -> Layout {
-    let align = max(size_of::<T>(), align);
-    let mask = max(size_of::<T>(), align) - 1;
-    unsafe { Layout::from_size_align_unchecked((size_of::<T>() + mask) & !mask, align) }
+    unsafe {
+        Layout::from_size_align_unchecked(aligned_size::<T>(align), max(align_of::<T>(), align))
+    }
 }
 
 struct GlobalRegion();
 
-type Rc = AtomicIsize;
+struct GlobalRegionHeader(AtomicIsize);
 
+/*
 trait GlobalRegionLayout: RegionLayout {
-    const RC_LAYOUT: Layout = aligned_layout::<Rc>(Self::ALIGN);
+    const RC_LAYOUT: Layout = aligned_layout::<Self::Rc>(Self::ALIGN);
 }
 
 impl<T: RegionLayout> GlobalRegionLayout for T {}
@@ -82,6 +105,7 @@ impl GlobalRegion {
 }
 
 impl Region for GlobalRegion {
+    type Header = AtomicIsize;
     unsafe fn alloc<T: RegionLayout, F: FnOnce(*mut T)>(
         self,
         size: usize,
@@ -106,3 +130,4 @@ impl Region for GlobalRegion {
         }
     }
 }
+*/

@@ -1,4 +1,4 @@
-use std::ptr::{drop_in_place, read, write};
+use std::ptr::{drop_in_place, write};
 
 use crate::common::{allocator::Allocator, fas::FasLayout};
 
