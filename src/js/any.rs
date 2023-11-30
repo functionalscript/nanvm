@@ -1,6 +1,9 @@
 use std::result;
 
-use crate::container::{Container, OptionalRc};
+use crate::{
+    common::allocator::GlobalAllocator,
+    container::{Container, OptionalRc},
+};
 
 use super::{
     any_internal::AnyInternal,
@@ -57,7 +60,7 @@ impl Any {
     //
     pub fn get_type(&self) -> Type {
         if self.is_rc() {
-            if self.is::<StringRc>() {
+            if self.is::<StringRc<GlobalAllocator>>() {
                 Type::String
             } else {
                 Type::Object

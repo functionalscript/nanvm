@@ -20,7 +20,7 @@ impl<A> Default for ObjectHeader<A> {
 }
 
 impl<A: Allocator> Info for ObjectHeader<A> {
-    type Item = (StringRc, Any);
+    type Item = (StringRc<A>, Any);
     type Allocator = A;
 }
 
