@@ -27,13 +27,13 @@ impl<T> Object for T {
     }
 }
 
+/// Update for a reference counter
 enum Update {
     AddRef = 1,
     Release = -1,
 }
 
-// Block header
-
+/// Block header
 trait Header {
     unsafe fn update(&self, i: Update) -> isize;
     unsafe fn get<T>(&mut self) -> &mut T;
@@ -43,9 +43,11 @@ trait Header {
 /// Block = (Header, Object)
 trait Manager: Sized {
     type Header: Header;
+    /// Allocate a block of memory for a new T object and initialize the object with `init`.
     unsafe fn new<T: Object, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self>;
 }
 
+/// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
 struct Ref<T, M: Manager>(*mut M::Header, PhantomData<T>);
 
