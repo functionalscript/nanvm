@@ -25,7 +25,7 @@ impl<A: Allocator> Info for StringHeader<A> {
 
 pub type StringContainer<A> = Container<StringHeader<A>>;
 
-pub type StringRc<A = GlobalAllocator> = Rc<StringHeader<A>>;
+pub type StringRc<A> = Rc<StringHeader<A>>;
 
 impl<A: Allocator> ExtensionRc for StringHeader<A> {
     const RC_SUBSET: BitSubset64 = STRING;

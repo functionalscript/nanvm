@@ -89,7 +89,7 @@ mod test {
             bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
             object::{self, ObjectHeader, ObjectRc},
-            string::StringHeader,
+            string::{self, StringHeader},
         },
     };
 
@@ -162,6 +162,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
+        type StringRc = string::StringRc<GlobalAllocator>;
         let s = StringRc::alloc(GlobalAllocator(), StringHeader::default(), [].into_iter());
         assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
