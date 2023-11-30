@@ -24,7 +24,7 @@ impl<A: Allocator> Info for ObjectHeader<A> {
     type Allocator = A;
 }
 
-pub type ObjectContainer = Container<ObjectHeader>;
+pub type ObjectContainer<A> = Container<ObjectHeader<A>>;
 
 pub type ObjectRc = Rc<ObjectHeader>;
 

@@ -23,7 +23,7 @@ impl<A: Allocator> Info for StringHeader<A> {
     type Allocator = A;
 }
 
-pub type StringContainer = Container<StringHeader>;
+pub type StringContainer<A> = Container<StringHeader<A>>;
 
 pub type StringRc = Rc<StringHeader>;
 
