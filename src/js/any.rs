@@ -88,7 +88,7 @@ mod test {
         js::{
             bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
-            object::{ObjectHeader, ObjectRc},
+            object::{self, ObjectHeader, ObjectRc},
             string::StringHeader,
         },
     };
@@ -193,6 +193,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
+        type ObjectRc = object::ObjectRc<GlobalAllocator>;
         assert!(!Null().move_to_any().is::<ObjectRc>());
 
         let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
