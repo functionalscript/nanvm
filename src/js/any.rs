@@ -159,7 +159,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
-        let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [].into_iter());
+        let s = StringRc::alloc(GlobalAllocator(), StringHeader::default(), [].into_iter());
         assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert!(v.is_empty());
@@ -168,7 +168,11 @@ mod test {
         assert!(!Any::from(true).is::<StringRc>());
         assert!(!Null().move_to_any().is::<StringRc>());
 
-        let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [0x20, 0x21].into_iter());
+        let s = StringRc::alloc(
+            GlobalAllocator(),
+            StringHeader::default(),
+            [0x20, 0x21].into_iter(),
+        );
         assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);

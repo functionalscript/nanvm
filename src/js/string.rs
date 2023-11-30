@@ -1,15 +1,26 @@
+use std::marker::PhantomData;
+
 use crate::{
-    common::{allocator::GlobalAllocator, bit_subset64::BitSubset64},
+    common::{
+        allocator::{Allocator, GlobalAllocator},
+        bit_subset64::BitSubset64,
+    },
     container::{Container, Info, Rc},
 };
 
 use super::{bitset::STRING, extension_rc::ExtensionRc};
 
-pub struct StringHeader();
+pub struct StringHeader<A: Allocator = GlobalAllocator>(PhantomData<A>);
 
-impl Info for StringHeader {
+impl Default for StringHeader {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<A: Allocator> Info for StringHeader<A> {
     type Item = u16;
-    type Allocator = GlobalAllocator;
+    type Allocator = A;
 }
 
 pub type StringContainer = Container<StringHeader>;
