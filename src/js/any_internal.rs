@@ -1,4 +1,7 @@
-use crate::container::{Base, OptionalBase};
+use crate::{
+    common::allocator::GlobalAllocator,
+    container::{Base, OptionalBase},
+};
 
 use super::{
     bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
@@ -21,9 +24,9 @@ impl OptionalBase for AnyInternal {
     }
     unsafe fn delete(&self, base: *mut Base) {
         if STRING.has(self.0) {
-            StringHeader::delete(base);
+            StringHeader::<GlobalAllocator>::delete(base);
         } else {
-            ObjectHeader::delete(base);
+            ObjectHeader::<GlobalAllocator>::delete(base);
         }
     }
 }

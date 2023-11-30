@@ -27,6 +27,6 @@ pub type StringContainer = Container<StringHeader>;
 
 pub type StringRc = Rc<StringHeader>;
 
-impl ExtensionRc for StringHeader {
+impl<A: Allocator> ExtensionRc for StringHeader<A> {
     const RC_SUBSET: BitSubset64 = STRING;
 }

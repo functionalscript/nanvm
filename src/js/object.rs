@@ -28,6 +28,6 @@ pub type ObjectContainer = Container<ObjectHeader>;
 
 pub type ObjectRc = Rc<ObjectHeader>;
 
-impl ExtensionRc for ObjectHeader {
+impl<A: Allocator> ExtensionRc for ObjectHeader<A> {
     const RC_SUBSET: BitSubset64 = OBJECT;
 }
