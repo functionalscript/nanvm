@@ -1,3 +1,5 @@
+use std::{collections::VecDeque, mem::take};
+
 pub trait ArrayEx {
     type Item;
     /// Move the array into a vector.
@@ -67,6 +69,12 @@ enum TokenizerState {
     ParseExp(ExpState),
 }
 
+impl Default for TokenizerState {
+    fn default() -> Self {
+        TokenizerState::Initial
+    }
+}
+
 impl TokenizerState {
     fn push(self, c: char) -> (Vec<JsonToken>, TokenizerState) {
         match self {
@@ -83,6 +91,12 @@ impl TokenizerState {
             TokenizerState::ParseExpBegin(s) => tokenize_exp_begin(c, s),
             TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(c, s),
         }
+    }
+
+    fn push_mut(&mut self, c: char) -> Vec<JsonToken> {
+        let tokens;
+        (tokens, *self) = take(self).push(c);
+        tokens
     }
 
     fn end(self) -> Vec<JsonToken> {
@@ -538,21 +552,58 @@ fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
 }
 
 fn tokenize(input: String) -> Vec<JsonToken> {
-    let mut state = TokenizerState::Initial;
-    let mut res: Vec<_> = default();
-    for c in input.chars() {
-        let tokens;
-        (tokens, state) = state.push(c);
-        res.extend(tokens);
+    TokenizerStateIterator::new(input.chars()).collect()
+}
+
+struct TokenizerStateIterator<T: Iterator<Item = char>> {
+    chars: T,
+    cache: VecDeque<JsonToken>,
+    state: TokenizerState,
+    end: bool,
+}
+
+impl<T: Iterator<Item = char>> TokenizerStateIterator<T> {
+    fn new(chars: T) -> Self {
+        Self {
+            chars,
+            cache: default(),
+            state: default(),
+            end: false,
+        }
     }
-    res.extend(state.end());
-    res
+}
+
+impl<T: Iterator<Item = char>> Iterator for TokenizerStateIterator<T> {
+    type Item = JsonToken;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(result) = self.cache.pop_front() {
+                return Some(result);
+            }
+            if self.end {
+                return None;
+            }
+            match self.chars.next() {
+                Some(c) => self.cache.extend(self.state.push_mut(c)),
+                None => {
+                    self.end = true;
+                    self.cache.extend(take(&mut self.state).end())
+                }
+            }
+        }
+    }
 }
 
 fn main() {
-    let s = "";
+    let s = "[0,1";
     let result = tokenize(s.to_string());
     println!("{:?}", result);
+
+    let result = TokenizerStateIterator::new(s.chars());
+    let result: Vec<_> = result.collect();
+    println!("{:?}", result);
+
     //todo:
     //1. read text file to string
     //2. print json tokens from the string
