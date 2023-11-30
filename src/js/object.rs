@@ -1,7 +1,10 @@
 use std::marker::PhantomData;
 
 use crate::{
-    common::{allocator::GlobalAllocator, bit_subset64::BitSubset64},
+    common::{
+        allocator::{Allocator, GlobalAllocator},
+        bit_subset64::BitSubset64,
+    },
     container::{Container, Info, Rc},
     js::any::Any,
 };
@@ -16,9 +19,9 @@ impl Default for ObjectHeader {
     }
 }
 
-impl Info for ObjectHeader {
+impl<A: Allocator> Info for ObjectHeader<A> {
     type Item = (StringRc, Any);
-    type Allocator = GlobalAllocator;
+    type Allocator = A;
 }
 
 pub type ObjectContainer = Container<ObjectHeader>;
