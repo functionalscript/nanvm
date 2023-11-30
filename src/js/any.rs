@@ -1,6 +1,9 @@
 use std::result;
 
-use crate::container::{Container, OptionalRc};
+use crate::{
+    common::allocator::GlobalAllocator,
+    container::{Container, OptionalRc},
+};
 
 use super::{
     any_internal::AnyInternal,
@@ -57,7 +60,7 @@ impl Any {
     //
     pub fn get_type(&self) -> Type {
         if self.is_rc() {
-            if self.is::<StringRc>() {
+            if self.is::<StringRc<GlobalAllocator>>() {
                 Type::String
             } else {
                 Type::Object
@@ -85,8 +88,8 @@ mod test {
         js::{
             bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
-            object::{ObjectHeader, ObjectRc},
-            string::StringHeader,
+            object::{self, ObjectHeader, ObjectRc},
+            string::{self, StringHeader},
         },
     };
 
@@ -159,7 +162,8 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_string() {
-        let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [].into_iter());
+        type StringRc = string::StringRc<GlobalAllocator>;
+        let s = StringRc::alloc(GlobalAllocator(), StringHeader::default(), [].into_iter());
         assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert!(v.is_empty());
@@ -168,13 +172,17 @@ mod test {
         assert!(!Any::from(true).is::<StringRc>());
         assert!(!Null().move_to_any().is::<StringRc>());
 
-        let s = StringRc::alloc(GlobalAllocator(), StringHeader(), [0x20, 0x21].into_iter());
+        let s = StringRc::alloc(
+            GlobalAllocator(),
+            StringHeader::default(),
+            [0x20, 0x21].into_iter(),
+        );
         assert!(Any::from(s.clone()).is::<StringRc>());
         let v = s.get_items_mut();
         assert_eq!(v, [0x20, 0x21]);
         let u = Any::from(s);
         {
-            let s = u.try_ref::<StringHeader>().unwrap();
+            let s = u.try_ref::<StringHeader<GlobalAllocator>>().unwrap();
             let items = s.get_items_mut();
             assert_eq!(items, [0x20, 0x21]);
         }
@@ -186,9 +194,10 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_object() {
+        type ObjectRc = object::ObjectRc<GlobalAllocator>;
         assert!(!Null().move_to_any().is::<ObjectRc>());
 
-        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
         assert!(Any::from(o.clone()).is::<ObjectRc>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
@@ -196,7 +205,7 @@ mod test {
         assert!(!15.0.move_to_any().is::<ObjectRc>());
         assert!(!true.move_to_any().is::<ObjectRc>());
 
-        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
         let u = o.move_to_any();
         assert_eq!(u.get_type(), Type::Object);
         {
