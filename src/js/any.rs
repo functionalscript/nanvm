@@ -192,7 +192,7 @@ mod test {
     fn test_object() {
         assert!(!Null().move_to_any().is::<ObjectRc>());
 
-        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
         assert!(Any::from(o.clone()).is::<ObjectRc>());
         let v = o.get_items_mut();
         assert!(v.is_empty());
@@ -200,7 +200,7 @@ mod test {
         assert!(!15.0.move_to_any().is::<ObjectRc>());
         assert!(!true.move_to_any().is::<ObjectRc>());
 
-        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader(), [].into_iter());
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
         let u = o.move_to_any();
         assert_eq!(u.get_type(), Type::Object);
         {
