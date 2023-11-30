@@ -540,6 +540,12 @@ mod test {
         let result = tokenize(String::from("-0"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m:0, e: 0 })]);
 
+        let result = tokenize(String::from("0abc"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::ErrorToken(ErrorType::InvalidToken)]);
+
+        let result = tokenize(String::from("0. 2"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber), JsonToken::Number(BigFloat { m:2, e: 0 })]);
+
         let result = tokenize(String::from("1234567890"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m:1234567890, e: 0 })]);
 
@@ -581,14 +587,36 @@ mod test {
         let result = tokenize(String::from("1e2"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 1, e: 2 })]);
 
-        let result = tokenize(String::from("1e+2"));
+        let result = tokenize(String::from("1E+2"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 1, e: 2 })]);
+
+        let result = tokenize(String::from("0e-2"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 0, e: -2 })]);
 
         let result = tokenize(String::from("1e-2"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 1, e: -2 })]);
 
         let result = tokenize(String::from("1.2e+2"));
         assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 12, e: 1 })]);
+
+        let result = tokenize(String::from("12e0000"));
+        assert_eq!(&result, &[JsonToken::Number(BigFloat { m: 12, e: 0 })]);
+
+        let result = tokenize(String::from("1e"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+
+        let result = tokenize(String::from("1e+"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+
+        let result = tokenize(String::from("1e-"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_errors() {
+        let result = tokenize(String::from("ᄑ"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)]);
     }
 
 }
