@@ -1,12 +1,11 @@
 use core::{
+    alloc::Layout,
     marker::PhantomData,
     mem::{align_of, size_of},
     ptr::drop_in_place,
-};
-use std::{
-    alloc::{alloc, dealloc, Layout},
     sync::atomic::{AtomicIsize, Ordering},
 };
+use std::alloc::{alloc, dealloc};
 
 use super::usize::max;
 
@@ -79,55 +78,47 @@ const fn aligned_layout<T>(align: usize) -> Layout {
 
 struct GlobalRegion();
 
-struct GlobalRegionHeader(AtomicIsize);
-
-/*
+/// Every type has its own header layout which depends on the type's alignment.
 trait GlobalRegionLayout: RegionLayout {
-    const RC_LAYOUT: Layout = aligned_layout::<Self::Rc>(Self::ALIGN);
+    const HEADER_LAYOUT: Layout = aligned_layout::<GlobalRegionHeader>(Self::ALIGN);
+    const HEADER_LAYOUT_ALIGN: usize = Self::HEADER_LAYOUT.align();
+    const HEADER_LAYOUT_SIZE: usize = Self::HEADER_LAYOUT.size();
 }
 
 impl<T: RegionLayout> GlobalRegionLayout for T {}
 
-impl GlobalRegion {
+struct GlobalRegionHeader(AtomicIsize);
+
+impl GlobalRegionHeader {
     const ORDER: Ordering = Ordering::Relaxed;
     #[inline(always)]
-    const unsafe fn rc_ptr<T: RegionLayout>(p: *mut T) -> *mut Rc {
-        p.sub(T::RC_LAYOUT.size()) as *mut Rc
+    const unsafe fn wrap_layout<T>(size: usize) -> Layout {
+        Layout::from_size_align_unchecked(T::HEADER_LAYOUT_SIZE + size, T::HEADER_LAYOUT_ALIGN)
+    }
+}
+
+impl Header for GlobalRegionHeader {
+    #[inline(always)]
+    unsafe fn update(&self, i: Update) -> isize {
+        self.0.fetch_add(i as isize, Self::ORDER)
     }
     #[inline(always)]
-    unsafe fn rc_update(p: &Rc, i: isize) -> isize {
-        p.fetch_add(i, Self::ORDER)
+    unsafe fn get<T>(&mut self) -> &mut T {
+        &mut *(self as *mut Self as *mut T).add(T::HEADER_LAYOUT.size())
     }
-    #[inline(always)]
-    const unsafe fn layout<T>(size: usize) -> Layout {
-        Layout::from_size_align_unchecked(T::RC_LAYOUT.size() + size, T::RC_LAYOUT.align())
+    unsafe fn delete<T>(&mut self) {
+        let p = self.get::<T>();
+        drop_in_place(p);
+        dealloc(p as *mut T as *mut u8, Self::wrap_layout::<T>(p.size()));
     }
 }
 
 impl Region for GlobalRegion {
-    type Header = AtomicIsize;
-    unsafe fn alloc<T: RegionLayout, F: FnOnce(*mut T)>(
-        self,
-        size: usize,
-        init: F,
-    ) -> Ref<T, Self> {
-        let ref_counter_p = alloc(Self::layout::<T>(size)) as *mut Rc;
-        (*ref_counter_p).store(1, Self::ORDER);
-        let p = ref_counter_p.add(T::RC_LAYOUT.size()) as *mut T;
-        init(p);
-        Ref(p, PhantomData)
-    }
-
-    unsafe fn add_ref<T: RegionLayout>(p: *mut T) {
-        Self::rc_update(&*Self::rc_ptr(p), 1);
-    }
-
-    unsafe fn release<T: RegionLayout>(p: *mut T) {
-        let rcp = Self::rc_ptr(p);
-        if Self::rc_update(&*rcp, -1) == 0 {
-            p.drop_in_place();
-            dealloc(rcp as *mut u8, Self::layout::<T>((*p).size()));
-        }
+    type Header = GlobalRegionHeader;
+    unsafe fn new<T: RegionLayout, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self> {
+        let header_p = alloc(Self::Header::wrap_layout::<T>(size)) as *mut Self::Header;
+        *header_p = GlobalRegionHeader(AtomicIsize::new(1));
+        init((*header_p).get::<T>());
+        Ref(header_p, PhantomData)
     }
 }
-*/
