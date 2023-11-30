@@ -181,7 +181,7 @@ mod test {
         assert_eq!(v, [0x20, 0x21]);
         let u = Any::from(s);
         {
-            let s = u.try_ref::<StringHeader>().unwrap();
+            let s = u.try_ref::<StringHeader<GlobalAllocator>>().unwrap();
             let items = s.get_items_mut();
             assert_eq!(items, [0x20, 0x21]);
         }
