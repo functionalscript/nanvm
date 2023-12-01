@@ -22,8 +22,8 @@ enum RcUpdate {
 /// Block header
 trait Header {
     unsafe fn rc_update(&self, i: RcUpdate) -> isize;
-    unsafe fn get<T>(&mut self) -> &mut T;
-    unsafe fn delete<T>(&mut self);
+    unsafe fn get<T: Object>(&mut self) -> &mut T;
+    unsafe fn delete<T: Object>(&mut self);
 }
 
 /// Block = (Header, Object)
@@ -35,9 +35,9 @@ trait Manager: Sized {
 
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
-struct Ref<T, M: Manager>(*mut M::Header, PhantomData<T>);
+struct Ref<T: Object, M: Manager>(*mut M::Header, PhantomData<T>);
 
-impl<T, M: Manager> Clone for Ref<T, M> {
+impl<T: Object, M: Manager> Clone for Ref<T, M> {
     fn clone(&self) -> Self {
         let v = self.0;
         unsafe { (*v).rc_update(RcUpdate::AddRef) };
@@ -45,7 +45,7 @@ impl<T, M: Manager> Clone for Ref<T, M> {
     }
 }
 
-impl<T, M: Manager> Drop for Ref<T, M> {
+impl<T: Object, M: Manager> Drop for Ref<T, M> {
     fn drop(&mut self) {
         unsafe {
             let p = &mut *self.0;
@@ -56,12 +56,12 @@ impl<T, M: Manager> Drop for Ref<T, M> {
     }
 }
 
-const fn aligned_size<T>(align: usize) -> usize {
+pub const fn aligned_size<T>(align: usize) -> usize {
     let mask = align - 1;
     (size_of::<T>() + mask) & !mask
 }
 
-const fn aligned_layout<T>(align: usize) -> Layout {
+pub const fn aligned_layout<T>(align: usize) -> Layout {
     unsafe {
         Layout::from_size_align_unchecked(aligned_size::<T>(align), max(align_of::<T>(), align))
     }
@@ -82,7 +82,7 @@ struct GlobalHeader(AtomicIsize);
 
 impl GlobalHeader {
     #[inline(always)]
-    const unsafe fn block_layout<T>(size: usize) -> Layout {
+    const unsafe fn block_layout<T: Object>(size: usize) -> Layout {
         Layout::from_size_align_unchecked(T::HEADER_LAYOUT_SIZE + size, T::HEADER_LAYOUT_ALIGN)
     }
 }
@@ -93,12 +93,12 @@ impl Header for GlobalHeader {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
     #[inline(always)]
-    unsafe fn get<T>(&mut self) -> &mut T {
+    unsafe fn get<T: Object>(&mut self) -> &mut T {
         let p = self as *mut Self as *mut u8;
         let p = p.add(T::HEADER_LAYOUT_SIZE) as *mut T;
         &mut *p
     }
-    unsafe fn delete<T>(&mut self) {
+    unsafe fn delete<T: Object>(&mut self) {
         let p = self.get::<T>();
         let size = p.size();
         drop_in_place(p);
