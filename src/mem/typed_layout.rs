@@ -12,11 +12,11 @@ pub struct TypedLayout<T, N> {
 }
 
 impl<T, N> TypedLayout<T, N> {
-    pub const fn align_to(align: usize) -> TypedLayout<T, N> {
+    pub const fn align_to(n_align: usize) -> TypedLayout<T, N> {
         TypedLayout {
-            align: max(align_of::<T>(), align),
+            align: max(align_of::<T>(), n_align),
             size: {
-                let mask = align - 1;
+                let mask = n_align - 1;
                 (size_of::<T>() + mask) & !mask
             },
             _0: PhantomData,
