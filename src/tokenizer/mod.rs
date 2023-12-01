@@ -28,7 +28,7 @@ pub enum ErrorType {
 }
 
 #[derive(Debug, PartialEq, Default)]
-struct BigFloat {
+pub struct BigFloat {
     m: i128,
     e: i16,
 }
