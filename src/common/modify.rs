@@ -10,13 +10,13 @@ impl<T> AsMutPtr<T> for T {
     }
 }
 
-pub fn move_update<T>(src: &mut T, f: impl FnOnce(T) -> T) {
-    unsafe { write(src.as_mut_ptr(), f(read(src))) };
+pub fn modify<T>(v: &mut T, f: impl FnOnce(T) -> T) {
+    unsafe { write(v, f(read(v))) };
 }
 
 #[cfg(test)]
 mod test {
-    use std::sync::atomic::{AtomicIsize, Ordering};
+    use core::sync::atomic::{AtomicIsize, Ordering};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -37,7 +37,7 @@ mod test {
         {
             let mut a = A(5, &x);
             let mut i = 0;
-            move_update(&mut a, |mut a| {
+            modify(&mut a, |mut a| {
                 a.0 += 1;
                 i += 1;
                 a
@@ -45,7 +45,7 @@ mod test {
             assert_eq!(a.0, 6);
             assert_eq!(i, 1);
             assert_eq!(x.load(Ordering::Relaxed), 0);
-            move_update(&mut a, |a| A(a.0 - 2, a.1));
+            modify(&mut a, |a| A(a.0 - 2, a.1));
             assert_eq!(a.0, 4);
             assert_eq!(x.load(Ordering::Relaxed), 1);
         }
