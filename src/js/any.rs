@@ -1,4 +1,4 @@
-use std::result;
+use core::result;
 
 use crate::{
     common::allocator::GlobalAllocator,

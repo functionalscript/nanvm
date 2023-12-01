@@ -1,4 +1,5 @@
-use std::alloc::{alloc, dealloc, Layout};
+use core::alloc::Layout;
+use std::alloc::{alloc, dealloc};
 
 pub trait Allocator {
     unsafe fn alloc(&mut self, layout: Layout) -> *mut u8;

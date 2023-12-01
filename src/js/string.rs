@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use crate::{
     common::{allocator::Allocator, bit_subset64::BitSubset64},
