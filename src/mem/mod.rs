@@ -28,7 +28,7 @@ trait Header {
 trait Manager: Sized {
     type Header: Header;
     /// Allocate a block of memory for a new T object and initialize the object with `init`.
-    unsafe fn new<T: Object, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self>;
+    unsafe fn new<C: CtorInPlace>(self, ctor: C) -> Ref<C::Object, Self>;
 }
 
 /// A reference to an object allocated by a memory manager.
@@ -89,12 +89,19 @@ impl Header for GlobalHeader {
     }
 }
 
+trait CtorInPlace {
+    type Object: Object;
+    fn size(&self) -> usize;
+    unsafe fn ctor_in_place(self, p: *mut Self::Object);
+}
+
 impl Manager for Global {
     type Header = GlobalHeader;
-    unsafe fn new<T: Object, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self> {
-        let header_p = alloc(Self::Header::block_layout::<T>(size)) as *mut Self::Header;
+    unsafe fn new<C: CtorInPlace>(self, ctor: C) -> Ref<C::Object, Self> {
+        let header_p =
+            alloc(Self::Header::block_layout::<C::Object>(ctor.size())) as *mut Self::Header;
         *header_p = GlobalHeader(AtomicIsize::new(1));
-        init((*header_p).get::<T>());
+        ctor.ctor_in_place(header_p as *mut C::Object);
         Ref(header_p, PhantomData)
     }
 }
