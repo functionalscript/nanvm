@@ -98,8 +98,8 @@ impl Header for GlobalHeader {
 impl Manager for Global {
     type Header = GlobalHeader;
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self> {
-        let header_p =
-            alloc(Self::Header::block_layout::<N::Object>(new_in_place.size())) as *mut Self::Header;
+        let header_p = alloc(Self::Header::block_layout::<N::Object>(new_in_place.size()))
+            as *mut Self::Header;
         *header_p = GlobalHeader(AtomicIsize::new(1));
         new_in_place.new_in_place(header_p as *mut N::Object);
         Ref(header_p, PhantomData)
