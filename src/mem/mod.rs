@@ -1,5 +1,5 @@
-mod layout;
 mod object;
+mod typed_layout;
 
 use core::{
     alloc::Layout,
@@ -9,7 +9,7 @@ use core::{
 };
 use std::alloc::{alloc, dealloc};
 
-use self::{layout::TypedLayout, object::Object};
+use self::{object::Object, typed_layout::TypedLayout};
 
 /// Update for a reference counter
 enum RcUpdate {

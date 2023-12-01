@@ -5,7 +5,7 @@ use core::{
     slice::from_raw_parts_mut,
 };
 
-use super::layout::TypedLayout;
+use super::typed_layout::TypedLayout;
 
 /// Object properties
 pub trait Object: Sized {
@@ -35,10 +35,10 @@ pub trait FasHeader: Sized {
 #[repr(transparent)]
 pub struct Fas<T: FasHeader>(pub T);
 
-impl<M: FasHeader> Object for Fas<M> {
-    const ALIGN: usize = M::LAYOUT.align;
+impl<T: FasHeader> Object for Fas<T> {
+    const ALIGN: usize = T::LAYOUT.align;
     fn size(&self) -> usize {
-        M::LAYOUT.size + self.0.len() * size_of::<M::Item>()
+        T::LAYOUT.size + self.0.len() * size_of::<T::Item>()
     }
     unsafe fn drop_in_place(&mut self) {
         drop_in_place(self.0.get_items_mut());
