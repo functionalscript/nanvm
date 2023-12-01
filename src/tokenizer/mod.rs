@@ -19,7 +19,7 @@ pub enum JsonToken {
 }
 
 #[derive(Debug, PartialEq)]
-enum ErrorType {
+pub enum ErrorType {
     UnexpectedCharacter,
     InvalidToken,
     InvalidNumber,
