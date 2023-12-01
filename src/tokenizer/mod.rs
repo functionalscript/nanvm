@@ -1,26 +1,6 @@
 use std::{collections::VecDeque, mem::take};
 
-pub trait ArrayEx {
-    type Item;
-    /// Move the array into a vector.
-    /// Compare to `.to_vec()`, the function doesn't require `Clone` trait.
-    fn vec(self) -> Vec<Self::Item>;
-}
-
-impl<T: Sized, const N: usize> ArrayEx for [T; N] {
-    type Item = T;
-    fn vec(self) -> Vec<Self::Item> {
-        let mut result = Vec::with_capacity(N);
-        for i in self {
-            result.push(i);
-        }
-        result
-    }
-}
-
-fn default<T: Default>() -> T {
-    T::default()
-}
+use crate::common::{array::ArrayEx, default::default};
 
 #[derive(Debug, PartialEq)]
 enum JsonToken {
