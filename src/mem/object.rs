@@ -5,7 +5,7 @@ use core::{
     slice::from_raw_parts_mut,
 };
 
-use super::aligned_layout;
+use super::layout::TypedLayout;
 
 /// Object properties
 pub trait Object: Sized {
@@ -26,13 +26,9 @@ impl<T> Object for Fixed<T> {}
 pub trait FasHeader: Sized {
     type Item;
     fn len(&self) -> usize;
-    const LAYOUT: Layout = aligned_layout::<Self>(align_of::<Self::Item>());
+    const LAYOUT: TypedLayout<Self, Self::Item> = TypedLayout::align_to(align_of::<Self::Item>());
     fn get_items_mut(&mut self) -> &mut [Self::Item] {
-        unsafe {
-            let p = self as *mut Self as *mut u8;
-            let p = p.add(Self::LAYOUT.size());
-            from_raw_parts_mut(&mut *(p as *mut Self::Item), self.len())
-        }
+        unsafe { from_raw_parts_mut(Self::LAYOUT.to_end(self), self.len()) }
     }
 }
 
@@ -40,9 +36,9 @@ pub trait FasHeader: Sized {
 pub struct Fas<T: FasHeader>(pub T);
 
 impl<M: FasHeader> Object for Fas<M> {
-    const ALIGN: usize = M::LAYOUT.align();
+    const ALIGN: usize = M::LAYOUT.align;
     fn size(&self) -> usize {
-        M::LAYOUT.size() + self.0.len() * size_of::<M::Item>()
+        M::LAYOUT.size + self.0.len() * size_of::<M::Item>()
     }
     unsafe fn drop_in_place(&mut self) {
         drop_in_place(self.0.get_items_mut());
