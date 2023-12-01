@@ -109,9 +109,9 @@ impl TokenizerState {
                 [JsonToken::ErrorToken(ErrorType::MissingQuotes)].vec()
             }
             TokenizerState::ParseZero(_) => [JsonToken::Number(default())].vec(),
-            TokenizerState::ParseInt(s) => [JsonToken::Number(s.to_big_float())].vec(),
-            TokenizerState::ParseFrac(s) => [JsonToken::Number(s.to_big_float())].vec(),
-            TokenizerState::ParseExp(s) => [JsonToken::Number(s.to_big_float())].vec(),
+            TokenizerState::ParseInt(s) => [s.to_token()].vec(),
+            TokenizerState::ParseFrac(s) => [s.to_token()].vec(),
+            TokenizerState::ParseExp(s) => [s.to_token()].vec(),
             TokenizerState::ParseMinus
             | TokenizerState::ParseFracBegin(_)
             | TokenizerState::ParseExpBegin(_)
@@ -186,8 +186,8 @@ impl IntegerState {
         }
     }
 
-    const fn to_big_float(self) -> BigFloat {
-        match self.s {
+    const fn to_token(self) -> JsonToken {
+        JsonToken::Number(match self.s {
             Sign::Plus => BigFloat {
                 m: self.m as i128,
                 e: 0,
@@ -196,7 +196,7 @@ impl IntegerState {
                 m: -1 * self.m as i128,
                 e: 0,
             },
-        }
+        })
     }
 }
 
@@ -223,8 +223,8 @@ impl FloatState {
         }
     }
 
-    const fn to_big_float(self) -> BigFloat {
-        match self.s {
+    const fn to_token(self) -> JsonToken {
+        JsonToken::Number(match self.s {
             Sign::Plus => BigFloat {
                 m: self.m as i128,
                 e: self.fe,
@@ -233,7 +233,7 @@ impl FloatState {
                 m: -1 * self.m as i128,
                 e: self.fe,
             },
-        }
+        })
     }
 }
 
@@ -251,13 +251,13 @@ impl ExpState {
         self
     }
 
-    const fn to_big_float(self) -> BigFloat {
+    const fn to_token(self) -> JsonToken {
         let e = self.fe
             + match self.es {
                 Sign::Plus => self.e,
                 Sign::Minus => -self.e,
             };
-        match self.s {
+        JsonToken::Number(match self.s {
             Sign::Plus => BigFloat {
                 m: self.m as i128,
                 e,
@@ -266,7 +266,7 @@ impl ExpState {
                 m: -1 * self.m as i128,
                 e,
             },
-        }
+        })
     }
 }
 
@@ -472,7 +472,7 @@ fn tokenize_integer(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerState
         '.' => (default(), TokenizerState::ParseFracBegin(s)),
         'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
         c if is_terminal_for_number(c) => transfer_state(
-            [JsonToken::Number(s.to_big_float())].vec(),
+            [s.to_token()].vec(),
             TokenizerState::Initial,
             c,
         ),
@@ -495,7 +495,7 @@ fn tokenize_frac(c: char, s: FloatState) -> (Vec<JsonToken>, TokenizerState) {
         '0'..='9' => (default(), TokenizerState::ParseFrac(s.add_digit(c))),
         'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
         c if is_terminal_for_number(c) => transfer_state(
-            [JsonToken::Number(s.to_big_float())].vec(),
+            [s.to_token()].vec(),
             TokenizerState::Initial,
             c,
         ),
@@ -523,7 +523,7 @@ fn tokenize_exp_begin(c: char, mut s: ExpState) -> (Vec<JsonToken>, TokenizerSta
             TokenizerState::ParseExpSign(s)
         }),
         c if is_terminal_for_number(c) => transfer_state(
-            [JsonToken::Number(s.to_big_float())].vec(),
+            [s.to_token()].vec(),
             TokenizerState::Initial,
             c,
         ),
@@ -535,7 +535,7 @@ fn tokenize_exp(c: char, s: ExpState) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
         c if is_terminal_for_number(c) => transfer_state(
-            [JsonToken::Number(s.to_big_float())].vec(),
+            [s.to_token()].vec(),
             TokenizerState::Initial,
             c,
         ),
