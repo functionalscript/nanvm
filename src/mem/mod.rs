@@ -33,7 +33,7 @@ trait NewInPlace {
 /// Block = (Header, Object)
 trait Manager: Sized {
     type Header: Header;
-    /// Allocate a block of memory for a new T object and initialize the object with `init`.
+    /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self>;
 }
 
