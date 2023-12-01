@@ -1,3 +1,5 @@
+mod object;
+
 use core::{
     alloc::Layout,
     marker::PhantomData,
@@ -9,23 +11,7 @@ use std::alloc::{alloc, dealloc};
 
 use crate::common::usize::max;
 
-// Object properties
-
-trait Object {
-    const ALIGN: usize;
-    fn size(&self) -> usize;
-    unsafe fn drop_in_place(&mut self);
-}
-
-impl<T> Object for T {
-    const ALIGN: usize = align_of::<T>();
-    fn size(&self) -> usize {
-        size_of::<T>()
-    }
-    unsafe fn drop_in_place(&mut self) {
-        drop_in_place(self)
-    }
-}
+use self::object::Object;
 
 /// Update for a reference counter
 enum Update {
