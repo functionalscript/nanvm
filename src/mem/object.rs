@@ -24,8 +24,10 @@ pub struct Fixed<T>(pub T);
 impl<T> Object for Fixed<T> {}
 
 pub trait FasHeader: Sized {
+    // required
     type Item;
     fn len(&self) -> usize;
+    // optional
     const LAYOUT: TypedLayout<Self, Self::Item> = TypedLayout::align_to(align_of::<Self::Item>());
     fn get_items_mut(&mut self) -> &mut [Self::Item] {
         unsafe { from_raw_parts_mut(Self::LAYOUT.to_end(self), self.len()) }
