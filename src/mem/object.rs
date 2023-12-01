@@ -19,3 +19,40 @@ impl<T> Object for T {
         drop_in_place(self)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use core::{sync::atomic::{AtomicIsize, Ordering}, mem::forget};
+
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use super::*;
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_object() {
+        let a = 5;
+        assert_eq!(a.size(), 4);
+    }
+
+    struct X<'a>(&'a AtomicIsize);
+
+    impl Drop for X<'_> {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_object_drop_in_place() {
+        let a = AtomicIsize::new(5);
+        {
+            let mut x = X(&a);
+            unsafe { x.drop_in_place() };
+            assert_eq!(a.load(Ordering::Relaxed), 6);
+            forget(x);
+        }
+        assert_eq!(a.load(Ordering::Relaxed), 6);
+    }
+}

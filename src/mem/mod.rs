@@ -14,14 +14,14 @@ use crate::common::usize::max;
 use self::object::Object;
 
 /// Update for a reference counter
-enum Update {
+enum RcUpdate {
     AddRef = 1,
     Release = -1,
 }
 
 /// Block header
 trait Header {
-    unsafe fn update(&self, i: Update) -> isize;
+    unsafe fn rc_update(&self, i: RcUpdate) -> isize;
     unsafe fn get<T>(&mut self) -> &mut T;
     unsafe fn delete<T>(&mut self);
 }
@@ -40,7 +40,7 @@ struct Ref<T, M: Manager>(*mut M::Header, PhantomData<T>);
 impl<T, M: Manager> Clone for Ref<T, M> {
     fn clone(&self) -> Self {
         let v = self.0;
-        unsafe { (*v).update(Update::AddRef) };
+        unsafe { (*v).rc_update(RcUpdate::AddRef) };
         Self(v, PhantomData)
     }
 }
@@ -49,7 +49,7 @@ impl<T, M: Manager> Drop for Ref<T, M> {
     fn drop(&mut self) {
         unsafe {
             let p = &mut *self.0;
-            if p.update(Update::Release) == 0 {
+            if p.rc_update(RcUpdate::Release) == 0 {
                 p.delete::<T>();
             }
         }
@@ -89,7 +89,7 @@ impl GlobalHeader {
 
 impl Header for GlobalHeader {
     #[inline(always)]
-    unsafe fn update(&self, i: Update) -> isize {
+    unsafe fn rc_update(&self, i: RcUpdate) -> isize {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
     #[inline(always)]
