@@ -24,11 +24,17 @@ trait Header {
     unsafe fn delete<T: Object>(&mut self);
 }
 
+trait NewInPlace {
+    type Object: Object;
+    fn size(&self) -> usize;
+    unsafe fn new_in_place(self, p: *mut Self::Object);
+}
+
 /// Block = (Header, Object)
 trait Manager: Sized {
     type Header: Header;
     /// Allocate a block of memory for a new T object and initialize the object with `init`.
-    unsafe fn new<C: CtorInPlace>(self, ctor: C) -> Ref<C::Object, Self>;
+    unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self>;
 }
 
 /// A reference to an object allocated by a memory manager.
@@ -89,19 +95,13 @@ impl Header for GlobalHeader {
     }
 }
 
-trait CtorInPlace {
-    type Object: Object;
-    fn size(&self) -> usize;
-    unsafe fn ctor_in_place(self, p: *mut Self::Object);
-}
-
 impl Manager for Global {
     type Header = GlobalHeader;
-    unsafe fn new<C: CtorInPlace>(self, ctor: C) -> Ref<C::Object, Self> {
+    unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self> {
         let header_p =
-            alloc(Self::Header::block_layout::<C::Object>(ctor.size())) as *mut Self::Header;
+            alloc(Self::Header::block_layout::<N::Object>(new_in_place.size())) as *mut Self::Header;
         *header_p = GlobalHeader(AtomicIsize::new(1));
-        ctor.ctor_in_place(header_p as *mut C::Object);
+        new_in_place.new_in_place(header_p as *mut N::Object);
         Ref(header_p, PhantomData)
     }
 }
