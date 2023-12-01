@@ -22,7 +22,10 @@ impl<T> Object for T {
 
 #[cfg(test)]
 mod test {
-    use core::{sync::atomic::{AtomicIsize, Ordering}, mem::forget};
+    use core::{
+        mem::forget,
+        sync::atomic::{AtomicIsize, Ordering},
+    };
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
