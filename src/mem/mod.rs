@@ -79,7 +79,7 @@ impl Header for GlobalHeader {
     }
     #[inline(always)]
     unsafe fn get<T: Object>(&mut self) -> &mut T {
-        &mut *T::HEADER_LAYOUT.to_end(self)
+        &mut *T::HEADER_LAYOUT.to_adjacent(self)
     }
     unsafe fn delete<T: Object>(&mut self) {
         let p = self.get::<T>();

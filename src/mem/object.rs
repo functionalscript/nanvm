@@ -29,7 +29,7 @@ pub trait FasHeader: Sized {
     // optional
     const LAYOUT: TypedLayout<Self, Self::Item> = TypedLayout::align_to(align_of::<Self::Item>());
     fn get_items_mut(&mut self) -> &mut [Self::Item] {
-        unsafe { from_raw_parts_mut(Self::LAYOUT.to_end(self), self.len()) }
+        unsafe { from_raw_parts_mut(Self::LAYOUT.to_adjacent(self), self.len()) }
     }
 }
 
