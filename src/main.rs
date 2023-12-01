@@ -79,17 +79,17 @@ impl TokenizerState {
     fn push(self, c: char) -> (Vec<JsonToken>, TokenizerState) {
         match self {
             TokenizerState::Initial => tokenize_initial(c),
-            TokenizerState::ParseKeyword(s) => tokenize_keyword(c, s),
-            TokenizerState::ParseString(s) => tokenize_string(c, s),
-            TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(c, s),
-            TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(c, s),
-            TokenizerState::ParseZero(s) => tokenize_zero(c, s),
-            TokenizerState::ParseInt(s) => tokenize_integer(c, s),
+            TokenizerState::ParseKeyword(s) => tokenize_keyword(s, c),
+            TokenizerState::ParseString(s) => tokenize_string(s, c),
+            TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(s, c),
+            TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(s, c),
+            TokenizerState::ParseZero(s) => tokenize_zero(s, c),
+            TokenizerState::ParseInt(s) => tokenize_integer(s, c),
             TokenizerState::ParseMinus => tokenize_minus(c),
-            TokenizerState::ParseFracBegin(s) => tokenize_frac_begin(c, s),
-            TokenizerState::ParseFrac(s) => tokenize_frac(c, s),
-            TokenizerState::ParseExpBegin(s) => tokenize_exp_begin(c, s),
-            TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(c, s),
+            TokenizerState::ParseFracBegin(s) => tokenize_frac_begin(s, c),
+            TokenizerState::ParseFrac(s) => tokenize_frac(s, c),
+            TokenizerState::ParseExpBegin(s) => tokenize_exp_begin(s, c),
+            TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(s, c),
         }
     }
 
@@ -135,7 +135,7 @@ impl ParseUnicodeCharState {
             3 => {
                 let c = char::from_u32(new_unicode);
                 match c {
-                    Some(c) => continue_string_state(c, self.s),
+                    Some(c) => continue_string_state(self.s, c),
                     None => (
                         [JsonToken::ErrorToken(ErrorType::InvalidHex)].vec(),
                         TokenizerState::Initial,
@@ -360,7 +360,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_keyword(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_keyword(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         'a'..='z' => {
             s.push(c);
@@ -373,7 +373,7 @@ fn tokenize_keyword(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) 
     }
 }
 
-fn tokenize_string(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_string(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '"' => ([JsonToken::String(s)].vec(), TokenizerState::Initial),
         '\\' => (default(), TokenizerState::ParseEscapeChar(s)),
@@ -384,7 +384,7 @@ fn tokenize_string(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn continue_string_state(c: char, mut s: String) -> (Vec<JsonToken>, TokenizerState) {
+fn continue_string_state(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     s.push(c);
     (default(), TokenizerState::ParseString(s))
 }
@@ -400,14 +400,14 @@ fn transfer_state(
     (vec, state)
 }
 
-fn tokenize_escape_char(c: char, s: String) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        '\"' | '\\' | '/' => continue_string_state(c, s),
-        'b' => continue_string_state('\u{8}', s),
-        'f' => continue_string_state('\u{c}', s),
-        'n' => continue_string_state('\n', s),
-        'r' => continue_string_state('\r', s),
-        't' => continue_string_state('\t', s),
+        '\"' | '\\' | '/' => continue_string_state(s, c),
+        'b' => continue_string_state(s, '\u{8}'),
+        'f' => continue_string_state(s, '\u{c}'),
+        'n' => continue_string_state(s, '\n'),
+        'r' => continue_string_state(s, '\r'),
+        't' => continue_string_state(s, '\t'),
         'u' => (
             default(),
             TokenizerState::ParseUnicodeChar(ParseUnicodeCharState {
@@ -425,8 +425,8 @@ fn tokenize_escape_char(c: char, s: String) -> (Vec<JsonToken>, TokenizerState) 
 }
 
 fn tokenize_unicode_char(
-    c: char,
     state: ParseUnicodeCharState,
+    c: char,
 ) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => state.push(c as u32 - CP_0),
@@ -440,7 +440,7 @@ fn tokenize_unicode_char(
     }
 }
 
-fn tokenize_zero(c: char, s: Sign) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => tokenize_invalid_number(c),
         '.' => (
@@ -466,21 +466,19 @@ fn tokenize_zero(c: char, s: Sign) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_integer(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_integer(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseInt(s.add_digit(c))),
         '.' => (default(), TokenizerState::ParseFracBegin(s)),
         'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
-        c if is_terminal_for_number(c) => transfer_state(
-            [s.to_token()].vec(),
-            TokenizerState::Initial,
-            c,
-        ),
+        c if is_terminal_for_number(c) => {
+            transfer_state([s.to_token()].vec(), TokenizerState::Initial, c)
+        }
         _ => tokenize_invalid_number(c),
     }
 }
 
-fn tokenize_frac_begin(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_frac_begin(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (
             default(),
@@ -490,15 +488,13 @@ fn tokenize_frac_begin(c: char, s: IntegerState) -> (Vec<JsonToken>, TokenizerSt
     }
 }
 
-fn tokenize_frac(c: char, s: FloatState) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_frac(s: FloatState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseFrac(s.add_digit(c))),
         'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
-        c if is_terminal_for_number(c) => transfer_state(
-            [s.to_token()].vec(),
-            TokenizerState::Initial,
-            c,
-        ),
+        c if is_terminal_for_number(c) => {
+            transfer_state([s.to_token()].vec(), TokenizerState::Initial, c)
+        }
         _ => tokenize_invalid_number(c),
     }
 }
@@ -514,7 +510,7 @@ fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_exp_begin(c: char, mut s: ExpState) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_exp_begin(mut s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
         '+' => (default(), TokenizerState::ParseExpSign(s)),
@@ -522,23 +518,19 @@ fn tokenize_exp_begin(c: char, mut s: ExpState) -> (Vec<JsonToken>, TokenizerSta
             s.es = Sign::Minus;
             TokenizerState::ParseExpSign(s)
         }),
-        c if is_terminal_for_number(c) => transfer_state(
-            [s.to_token()].vec(),
-            TokenizerState::Initial,
-            c,
-        ),
+        c if is_terminal_for_number(c) => {
+            transfer_state([s.to_token()].vec(), TokenizerState::Initial, c)
+        }
         _ => tokenize_invalid_number(c),
     }
 }
 
-fn tokenize_exp(c: char, s: ExpState) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_exp(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
-        c if is_terminal_for_number(c) => transfer_state(
-            [s.to_token()].vec(),
-            TokenizerState::Initial,
-            c,
-        ),
+        c if is_terminal_for_number(c) => {
+            transfer_state([s.to_token()].vec(), TokenizerState::Initial, c)
+        }
         _ => tokenize_invalid_number(c),
     }
 }
