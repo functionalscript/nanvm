@@ -3,7 +3,7 @@ use std::{collections::VecDeque, mem::take};
 use crate::common::{array::ArrayEx, default::default};
 
 #[derive(Debug, PartialEq)]
-enum JsonToken {
+pub enum JsonToken {
     True,
     False,
     Null,
@@ -523,11 +523,11 @@ fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
     )
 }
 
-fn tokenize(input: String) -> Vec<JsonToken> {
+pub fn tokenize(input: String) -> Vec<JsonToken> {
     TokenizerStateIterator::new(input.chars()).collect()
 }
 
-struct TokenizerStateIterator<T: Iterator<Item = char>> {
+pub struct TokenizerStateIterator<T: Iterator<Item = char>> {
     chars: T,
     cache: VecDeque<JsonToken>,
     state: TokenizerState,
@@ -535,7 +535,7 @@ struct TokenizerStateIterator<T: Iterator<Item = char>> {
 }
 
 impl<T: Iterator<Item = char>> TokenizerStateIterator<T> {
-    fn new(chars: T) -> Self {
+    pub fn new(chars: T) -> Self {
         Self {
             chars,
             cache: default(),
