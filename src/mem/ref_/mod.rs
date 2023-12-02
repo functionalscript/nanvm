@@ -1,11 +1,9 @@
 pub mod update;
 
-use core::marker::PhantomData;
-
 use self::update::RefUpdate;
 
 use super::{
-    block::{Block, BlockHeader},
+    block::{header::BlockHeader, Block},
     object::Object,
     Manager,
 };
@@ -23,7 +21,7 @@ impl<T: Object, M: Manager> Ref<T, M> {
 impl<T: Object, M: Manager> Clone for Ref<T, M> {
     fn clone(&self) -> Self {
         let v = self.0;
-        unsafe { (*v).0.ref_update(RefUpdate::AddRef) };
+        unsafe { (*v).header.ref_update(RefUpdate::AddRef) };
         Self(v)
     }
 }
@@ -32,7 +30,7 @@ impl<T: Object, M: Manager> Drop for Ref<T, M> {
     fn drop(&mut self) {
         unsafe {
             let p = &mut *self.0;
-            if p.0.ref_update(RefUpdate::Release) == 0 {
+            if p.header.ref_update(RefUpdate::Release) == 0 {
                 p.delete();
             }
         }

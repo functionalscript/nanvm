@@ -7,15 +7,13 @@ mod object;
 mod ref_;
 
 use core::{
-    alloc::Layout,
     ptr::drop_in_place,
     sync::atomic::{AtomicIsize, Ordering},
 };
 use std::alloc::{alloc, dealloc};
 
 use self::{
-    block::{Block, BlockHeader},
-    field_layout::FieldLayout,
+    block::{header::BlockHeader, Block},
     new_in_place::NewInPlace,
     object::Object,
     ref_::{update::RefUpdate, Ref},
@@ -37,23 +35,26 @@ impl BlockHeader for GlobalHeader {
     unsafe fn ref_update(&self, i: RefUpdate) -> isize {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
-    unsafe fn delete<T: Object>(&mut self) {
-        let p = self.block::<T>().get_object();
-        let size = p.object_size();
-        drop_in_place(p);
-        dealloc(p as *mut T as *mut u8, Block::<Self, T>::block_layout(size));
+    unsafe fn delete<T: Object>(block: &mut Block<Self, T>) {
+        let object = block.object();
+        let size = object.object_size();
+        drop_in_place(object);
+        dealloc(
+            block as *mut _ as *mut u8,
+            Block::<Self, T>::block_layout(size),
+        );
     }
 }
 
 impl Manager for Global {
     type BlockHeader = GlobalHeader;
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
-        let header_p = alloc(Block::<GlobalHeader, N::Result>::block_layout(
+        let block = alloc(Block::<GlobalHeader, N::Result>::block_layout(
             new_in_place.result_size(),
         )) as *mut Block<GlobalHeader, N::Result>;
-        (*header_p).0 = GlobalHeader(AtomicIsize::new(1));
-        new_in_place.new_in_place((*header_p).get_object());
-        Ref::new(header_p)
+        (*block).header = GlobalHeader(AtomicIsize::new(1));
+        new_in_place.new_in_place((*block).object());
+        Ref::new(block)
     }
 }
 
