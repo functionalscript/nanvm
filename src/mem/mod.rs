@@ -1,7 +1,7 @@
 mod field_layout;
 mod fixed;
 mod flexible_array;
-mod new_in_place_fn;
+mod new_in_place;
 mod object;
 mod rc_update;
 
@@ -14,7 +14,7 @@ use core::{
 use std::alloc::{alloc, dealloc};
 
 use self::{
-    field_layout::FieldLayout, new_in_place_fn::NewInPlaceFn, object::Object, rc_update::RcUpdate,
+    field_layout::FieldLayout, new_in_place::NewInPlace, object::Object, rc_update::RcUpdate,
 };
 
 /// Block header
@@ -28,7 +28,7 @@ trait BlockHeader {
 trait Manager: Sized {
     type BlockHeader: BlockHeader;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
-    unsafe fn new<N: NewInPlaceFn>(self, new_in_place: N) -> Ref<N::Result, Self>;
+    unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self>;
 }
 
 /// A reference to an object allocated by a memory manager.
@@ -92,7 +92,7 @@ impl BlockHeader for GlobalHeader {
 
 impl Manager for Global {
     type BlockHeader = GlobalHeader;
-    unsafe fn new<N: NewInPlaceFn>(self, new_in_place: N) -> Ref<N::Result, Self> {
+    unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
         let header_p = alloc(Self::BlockHeader::block_layout::<N::Result>(
             new_in_place.result_size(),
         )) as *mut Self::BlockHeader;

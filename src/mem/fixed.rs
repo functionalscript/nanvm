@@ -1,11 +1,11 @@
-use super::{new_in_place_fn::NewInPlaceFn, Object};
+use super::{new_in_place::NewInPlace, Object};
 
 #[repr(transparent)]
 pub struct Fixed<T>(pub T);
 
 impl<T> Object for Fixed<T> {}
 
-impl<T> NewInPlaceFn for Fixed<T> {
+impl<T> NewInPlace for Fixed<T> {
     type Result = Fixed<T>;
     fn result_size(&self) -> usize {
         Self::Result::object_size(self)
