@@ -43,7 +43,7 @@ impl<T: VariableHeader> Object for Variable<T> {
 
 #[cfg(test)]
 mod test {
-    use core::marker::PhantomData;
+    use core::{fmt::Debug, marker::PhantomData};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -61,8 +61,8 @@ mod test {
     }
 
     #[repr(C)]
-    struct Y<I, const N: usize> {
-        len: u16,
+    struct Y<H, I, const N: usize> {
+        len: H,
         items: [I; N],
     }
 
@@ -73,7 +73,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_u8_5() {
-        let mut y = Y::<u8, 5> {
+        let mut y = Y::<u16, u8, 5> {
             len: 5,
             items: [42, 43, 44, 45, 46],
         };
@@ -89,7 +89,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_u32_3() {
-        let mut y = Y::<u32, 3> {
+        let mut y = Y::<u16, u32, 3> {
             len: 3,
             items: [42, 43, 44],
         };
@@ -100,5 +100,33 @@ mod test {
             let items = (*v).get_items_mut();
             assert_eq!(items, &[42, 43, 44]);
         }
+    }
+
+    fn generic_test<
+        H: Into<usize> + Copy + TryFrom<usize>,
+        I: PartialEq + Debug,
+        const N: usize,
+    >(
+        items: [I; N],
+        size: usize,
+    ) {
+        let mut y = Y::<H, I, N> {
+            len: unsafe { N.try_into().unwrap_unchecked() },
+            items,
+        };
+        let v = ptr(&mut y) as *mut Variable<X<H, I>>;
+        unsafe {
+            assert_eq!((*v).0.len(), N);
+            assert_eq!((*v).object_size(), size);
+            assert_eq!(&*(*v).get_items_mut(), &y.items[..]);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test1() {
+        generic_test::<u8, u8, 1>([42], 2);
+        generic_test::<u16, u32, 6>([42, 56, 78, 90, 101, 102], 28);
+        generic_test::<u16, u8, 3>([90, 101, 102], 5);
     }
 }
