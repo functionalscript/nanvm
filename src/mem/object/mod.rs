@@ -1,3 +1,5 @@
+mod fixed;
+
 use core::{
     mem::{align_of, size_of},
     ptr::drop_in_place,
@@ -16,11 +18,6 @@ pub trait Object: Sized {
         drop_in_place(self)
     }
 }
-
-#[repr(transparent)]
-pub struct Fixed<T>(pub T);
-
-impl<T> Object for Fixed<T> {}
 
 pub trait FasHeader: Sized {
     // required
@@ -56,7 +53,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::*;
+    use super::{fixed::Fixed, *};
 
     #[test]
     #[wasm_bindgen_test]
