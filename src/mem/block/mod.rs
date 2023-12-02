@@ -19,10 +19,10 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
         &mut *Self::BLOCK_HEADER_LAYOUT.to_adjacent(&mut self.header)
     }
     #[inline(always)]
-    pub fn block_layout(size: usize) -> Layout {
+    pub fn block_layout(object_size: usize) -> Layout {
         unsafe {
             Layout::from_size_align_unchecked(
-                Self::BLOCK_HEADER_LAYOUT.size + size,
+                Self::BLOCK_HEADER_LAYOUT.size + object_size,
                 Self::BLOCK_HEADER_LAYOUT.align,
             )
         }

@@ -37,11 +37,11 @@ impl BlockHeader for GlobalHeader {
     }
     unsafe fn delete<T: Object>(block: &mut Block<Self, T>) {
         let object = block.object();
-        let size = object.object_size();
-        drop_in_place(object);
+        let object_size = object.object_size();
+        object.object_drop_in_place();
         dealloc(
             block as *mut _ as *mut u8,
-            Block::<Self, T>::block_layout(size),
+            Block::<Self, T>::block_layout(object_size),
         );
     }
 }
@@ -51,7 +51,7 @@ impl Manager for Global {
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
         let block = alloc(Block::<GlobalHeader, N::Result>::block_layout(
             new_in_place.result_size(),
-        )) as *mut Block<GlobalHeader, N::Result>;
+        )) as *mut Block<_, _>;
         (*block).header = GlobalHeader(AtomicIsize::new(1));
         new_in_place.new_in_place((*block).object());
         Ref::new(block)
