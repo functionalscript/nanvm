@@ -4,9 +4,9 @@ use core::{
     slice::from_raw_parts_mut,
 };
 
-use crate::mem::field_layout::FieldLayout;
+use crate::{common::ref_mut::RefMut, mem::field_layout::FieldLayout};
 
-use super::Object;
+use super::{new_in_place::NewInPlace, Object};
 
 pub trait VariableHeader: Sized {
     type Item;
@@ -14,7 +14,9 @@ pub trait VariableHeader: Sized {
 }
 
 #[repr(transparent)]
-pub struct Variable<T: VariableHeader>(pub T);
+pub struct Variable<T: VariableHeader> {
+    pub header: T,
+}
 
 impl<T: VariableHeader> Variable<T> {
     const VARIABLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
@@ -22,21 +24,44 @@ impl<T: VariableHeader> Variable<T> {
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         unsafe {
             from_raw_parts_mut(
-                Self::VARIABLE_HEADER_LAYOUT.to_adjacent(&mut self.0),
-                self.0.len(),
+                Self::VARIABLE_HEADER_LAYOUT.to_adjacent(&mut self.header),
+                self.header.len(),
             )
         }
+    }
+    pub const fn variable_object_size(len: usize) -> usize {
+        Self::VARIABLE_HEADER_LAYOUT.size + len * size_of::<T::Item>()
     }
 }
 
 impl<T: VariableHeader> Object for Variable<T> {
     const OBJECT_ALIGN: usize = Self::VARIABLE_HEADER_LAYOUT.align;
     fn object_size(&self) -> usize {
-        Self::VARIABLE_HEADER_LAYOUT.size + self.0.len() * size_of::<T::Item>()
+        Self::variable_object_size(self.header.len())
     }
     unsafe fn object_drop_in_place(&mut self) {
         drop_in_place(self.get_items_mut());
         drop_in_place(self);
+    }
+}
+
+struct VariableInit<H: VariableHeader, I: Iterator<Item = H::Item>> {
+    header: H,
+    items: I,
+}
+
+impl<H: VariableHeader, I: Iterator<Item = H::Item>> NewInPlace for VariableInit<H, I> {
+    type Object = Variable<H>;
+    fn size(&self) -> usize {
+        Self::Object::variable_object_size(self.header.len())
+    }
+    unsafe fn new_in_place(self, p: *mut Self::Object) {
+        let v = &mut *p;
+        v.header.as_mut_ptr().write(self.header);
+        let mut src = self.items;
+        for dst in v.get_items_mut() {
+            dst.as_mut_ptr().write(src.next().unwrap());
+        }
     }
 }
 
@@ -45,13 +70,16 @@ mod test {
     use core::{
         fmt::Debug,
         marker::PhantomData,
-        mem::{size_of, forget, align_of},
+        mem::{align_of, forget, size_of},
         sync::atomic::{AtomicUsize, Ordering},
     };
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{mem::{object::Object, field_layout::FieldLayout}, common::ref_mut::RefMut};
+    use crate::{
+        common::ref_mut::RefMut,
+        mem::{field_layout::FieldLayout, object::Object},
+    };
 
     use super::{Variable, VariableHeader};
 
@@ -83,7 +111,7 @@ mod test {
         };
         let v = ptr(&mut y) as *mut Variable<X<u16, u8>>;
         unsafe {
-            assert_eq!((*v).0.len(), 5);
+            assert_eq!((*v).header.len(), 5);
             assert_eq!((*v).object_size(), 7);
             let items = (*v).get_items_mut();
             assert_eq!(items, &[42, 43, 44, 45, 46]);
@@ -99,7 +127,7 @@ mod test {
         };
         let v = ptr(&mut y) as *mut Variable<X<u16, u32>>;
         unsafe {
-            assert_eq!((*v).0.len(), 3);
+            assert_eq!((*v).header.len(), 3);
             assert_eq!((*v).object_size(), 16);
             let items = (*v).get_items_mut();
             assert_eq!(items, &[42, 43, 44]);
@@ -121,7 +149,7 @@ mod test {
         };
         let v = ptr(&mut y) as *mut Variable<X<H, I>>;
         unsafe {
-            assert_eq!((*v).0.len(), N);
+            assert_eq!((*v).header.len(), N);
             assert_eq!((*v).object_size(), size);
             assert_eq!(&*(*v).get_items_mut(), &old[..]);
         }
@@ -174,7 +202,7 @@ mod test {
             };
             let v = unsafe { x.as_mut_ptr() as *mut Variable<DropCount> };
             unsafe {
-                assert_eq!((*v).0.len(), 3);
+                assert_eq!((*v).header.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
                 assert_eq!((*v).object_size(), size_of::<DropCount>() * 4);
                 let a = &*(*v).get_items_mut();
@@ -220,7 +248,7 @@ mod test {
     #[wasm_bindgen_test]
     fn empty_header_test() {
         static mut I: u8 = 0;
-        unsafe { I = 0};
+        unsafe { I = 0 };
         struct EmptyHeader();
         impl Drop for EmptyHeader {
             fn drop(&mut self) {
@@ -243,7 +271,10 @@ mod test {
             assert_eq!(size_of::<StaticVariable<EmptyHeader, 3>>(), 24);
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);
-            assert_eq!(y.get_items_mut(), &[0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef]);
+            assert_eq!(
+                y.get_items_mut(),
+                &[0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef]
+            );
             assert_eq!(unsafe { I }, 0);
             unsafe { y.object_drop_in_place() };
             assert_eq!(unsafe { I }, 1);

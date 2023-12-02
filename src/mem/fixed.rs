@@ -19,7 +19,8 @@ impl<T> NewInPlace for Fixed<T> {
 mod test {
     use core::{
         mem::forget,
-        sync::atomic::{AtomicIsize, Ordering}, ptr::null,
+        ptr::null,
+        sync::atomic::{AtomicIsize, Ordering},
     };
 
     use wasm_bindgen_test::wasm_bindgen_test;
