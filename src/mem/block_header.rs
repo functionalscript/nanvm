@@ -1,7 +1,7 @@
-use super::{object::Object, rc_update::RcUpdate};
+use super::{object::Object, ref_::update::RefUpdate};
 
 pub trait BlockHeader {
-    unsafe fn rc_update(&self, i: RcUpdate) -> isize;
+    unsafe fn ref_update(&self, i: RefUpdate) -> isize;
     unsafe fn get_object<T: Object>(&mut self) -> &mut T;
     unsafe fn delete<T: Object>(&mut self);
 }

@@ -4,24 +4,25 @@ mod fixed;
 mod flexible_array;
 mod new_in_place;
 mod object;
-mod rc_update;
 mod ref_;
 
 use core::{
     alloc::Layout,
-    marker::PhantomData,
     ptr::drop_in_place,
     sync::atomic::{AtomicIsize, Ordering},
 };
 use std::alloc::{alloc, dealloc};
 
 use self::{
-    block_header::BlockHeader, field_layout::FieldLayout, new_in_place::NewInPlace, object::Object,
-    rc_update::RcUpdate, ref_::Ref,
+    block_header::BlockHeader,
+    field_layout::FieldLayout,
+    new_in_place::NewInPlace,
+    object::Object,
+    ref_::{update::RefUpdate, Ref},
 };
 
 /// Block = (Header, Object)
-trait Manager: Sized {
+pub trait Manager: Sized {
     type BlockHeader: BlockHeader;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self>;
@@ -48,7 +49,7 @@ impl GlobalHeader {
 
 impl BlockHeader for GlobalHeader {
     #[inline(always)]
-    unsafe fn rc_update(&self, i: RcUpdate) -> isize {
+    unsafe fn ref_update(&self, i: RefUpdate) -> isize {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
     #[inline(always)]
