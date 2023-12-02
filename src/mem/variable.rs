@@ -12,30 +12,31 @@ pub trait VariableHeader: Sized {
     // required
     type Item;
     fn len(&self) -> usize;
-    // optional
-    const LAYOUT: FieldLayout<Self, Self::Item> = FieldLayout::align_to(align_of::<Self::Item>());
-    fn get_items_mut(&mut self) -> &mut [Self::Item] {
-        unsafe { from_raw_parts_mut(Self::LAYOUT.to_adjacent(self), self.len()) }
-    }
 }
 
 #[repr(transparent)]
-pub struct Variable<T: VariableHeader>(T);
+pub struct Variable<T: VariableHeader>(pub T);
 
 impl<T: VariableHeader> Variable<T> {
-    const LAYOUT: FieldLayout<T, T::Item> = FieldLayout::align_to(align_of::<T::Item>());
+    const VARIABLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
+        FieldLayout::align_to(align_of::<T::Item>());
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
-        self.0.get_items_mut()
+        unsafe {
+            from_raw_parts_mut(
+                Self::VARIABLE_HEADER_LAYOUT.to_adjacent(&mut self.0),
+                self.0.len(),
+            )
+        }
     }
 }
 
 impl<T: VariableHeader> Object for Variable<T> {
-    const OBJECT_ALIGN: usize = T::LAYOUT.align;
+    const OBJECT_ALIGN: usize = Self::VARIABLE_HEADER_LAYOUT.align;
     fn object_size(&self) -> usize {
-        T::LAYOUT.size + self.0.len() * size_of::<T::Item>()
+        Self::VARIABLE_HEADER_LAYOUT.size + self.0.len() * size_of::<T::Item>()
     }
     unsafe fn object_drop_in_place(&mut self) {
-        drop_in_place(self.0.get_items_mut());
+        drop_in_place(self.get_items_mut());
         drop_in_place(self);
     }
 }
@@ -46,32 +47,58 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::VariableHeader;
+    use crate::mem::object::Object;
 
-    struct X<I>(usize, PhantomData<I>);
+    use super::{Variable, VariableHeader};
 
-    impl<I> VariableHeader for X<I> {
+    struct X<H, I>(H, PhantomData<I>);
+
+    impl<H: Into<usize> + Copy, I> VariableHeader for X<H, I> {
         type Item = I;
         fn len(&self) -> usize {
-            self.0
+            self.0.into()
         }
+    }
+
+    #[repr(C)]
+    struct Y<I, const N: usize> {
+        len: u16,
+        items: [I; N],
+    }
+
+    fn ptr<T>(x: &mut T) -> *mut T {
+        x as *mut T
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_u8_5() {
-        #[repr(C)]
-        struct X_8_5 {
-            len: usize,
-            items: [u8; 5],
-        }
-        let v = X_8_5 {
+        let mut y = Y::<u8, 5> {
             len: 5,
             items: [42, 43, 44, 45, 46],
         };
-        let x = &v as *const X_8_5 as *const X<u8>;
+        let v = ptr(&mut y) as *mut Variable<X<u16, u8>>;
         unsafe {
-            assert_eq!((*x).len(), 5);
+            assert_eq!((*v).0.len(), 5);
+            assert_eq!((*v).object_size(), 7);
+            let items = (*v).get_items_mut();
+            assert_eq!(items, &[42, 43, 44, 45, 46]);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_u32_3() {
+        let mut y = Y::<u32, 3> {
+            len: 3,
+            items: [42, 43, 44],
+        };
+        let v = ptr(&mut y) as *mut Variable<X<u16, u32>>;
+        unsafe {
+            assert_eq!((*v).0.len(), 3);
+            assert_eq!((*v).object_size(), 16);
+            let items = (*v).get_items_mut();
+            assert_eq!(items, &[42, 43, 44]);
         }
     }
 }
