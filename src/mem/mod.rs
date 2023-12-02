@@ -1,4 +1,6 @@
+mod fas;
 mod field_layout;
+mod fixed;
 mod object;
 
 use core::{

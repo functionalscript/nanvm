@@ -1,6 +1,3 @@
-mod fas;
-mod fixed;
-
 use core::{
     mem::{align_of, size_of},
     ptr::drop_in_place,
