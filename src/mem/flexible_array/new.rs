@@ -28,14 +28,14 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for Flexibl
 mod test {
     use core::{
         mem::size_of,
-        ptr::{null, null_mut},
+        ptr::null_mut,
     };
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
         common::ref_mut::RefMut,
-        mem::{flexible_array::FlexibleArray, object::Object},
+        mem::object::Object,
     };
 
     use super::{
@@ -67,24 +67,34 @@ mod test {
             }
         }
         let mut i = 0;
-        let new = FlexibleArrayNew {
-            header: Header(5, &mut i),
-            items: [42, 43, 44, 45, 46].into_iter(),
-        };
-        let mut mem = StaticVariable::<Header, 5> {
-            header: Header(0, null_mut()),
-            items: [0; 5],
-        };
-        let v = unsafe { (&mut mem).as_mut_ptr() as *mut _ };
-        unsafe { new.new_in_place(v) };
-        let r = unsafe { &mut *v };
-        assert_eq!(mem.header.len(), 5);
-        assert_eq!(r.header.len(), 5);
-        assert_eq!(mem.header.0, 5);
-        assert_eq!(r.header.0, 5);
-        assert_eq!(mem.header.1, unsafe { (&mut i).as_mut_ptr() });
-        assert_eq!(r.header.1, unsafe { (&mut i).as_mut_ptr() });
-        assert_eq!(r.object_size(), size_of::<usize>() * 2 + 5);
-        assert_eq!(mem.items, [42, 43, 44, 45, 46]);
+        {
+            let new = FlexibleArrayNew {
+                header: Header(5, &mut i),
+                items: [42, 43, 44, 45, 46].into_iter(),
+            };
+            {
+                let mut mem = StaticVariable::<Header, 5> {
+                    header: Header(0, null_mut()),
+                    items: [0; 5],
+                };
+                let v = unsafe { (&mut mem).as_mut_ptr() as *mut _ };
+                unsafe { new.new_in_place(v) };
+                let r = unsafe { &mut *v };
+                assert_eq!(mem.header.len(), 5);
+                assert_eq!(r.header.len(), 5);
+                assert_eq!(mem.header.0, 5);
+                assert_eq!(r.header.0, 5);
+                assert_eq!(mem.header.1, unsafe { (&mut i).as_mut_ptr() });
+                assert_eq!(r.header.1, unsafe { (&mut i).as_mut_ptr() });
+                assert_eq!(r.object_size(), size_of::<usize>() * 2 + 5);
+                assert_eq!(mem.items, [42, 43, 44, 45, 46]);
+                assert_eq!(r.get_items_mut(), &[42, 43, 44, 45, 46]);
+                assert_eq!(i, 0);
+                unsafe { (*v).object_drop_in_place() };
+                assert_eq!(i, 1);
+            }
+            assert_eq!(i, 2);
+        }
+        assert_eq!(i, 2);
     }
 }
