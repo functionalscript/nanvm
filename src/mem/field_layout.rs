@@ -35,14 +35,14 @@ mod test {
 
     use super::FieldLayout;
 
-    const A_4_1: FieldLayout<u32, u8> = FieldLayout::align_to(1);
-    const _: () = assert!(A_4_1.align == 4 && A_4_1.size == 4);
+    const _A_4_1: FieldLayout<u32, u8> = FieldLayout::align_to(1);
+    const _: () = assert!(_A_4_1.align == 4 && _A_4_1.size == 4);
 
-    const A_4_8: FieldLayout<u32, u8> = FieldLayout::align_to(8);
-    const _: () = assert!(A_4_8.align == 8 && A_4_8.size == 8);
+    const _A_4_8: FieldLayout<u32, u8> = FieldLayout::align_to(8);
+    const _: () = assert!(_A_4_8.align == 8 && _A_4_8.size == 8);
 
-    const A_1_4: FieldLayout<[u8; 3], u8> = FieldLayout::align_to(4);
-    const _: () = assert!(A_1_4.align == 4 && A_1_4.size == 4);
+    const _A_1_4: FieldLayout<[u8; 3], u8> = FieldLayout::align_to(4);
+    const _: () = assert!(_A_1_4.align == 4 && _A_1_4.size == 4);
 
     #[test]
     #[should_panic]

@@ -9,7 +9,6 @@ use crate::mem::field_layout::FieldLayout;
 use super::Object;
 
 pub trait VariableHeader: Sized {
-    // required
     type Item;
     fn len(&self) -> usize;
 }
@@ -46,13 +45,13 @@ mod test {
     use core::{
         fmt::Debug,
         marker::PhantomData,
-        mem::{size_of, forget},
+        mem::{size_of, forget, align_of},
         sync::atomic::{AtomicUsize, Ordering},
     };
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::object::Object;
+    use crate::{mem::{object::Object, field_layout::FieldLayout}, common::ref_mut::RefMut};
 
     use super::{Variable, VariableHeader};
 
@@ -173,7 +172,7 @@ mod test {
                     DropCount(&i as *const AtomicUsize),
                 ],
             };
-            let v = ptr(&mut x) as *mut Variable<DropCount>;
+            let v = unsafe { x.as_mut_ptr() as *mut Variable<DropCount> };
             unsafe {
                 assert_eq!((*v).0.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
@@ -190,5 +189,66 @@ mod test {
             forget(x);
         }
         assert_eq!(i.load(Ordering::Relaxed), 4);
+    }
+
+    #[repr(C)]
+    struct StaticVariable<T: VariableHeader, const L: usize> {
+        header: T,
+        items: [T::Item; L],
+    }
+
+    struct E();
+
+    impl VariableHeader for E {
+        type Item = u64;
+        fn len(&self) -> usize {
+            3
+        }
+    }
+
+    const _: () = assert!(size_of::<StaticVariable<E, 3>>() == 24);
+
+    const _: () = assert!(Variable::<E>::OBJECT_ALIGN == 8);
+    const _: () = assert!(Variable::<E>::VARIABLE_HEADER_LAYOUT.align == 8);
+    const _: () = assert!(size_of::<E>() == 0);
+    const FL: FieldLayout<E, u64> = FieldLayout::align_to(align_of::<u64>());
+    const _: () = assert!(FL.align == 8);
+    const _: () = assert!(FL.size == 0);
+    const _: () = assert!(Variable::<E>::VARIABLE_HEADER_LAYOUT.size == 0);
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn empty_header_test() {
+        static mut I: u8 = 0;
+        unsafe { I = 0};
+        struct EmptyHeader();
+        impl Drop for EmptyHeader {
+            fn drop(&mut self) {
+                unsafe { I += 1 };
+            }
+        }
+        impl VariableHeader for EmptyHeader {
+            type Item = u64;
+            fn len(&self) -> usize {
+                3
+            }
+        }
+        let items: [u64; 3] = [0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef];
+        {
+            let mut x = StaticVariable::<EmptyHeader, 3> {
+                header: EmptyHeader(),
+                items,
+            };
+            let y = unsafe { &mut *(x.as_mut_ptr() as *mut Variable<EmptyHeader>) };
+            assert_eq!(size_of::<StaticVariable<EmptyHeader, 3>>(), 24);
+            assert_eq!(size_of::<EmptyHeader>(), 0);
+            assert_eq!(y.object_size(), 24);
+            assert_eq!(y.get_items_mut(), &[0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef]);
+            assert_eq!(unsafe { I }, 0);
+            unsafe { y.object_drop_in_place() };
+            assert_eq!(unsafe { I }, 1);
+            forget(x)
+        }
+        assert_eq!(unsafe { I }, 1);
     }
 }
