@@ -1,9 +1,9 @@
-mod variable;
 mod field_layout;
 mod fixed;
 mod new_in_place;
 mod object;
 mod rc_update;
+mod variable;
 
 use core::{
     alloc::Layout,
