@@ -26,17 +26,11 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for Flexibl
 
 #[cfg(test)]
 mod test {
-    use core::{
-        mem::size_of,
-        ptr::null_mut,
-    };
+    use core::{mem::size_of, ptr::null_mut};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{
-        common::ref_mut::RefMut,
-        mem::object::Object,
-    };
+    use crate::{common::ref_mut::RefMut, mem::object::Object};
 
     use super::{
         super::{super::NewInPlace, FlexibleArrayHeader},
@@ -49,9 +43,7 @@ mod test {
         items: [T::Item; L],
     }
 
-    #[test]
-    #[wasm_bindgen_test]
-    fn test() {
+    fn gen_test(t: usize) {
         struct Header(u8, *mut u8);
         impl Drop for Header {
             fn drop(&mut self) {
@@ -70,7 +62,7 @@ mod test {
         {
             let new = FlexibleArrayNew {
                 header: Header(5, &mut i),
-                items: [42, 43, 44, 45, 46].into_iter(),
+                items: [42, 43, 44, 45, 46, 47, 48].into_iter().take(t),
             };
             {
                 let mut mem = StaticVariable::<Header, 5> {
@@ -96,5 +88,24 @@ mod test {
             assert_eq!(i, 2);
         }
         assert_eq!(i, 2);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_5() {
+        gen_test(5);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_10() {
+        gen_test(10);
+    }
+
+    #[test]
+    #[should_panic]
+    #[wasm_bindgen_test]
+    fn test_2() {
+        gen_test(2);
     }
 }
