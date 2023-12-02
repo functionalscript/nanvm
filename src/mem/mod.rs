@@ -1,7 +1,9 @@
 mod fas;
 mod field_layout;
 mod fixed;
+mod new_in_place;
 mod object;
+mod rc_update;
 
 use core::{
     alloc::Layout,
@@ -11,25 +13,15 @@ use core::{
 };
 use std::alloc::{alloc, dealloc};
 
-use self::{field_layout::FieldLayout, object::Object};
-
-/// Update for a reference counter
-enum RcUpdate {
-    AddRef = 1,
-    Release = -1,
-}
+use self::{
+    field_layout::FieldLayout, new_in_place::NewInPlace, object::Object, rc_update::RcUpdate,
+};
 
 /// Block header
 trait BlockHeader {
     unsafe fn rc_update(&self, i: RcUpdate) -> isize;
     unsafe fn get<T: Object>(&mut self) -> &mut T;
     unsafe fn delete<T: Object>(&mut self);
-}
-
-trait NewInPlace {
-    type Object: Object;
-    fn size(&self) -> usize;
-    unsafe fn new_in_place(self, p: *mut Self::Object);
 }
 
 /// Block = (Header, Object)
