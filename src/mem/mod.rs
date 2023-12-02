@@ -1,9 +1,9 @@
 mod field_layout;
 mod fixed;
+mod flexible_array;
 mod new_in_place_fn;
 mod object;
 mod rc_update;
-mod flexible_array;
 
 use core::{
     alloc::Layout,
