@@ -104,12 +104,13 @@ mod test {
 
     fn generic_test<
         H: Into<usize> + Copy + TryFrom<usize>,
-        I: PartialEq + Debug,
+        I: PartialEq + Debug + Copy,
         const N: usize,
     >(
         items: [I; N],
         size: usize,
     ) {
+        let old = items;
         let mut y = Y::<H, I, N> {
             len: unsafe { N.try_into().unwrap_unchecked() },
             items,
@@ -118,7 +119,7 @@ mod test {
         unsafe {
             assert_eq!((*v).0.len(), N);
             assert_eq!((*v).object_size(), size);
-            assert_eq!(&*(*v).get_items_mut(), &y.items[..]);
+            assert_eq!(&*(*v).get_items_mut(), &old[..]);
         }
     }
 
