@@ -1,42 +1,14 @@
-use core::sync::atomic::{AtomicIsize, Ordering};
-
-use std::alloc::{alloc, dealloc};
+use std::alloc::alloc;
 
 use crate::common::ref_mut::RefMut;
 
-use super::{
-    block::{header::BlockHeader, Block},
-    new_in_place::NewInPlace,
-    object::Object,
-    ref_::{update::RefUpdate, Ref},
-    Manager,
-};
+use self::header::GlobalHeader;
+
+use super::{block::Block, new_in_place::NewInPlace, ref_::Ref, Manager};
+
+mod header;
 
 pub struct Global();
-
-pub struct GlobalHeader(AtomicIsize);
-
-impl Default for GlobalHeader {
-    fn default() -> Self {
-        Self(AtomicIsize::new(1))
-    }
-}
-
-impl BlockHeader for GlobalHeader {
-    #[inline(always)]
-    unsafe fn ref_update(&self, i: RefUpdate) -> isize {
-        self.0.fetch_add(i as isize, Ordering::Relaxed)
-    }
-    unsafe fn delete<T: Object>(block: &mut Block<Self, T>) {
-        let object = block.object();
-        let object_size = object.object_size();
-        object.object_drop_in_place();
-        dealloc(
-            block as *mut _ as *mut u8,
-            Block::<Self, T>::block_layout(object_size),
-        );
-    }
-}
 
 impl Manager for Global {
     type BlockHeader = GlobalHeader;
