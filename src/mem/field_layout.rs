@@ -5,15 +5,15 @@ use core::{
 
 use crate::common::usize::max;
 
-pub struct TypedLayout<T, A> {
+pub struct FieldLayout<T, A> {
     pub align: usize,
     pub size: usize,
     _0: PhantomData<(T, A)>,
 }
 
-impl<T, A> TypedLayout<T, A> {
-    pub const fn align_to(adjacent_align: usize) -> TypedLayout<T, A> {
-        TypedLayout {
+impl<T, A> FieldLayout<T, A> {
+    pub const fn align_to(adjacent_align: usize) -> FieldLayout<T, A> {
+        FieldLayout {
             align: max(align_of::<T>(), adjacent_align),
             size: {
                 let mask = adjacent_align - 1;

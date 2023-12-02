@@ -1,5 +1,5 @@
+mod field_layout;
 mod object;
-mod typed_layout;
 
 use core::{
     alloc::Layout,
@@ -9,7 +9,7 @@ use core::{
 };
 use std::alloc::{alloc, dealloc};
 
-use self::{object::Object, typed_layout::TypedLayout};
+use self::{field_layout::FieldLayout, object::Object};
 
 /// Update for a reference counter
 enum RcUpdate {
@@ -18,7 +18,7 @@ enum RcUpdate {
 }
 
 /// Block header
-trait Header {
+trait BlockHeader {
     unsafe fn rc_update(&self, i: RcUpdate) -> isize;
     unsafe fn get<T: Object>(&mut self) -> &mut T;
     unsafe fn delete<T: Object>(&mut self);
@@ -32,7 +32,7 @@ trait NewInPlace {
 
 /// Block = (Header, Object)
 trait Manager: Sized {
-    type Header: Header;
+    type Header: BlockHeader;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self>;
 }
@@ -64,7 +64,7 @@ struct Global();
 
 /// Every object type has its own header layout which depends on the type's alignment.
 trait GlobalLayout: Object {
-    const HEADER_LAYOUT: TypedLayout<GlobalHeader, Self> = TypedLayout::align_to(Self::ALIGN);
+    const HEADER_LAYOUT: FieldLayout<GlobalHeader, Self> = FieldLayout::align_to(Self::ALIGN);
 }
 
 impl<T: Object> GlobalLayout for T {}
@@ -78,7 +78,7 @@ impl GlobalHeader {
     }
 }
 
-impl Header for GlobalHeader {
+impl BlockHeader for GlobalHeader {
     #[inline(always)]
     unsafe fn rc_update(&self, i: RcUpdate) -> isize {
         self.0.fetch_add(i as isize, Ordering::Relaxed)

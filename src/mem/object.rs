@@ -4,7 +4,7 @@ use core::{
     slice::from_raw_parts_mut,
 };
 
-use super::typed_layout::TypedLayout;
+use super::field_layout::FieldLayout;
 
 /// Object properties
 pub trait Object: Sized {
@@ -27,7 +27,7 @@ pub trait FasHeader: Sized {
     type Item;
     fn len(&self) -> usize;
     // optional
-    const LAYOUT: TypedLayout<Self, Self::Item> = TypedLayout::align_to(align_of::<Self::Item>());
+    const LAYOUT: FieldLayout<Self, Self::Item> = FieldLayout::align_to(align_of::<Self::Item>());
     fn get_items_mut(&mut self) -> &mut [Self::Item] {
         unsafe { from_raw_parts_mut(Self::LAYOUT.to_adjacent(self), self.len()) }
     }
