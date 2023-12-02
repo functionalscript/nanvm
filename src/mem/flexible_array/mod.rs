@@ -1,17 +1,15 @@
+mod header;
+mod new;
+
 use core::{
     mem::{align_of, size_of},
     ptr::drop_in_place,
     slice::from_raw_parts_mut,
 };
 
-use crate::{common::ref_mut::RefMut, mem::field_layout::FieldLayout};
+use self::header::FlexibleArrayHeader;
 
-use super::{new_in_place_fn::NewInPlaceFn, Object};
-
-pub trait FlexibleArrayHeader: Sized {
-    type Item;
-    fn len(&self) -> usize;
-}
+use super::{field_layout::FieldLayout, Object};
 
 #[repr(transparent)]
 pub struct FlexibleArray<T: FlexibleArrayHeader> {
@@ -42,26 +40,6 @@ impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
     unsafe fn object_drop_in_place(&mut self) {
         drop_in_place(self.get_items_mut());
         drop_in_place(self);
-    }
-}
-
-struct FlexibleArrayInit<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
-    header: H,
-    items: I,
-}
-
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlaceFn for FlexibleArrayInit<H, I> {
-    type Result = FlexibleArray<H>;
-    fn result_size(&self) -> usize {
-        Self::Result::flexible_array_size(self.header.len())
-    }
-    unsafe fn new_in_place(self, p: *mut Self::Result) {
-        let v = &mut *p;
-        v.header.as_mut_ptr().write(self.header);
-        let mut src = self.items;
-        for dst in v.get_items_mut() {
-            dst.as_mut_ptr().write(src.next().unwrap());
-        }
     }
 }
 
