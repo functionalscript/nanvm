@@ -14,7 +14,7 @@ use core::{
 use std::alloc::{alloc, dealloc};
 
 use self::{
-    block_header::BlockHeader,
+    block_header::{Block, BlockHeader},
     field_layout::FieldLayout,
     new_in_place::NewInPlace,
     object::Object,
@@ -30,47 +30,28 @@ pub trait Manager: Sized {
 
 struct Global();
 
-/// Every object type has its own header layout which depends on the type's alignment.
-trait GlobalLayout: Object {
-    const HEADER_LAYOUT: FieldLayout<GlobalHeader, Self> =
-        FieldLayout::align_to(Self::OBJECT_ALIGN);
-}
-
-impl<T: Object> GlobalLayout for T {}
-
 struct GlobalHeader(AtomicIsize);
-
-impl GlobalHeader {
-    #[inline(always)]
-    const unsafe fn block_layout<T: Object>(size: usize) -> Layout {
-        Layout::from_size_align_unchecked(T::HEADER_LAYOUT.size + size, T::HEADER_LAYOUT.align)
-    }
-}
 
 impl BlockHeader for GlobalHeader {
     #[inline(always)]
     unsafe fn ref_update(&self, i: RefUpdate) -> isize {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
-    #[inline(always)]
-    unsafe fn get_object<T: Object>(&mut self) -> &mut T {
-        &mut *T::HEADER_LAYOUT.to_adjacent(self)
-    }
     unsafe fn delete<T: Object>(&mut self) {
-        let p = self.get_object::<T>();
+        let p = self.block::<T>().get_object();
         let size = p.object_size();
         drop_in_place(p);
-        dealloc(p as *mut T as *mut u8, Self::block_layout::<T>(size));
+        dealloc(p as *mut T as *mut u8, Block::<Self, T>::block_layout(size));
     }
 }
 
 impl Manager for Global {
     type BlockHeader = GlobalHeader;
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
-        let header_p = alloc(Self::BlockHeader::block_layout::<N::Result>(
+        let header_p = alloc(Block::<GlobalHeader, N::Result>::block_layout(
             new_in_place.result_size(),
-        )) as *mut Self::BlockHeader;
-        *header_p = GlobalHeader(AtomicIsize::new(1));
+        )) as *mut Block<GlobalHeader, N::Result>;
+        (*header_p).0 = GlobalHeader(AtomicIsize::new(1));
         new_in_place.new_in_place((*header_p).get_object());
         Ref::new(header_p)
     }

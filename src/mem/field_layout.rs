@@ -3,7 +3,7 @@ use core::{
     mem::{align_of, size_of},
 };
 
-use crate::common::usize::max;
+use crate::common::{ref_mut::RefMut, usize::max};
 
 pub struct FieldLayout<T, A> {
     pub align: usize,
@@ -25,7 +25,7 @@ impl<T, A> FieldLayout<T, A> {
         }
     }
     pub fn to_adjacent(&self, r: &mut T) -> *mut A {
-        unsafe { (r as *mut T as *mut u8).add(self.size) as *mut A }
+        unsafe { (r.as_mut_ptr() as *mut u8).add(self.size) as *mut A }
     }
 }
 
