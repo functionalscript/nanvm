@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use self::update::RefUpdate;
 
 use super::{
-    block_header::{Block, BlockHeader},
+    block::{Block, BlockHeader},
     object::Object,
     Manager,
 };

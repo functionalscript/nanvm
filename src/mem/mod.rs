@@ -1,4 +1,4 @@
-mod block_header;
+mod block;
 mod field_layout;
 mod fixed;
 mod flexible_array;
@@ -14,7 +14,7 @@ use core::{
 use std::alloc::{alloc, dealloc};
 
 use self::{
-    block_header::{Block, BlockHeader},
+    block::{Block, BlockHeader},
     field_layout::FieldLayout,
     new_in_place::NewInPlace,
     object::Object,
