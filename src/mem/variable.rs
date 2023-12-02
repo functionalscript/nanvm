@@ -189,7 +189,7 @@ mod test {
             assert_eq!(i.load(Ordering::Relaxed), 4);
             //forget(x);
         }
-        // drop called twice
+        // dro() called twice if forget to forget :-)
         assert_eq!(i.load(Ordering::Relaxed), 8);
     }
 }
