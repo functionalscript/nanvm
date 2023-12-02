@@ -46,7 +46,7 @@ mod test {
     use core::{
         fmt::Debug,
         marker::PhantomData,
-        mem::{forget, size_of},
+        mem::{size_of, forget},
         sync::atomic::{AtomicUsize, Ordering},
     };
 
@@ -187,9 +187,8 @@ mod test {
             assert_eq!(i.load(Ordering::Relaxed), 0);
             unsafe { (*v).object_drop_in_place() };
             assert_eq!(i.load(Ordering::Relaxed), 4);
-            //forget(x);
+            forget(x);
         }
-        // dro() called twice if forget to forget :-)
-        assert_eq!(i.load(Ordering::Relaxed), 8);
+        assert_eq!(i.load(Ordering::Relaxed), 4);
     }
 }
