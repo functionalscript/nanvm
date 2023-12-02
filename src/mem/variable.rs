@@ -8,7 +8,7 @@ use crate::mem::field_layout::FieldLayout;
 
 use super::Object;
 
-pub trait FasHeader: Sized {
+pub trait VariableHeader: Sized {
     // required
     type Item;
     fn len(&self) -> usize;
@@ -20,9 +20,9 @@ pub trait FasHeader: Sized {
 }
 
 #[repr(transparent)]
-pub struct Fas<T: FasHeader>(pub T);
+pub struct Variable<T: VariableHeader>(pub T);
 
-impl<T: FasHeader> Object for Fas<T> {
+impl<T: VariableHeader> Object for Variable<T> {
     const OBJECT_ALIGN: usize = T::LAYOUT.align;
     fn object_size(&self) -> usize {
         T::LAYOUT.size + self.0.len() * size_of::<T::Item>()
