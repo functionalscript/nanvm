@@ -1,6 +1,6 @@
-use core::ptr::{drop_in_place, write};
+use core::ptr::drop_in_place;
 
-use crate::common::{allocator::Allocator, fas::FasLayout};
+use crate::common::{allocator::Allocator, fas::FasLayout, ref_mut::RefMut};
 
 use super::{Base, Info};
 
@@ -20,17 +20,13 @@ impl<T: Info> Container<T> {
     ) -> *mut Self {
         let mut len = items.len();
         let p = allocator.alloc(Self::FAS_LAYOUT.layout(len)) as *mut Self;
-        let container = &mut *p;
-        write(
-            container,
-            Container {
-                base: Base::default(),
-                len,
-                info,
-            },
-        );
-        for (dst, src) in container.get_items_mut().iter_mut().zip(items) {
-            write(dst, src);
+        p.write(Container {
+            base: Base::default(),
+            len,
+            info,
+        });
+        for (dst, src) in (*p).get_items_mut().iter_mut().zip(items) {
+            dst.as_mut_ptr().write(src);
             len -= 1;
         }
         assert_eq!(len, 0);

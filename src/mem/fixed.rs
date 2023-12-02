@@ -1,9 +1,19 @@
-use super::Object;
+use super::{new_in_place::NewInPlace, Object};
 
 #[repr(transparent)]
 pub struct Fixed<T>(pub T);
 
 impl<T> Object for Fixed<T> {}
+
+impl<T: Object> NewInPlace for Fixed<T> {
+    type Object = Fixed<T>;
+    fn size(&self) -> usize {
+        Self::Object::object_size(self)
+    }
+    unsafe fn new_in_place(self, p: *mut Self::Object) {
+        p.write(self);
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -45,4 +55,8 @@ mod test {
         }
         assert_eq!(a.load(Ordering::Relaxed), 6);
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_new_in_place() {}
 }
