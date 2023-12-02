@@ -43,7 +43,12 @@ impl<T: VariableHeader> Object for Variable<T> {
 
 #[cfg(test)]
 mod test {
-    use core::{fmt::Debug, marker::PhantomData};
+    use core::{
+        fmt::Debug,
+        marker::PhantomData,
+        mem::{forget, size_of},
+        sync::atomic::{AtomicUsize, Ordering},
+    };
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -129,5 +134,62 @@ mod test {
         generic_test::<u8, u8, 1>([42], 2);
         generic_test::<u16, u32, 6>([42, 56, 78, 90, 101, 102], 28);
         generic_test::<u16, u8, 3>([90, 101, 102], 5);
+    }
+
+    #[repr(transparent)]
+    struct DropCount(*const AtomicUsize);
+
+    impl Drop for DropCount {
+        fn drop(&mut self) {
+            unsafe {
+                (*self.0).fetch_add(1, Ordering::Relaxed);
+            }
+        }
+    }
+
+    impl VariableHeader for DropCount {
+        type Item = DropCount;
+        fn len(&self) -> usize {
+            3
+        }
+    }
+
+    #[repr(C)]
+    struct DropCountX {
+        header: DropCount,
+        items: [DropCount; 3],
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn drop_test() {
+        let i = AtomicUsize::new(0);
+        {
+            let mut x = DropCountX {
+                header: DropCount(&i as *const AtomicUsize),
+                items: [
+                    DropCount(&i as *const AtomicUsize),
+                    DropCount(&i as *const AtomicUsize),
+                    DropCount(&i as *const AtomicUsize),
+                ],
+            };
+            let v = ptr(&mut x) as *mut Variable<DropCount>;
+            unsafe {
+                assert_eq!((*v).0.len(), 3);
+                assert_eq!((*v).object_size(), size_of::<DropCountX>());
+                assert_eq!((*v).object_size(), size_of::<DropCount>() * 4);
+                let a = &*(*v).get_items_mut();
+                assert_eq!(a.len(), 3);
+                assert_eq!(a[0].0, &i as *const AtomicUsize);
+                assert_eq!(a[1].0, &i as *const AtomicUsize);
+                assert_eq!(a[2].0, &i as *const AtomicUsize);
+            }
+            assert_eq!(i.load(Ordering::Relaxed), 0);
+            unsafe { (*v).object_drop_in_place() };
+            assert_eq!(i.load(Ordering::Relaxed), 4);
+            //forget(x);
+        }
+        // drop called twice
+        assert_eq!(i.load(Ordering::Relaxed), 8);
     }
 }
