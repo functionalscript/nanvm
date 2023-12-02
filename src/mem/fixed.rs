@@ -1,16 +1,16 @@
-use super::{new_in_place::NewInPlace, Object};
+use super::{new_in_place_fn::NewInPlaceFn, Object};
 
 #[repr(transparent)]
 pub struct Fixed<T>(pub T);
 
 impl<T> Object for Fixed<T> {}
 
-impl<T> NewInPlace for Fixed<T> {
-    type Object = Fixed<T>;
-    fn size(&self) -> usize {
-        Self::Object::object_size(self)
+impl<T> NewInPlaceFn for Fixed<T> {
+    type Result = Fixed<T>;
+    fn result_size(&self) -> usize {
+        Self::Result::object_size(self)
     }
-    unsafe fn new_in_place(self, p: *mut Self::Object) {
+    unsafe fn new_in_place(self, p: *mut Self::Result) {
         p.write(self);
     }
 }
