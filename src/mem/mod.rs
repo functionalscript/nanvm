@@ -1,9 +1,11 @@
+mod block_header;
 mod field_layout;
 mod fixed;
 mod flexible_array;
 mod new_in_place;
 mod object;
 mod rc_update;
+mod ref_;
 
 use core::{
     alloc::Layout,
@@ -14,44 +16,15 @@ use core::{
 use std::alloc::{alloc, dealloc};
 
 use self::{
-    field_layout::FieldLayout, new_in_place::NewInPlace, object::Object, rc_update::RcUpdate,
+    block_header::BlockHeader, field_layout::FieldLayout, new_in_place::NewInPlace, object::Object,
+    rc_update::RcUpdate, ref_::Ref,
 };
-
-/// Block header
-trait BlockHeader {
-    unsafe fn rc_update(&self, i: RcUpdate) -> isize;
-    unsafe fn get<T: Object>(&mut self) -> &mut T;
-    unsafe fn delete<T: Object>(&mut self);
-}
 
 /// Block = (Header, Object)
 trait Manager: Sized {
     type BlockHeader: BlockHeader;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self>;
-}
-
-/// A reference to an object allocated by a memory manager.
-#[repr(transparent)]
-struct Ref<T: Object, M: Manager>(*mut M::BlockHeader, PhantomData<T>);
-
-impl<T: Object, M: Manager> Clone for Ref<T, M> {
-    fn clone(&self) -> Self {
-        let v = self.0;
-        unsafe { (*v).rc_update(RcUpdate::AddRef) };
-        Self(v, PhantomData)
-    }
-}
-
-impl<T: Object, M: Manager> Drop for Ref<T, M> {
-    fn drop(&mut self) {
-        unsafe {
-            let p = &mut *self.0;
-            if p.rc_update(RcUpdate::Release) == 0 {
-                p.delete::<T>();
-            }
-        }
-    }
 }
 
 struct Global();
@@ -79,11 +52,11 @@ impl BlockHeader for GlobalHeader {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
     #[inline(always)]
-    unsafe fn get<T: Object>(&mut self) -> &mut T {
+    unsafe fn get_object<T: Object>(&mut self) -> &mut T {
         &mut *T::HEADER_LAYOUT.to_adjacent(self)
     }
     unsafe fn delete<T: Object>(&mut self) {
-        let p = self.get::<T>();
+        let p = self.get_object::<T>();
         let size = p.object_size();
         drop_in_place(p);
         dealloc(p as *mut T as *mut u8, Self::block_layout::<T>(size));
@@ -97,8 +70,8 @@ impl Manager for Global {
             new_in_place.result_size(),
         )) as *mut Self::BlockHeader;
         *header_p = GlobalHeader(AtomicIsize::new(1));
-        new_in_place.new_in_place(header_p as *mut N::Result);
-        Ref(header_p, PhantomData)
+        new_in_place.new_in_place((*header_p).get_object());
+        Ref::new(header_p)
     }
 }
 
