@@ -20,7 +20,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_object() {
         let a = Fixed(5);
-        assert_eq!(a.size(), 4);
+        assert_eq!(a.object_size(), 4);
     }
 
     struct X<'a>(&'a AtomicIsize);
@@ -39,7 +39,7 @@ mod test {
         let a = AtomicIsize::new(5);
         {
             let mut x = X(&a);
-            unsafe { x.drop_in_place() };
+            unsafe { x.object_drop_in_place() };
             assert_eq!(a.load(Ordering::Relaxed), 6);
             forget(x);
         }

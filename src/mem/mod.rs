@@ -26,14 +26,14 @@ trait BlockHeader {
 
 /// Block = (Header, Object)
 trait Manager: Sized {
-    type Header: BlockHeader;
+    type BlockHeader: BlockHeader;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self>;
 }
 
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
-struct Ref<T: Object, M: Manager>(*mut M::Header, PhantomData<T>);
+struct Ref<T: Object, M: Manager>(*mut M::BlockHeader, PhantomData<T>);
 
 impl<T: Object, M: Manager> Clone for Ref<T, M> {
     fn clone(&self) -> Self {
@@ -58,7 +58,8 @@ struct Global();
 
 /// Every object type has its own header layout which depends on the type's alignment.
 trait GlobalLayout: Object {
-    const HEADER_LAYOUT: FieldLayout<GlobalHeader, Self> = FieldLayout::align_to(Self::ALIGN);
+    const HEADER_LAYOUT: FieldLayout<GlobalHeader, Self> =
+        FieldLayout::align_to(Self::OBJECT_ALIGN);
 }
 
 impl<T: Object> GlobalLayout for T {}
@@ -83,17 +84,18 @@ impl BlockHeader for GlobalHeader {
     }
     unsafe fn delete<T: Object>(&mut self) {
         let p = self.get::<T>();
-        let size = p.size();
+        let size = p.object_size();
         drop_in_place(p);
         dealloc(p as *mut T as *mut u8, Self::block_layout::<T>(size));
     }
 }
 
 impl Manager for Global {
-    type Header = GlobalHeader;
+    type BlockHeader = GlobalHeader;
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Object, Self> {
-        let header_p = alloc(Self::Header::block_layout::<N::Object>(new_in_place.size()))
-            as *mut Self::Header;
+        let header_p = alloc(Self::BlockHeader::block_layout::<N::Object>(
+            new_in_place.size(),
+        )) as *mut Self::BlockHeader;
         *header_p = GlobalHeader(AtomicIsize::new(1));
         new_in_place.new_in_place(header_p as *mut N::Object);
         Ref(header_p, PhantomData)

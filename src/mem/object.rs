@@ -5,11 +5,11 @@ use core::{
 
 /// Object properties
 pub trait Object: Sized {
-    const ALIGN: usize = align_of::<Self>();
-    fn size(&self) -> usize {
+    const OBJECT_ALIGN: usize = align_of::<Self>();
+    fn object_size(&self) -> usize {
         size_of::<Self>()
     }
-    unsafe fn drop_in_place(&mut self) {
+    unsafe fn object_drop_in_place(&mut self) {
         drop_in_place(self)
     }
 }

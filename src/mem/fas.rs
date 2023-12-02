@@ -23,11 +23,11 @@ pub trait FasHeader: Sized {
 pub struct Fas<T: FasHeader>(pub T);
 
 impl<T: FasHeader> Object for Fas<T> {
-    const ALIGN: usize = T::LAYOUT.align;
-    fn size(&self) -> usize {
+    const OBJECT_ALIGN: usize = T::LAYOUT.align;
+    fn object_size(&self) -> usize {
         T::LAYOUT.size + self.0.len() * size_of::<T::Item>()
     }
-    unsafe fn drop_in_place(&mut self) {
+    unsafe fn object_drop_in_place(&mut self) {
         drop_in_place(self.0.get_items_mut());
         drop_in_place(self);
     }
