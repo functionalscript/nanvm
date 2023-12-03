@@ -44,7 +44,7 @@ fn add_same_sign(lhs: BigInt, rhs: BigInt) -> BigInt {
         result.push(next);
         carry = if next < *a { 1 } else { 0 };
     }
-    if (carry == 1) {
+    if carry == 1 {
         result.push(1);
     }
     BigInt {
@@ -63,7 +63,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_empty() {
+    fn test_add() {
         let a = BigInt {
             sign: Sign::Positive,
             value: [1].vec(),
@@ -73,7 +73,17 @@ mod test {
             value: [2].vec(),
         };
         let result = a + b;
-        assert_eq!(result.sign, Sign::Positive);
         assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [3].vec()});
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1 << 63].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [1 << 63].vec(),
+        };
+        let result = a + b;
+        assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [0, 1].vec()});
     }
 }
