@@ -63,7 +63,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_add() {
+    fn test_add_same_sign() {
         let a = BigInt {
             sign: Sign::Positive,
             value: [1].vec(),
@@ -74,6 +74,17 @@ mod test {
         };
         let result = a + b;
         assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [3].vec()});
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [2].vec(),
+        };
+        let result = a + b;
+        assert_eq!(&result, &BigInt { sign: Sign::Negative, value: [3].vec()});
 
         let a = BigInt {
             sign: Sign::Positive,
