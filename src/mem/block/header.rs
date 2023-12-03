@@ -10,7 +10,7 @@ use super::Block;
 pub trait BlockHeader: Sized {
     // required
     unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
-    unsafe fn dealloc(p: *mut u8, layout: Layout);
+    unsafe fn dealloc(ptr: *mut u8, layout: Layout);
     //
     #[inline(always)]
     unsafe fn block<T: Object>(&mut self) -> &mut Block<Self, T> {
