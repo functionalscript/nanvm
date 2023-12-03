@@ -11,7 +11,6 @@ pub trait BlockHeader: Sized {
     // required
     unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
     unsafe fn dealloc(p: *mut u8, layout: Layout);
-    unsafe fn delete<T: Object>(block: &mut Block<Self, T>);
     //
     #[inline(always)]
     unsafe fn block<T: Object>(&mut self) -> &mut Block<Self, T> {
@@ -40,7 +39,6 @@ mod test {
             self.0
         }
         unsafe fn dealloc(p: *mut u8, layout: std::alloc::Layout) {}
-        unsafe fn delete<T: Object>(block: &mut Block<Self, T>) {}
     }
 
     #[test]

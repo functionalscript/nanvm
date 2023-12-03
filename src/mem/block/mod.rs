@@ -29,6 +29,9 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
     }
     #[inline(always)]
     pub unsafe fn delete(&mut self) {
-        BH::delete(self);
+        let object = self.object();
+        let object_size = object.object_size();
+        object.object_drop_in_place();
+        BH::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
     }
 }
