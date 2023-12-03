@@ -10,4 +10,4 @@ repository = "https://github.com/functionalscript/nanvm"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.38"
+wasm-bindgen-test = "0.3.39"

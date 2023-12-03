@@ -1,101 +1,42 @@
+mod block;
+mod field_layout;
+mod fixed;
+mod flexible_array;
+mod global;
+mod new_in_place;
 mod object;
-mod typed_layout;
+mod ref_;
 
-use core::{
-    alloc::Layout,
-    marker::PhantomData,
-    ptr::drop_in_place,
-    sync::atomic::{AtomicIsize, Ordering},
+use core::alloc::Layout;
+
+use crate::common::ref_mut::RefMut;
+
+use self::{
+    block::{header::BlockHeader, Block},
+    new_in_place::NewInPlace,
+    object::Object,
+    ref_::Ref,
 };
-use std::alloc::{alloc, dealloc};
-
-use self::{object::Object, typed_layout::TypedLayout};
-
-/// Update for a reference counter
-enum RcUpdate {
-    AddRef = 1,
-    Release = -1,
-}
-
-/// Block header
-trait Header {
-    unsafe fn rc_update(&self, i: RcUpdate) -> isize;
-    unsafe fn get<T: Object>(&mut self) -> &mut T;
-    unsafe fn delete<T: Object>(&mut self);
-}
 
 /// Block = (Header, Object)
-trait Manager: Sized {
-    type Header: Header;
-    /// Allocate a block of memory for a new T object and initialize the object with `init`.
-    unsafe fn new<T: Object, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self>;
-}
-
-/// A reference to an object allocated by a memory manager.
-#[repr(transparent)]
-struct Ref<T: Object, M: Manager>(*mut M::Header, PhantomData<T>);
-
-impl<T: Object, M: Manager> Clone for Ref<T, M> {
-    fn clone(&self) -> Self {
-        let v = self.0;
-        unsafe { (*v).rc_update(RcUpdate::AddRef) };
-        Self(v, PhantomData)
-    }
-}
-
-impl<T: Object, M: Manager> Drop for Ref<T, M> {
-    fn drop(&mut self) {
+pub trait Manager: Sized {
+    type BlockHeader: BlockHeader;
+    unsafe fn alloc(self, layout: Layout) -> *mut u8;
+    unsafe fn dealloc(ptr: *mut u8, layout: Layout);
+    /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
+    fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
         unsafe {
-            let p = &mut *self.0;
-            if p.rc_update(RcUpdate::Release) == 0 {
-                p.delete::<T>();
-            }
+            let p = self.alloc(Block::<Self::BlockHeader, N::Result>::block_layout(
+                new_in_place.result_size(),
+            )) as *mut Block<Self::BlockHeader, _>;
+            let block = &mut *p;
+            block
+                .header
+                .as_mut_ptr()
+                .write(Self::BlockHeader::default());
+            new_in_place.new_in_place(block.object());
+            Ref::new(p)
         }
-    }
-}
-
-struct Global();
-
-/// Every object type has its own header layout which depends on the type's alignment.
-trait GlobalLayout: Object {
-    const HEADER_LAYOUT: TypedLayout<GlobalHeader, Self> = TypedLayout::align_to(Self::ALIGN);
-}
-
-impl<T: Object> GlobalLayout for T {}
-
-struct GlobalHeader(AtomicIsize);
-
-impl GlobalHeader {
-    #[inline(always)]
-    const unsafe fn block_layout<T: Object>(size: usize) -> Layout {
-        Layout::from_size_align_unchecked(T::HEADER_LAYOUT.size + size, T::HEADER_LAYOUT.align)
-    }
-}
-
-impl Header for GlobalHeader {
-    #[inline(always)]
-    unsafe fn rc_update(&self, i: RcUpdate) -> isize {
-        self.0.fetch_add(i as isize, Ordering::Relaxed)
-    }
-    #[inline(always)]
-    unsafe fn get<T: Object>(&mut self) -> &mut T {
-        &mut *T::HEADER_LAYOUT.to_adjacent(self)
-    }
-    unsafe fn delete<T: Object>(&mut self) {
-        let p = self.get::<T>();
-        let size = p.size();
-        drop_in_place(p);
-        dealloc(p as *mut T as *mut u8, Self::block_layout::<T>(size));
-    }
-}
-
-impl Manager for Global {
-    type Header = GlobalHeader;
-    unsafe fn new<T: Object, F: FnOnce(*mut T)>(self, size: usize, init: F) -> Ref<T, Self> {
-        let header_p = alloc(Self::Header::block_layout::<T>(size)) as *mut Self::Header;
-        *header_p = GlobalHeader(AtomicIsize::new(1));
-        init((*header_p).get::<T>());
-        Ref(header_p, PhantomData)
     }
 }
 

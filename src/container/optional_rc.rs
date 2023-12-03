@@ -1,4 +1,6 @@
-use core::{mem::forget, ptr::read};
+use core::mem::forget;
+
+use crate::common::ref_mut::RefMut;
 
 use super::{OptionalBase, Update};
 
@@ -16,7 +18,7 @@ impl<T: OptionalBase> OptionalRc<T> {
     }
     #[inline(always)]
     pub unsafe fn move_to_optional_base(mut self) -> T {
-        let result = read(&mut self.0);
+        let result = self.0.as_mut_ptr().read();
         forget(self);
         result
     }

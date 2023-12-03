@@ -1,18 +1,19 @@
-use core::ptr::{read, write};
-
-trait AsMutPtr<T> {
-    fn as_mut_ptr(&mut self) -> *mut T;
-}
-
-impl<T> AsMutPtr<T> for T {
-    fn as_mut_ptr(&mut self) -> *mut T {
-        self as *mut T
+pub trait RefMut {
+    unsafe fn as_mut_ptr(&mut self) -> *mut Self {
+        self as *mut Self
+    }
+    fn modify(&mut self, f: impl FnOnce(Self) -> Self)
+    where
+        Self: Sized,
+    {
+        unsafe {
+            let p = self.as_mut_ptr();
+            p.write(f(p.read()));
+        };
     }
 }
 
-pub fn modify<T>(v: &mut T, f: impl FnOnce(T) -> T) {
-    unsafe { write(v, f(read(v))) };
-}
+impl<T> RefMut for T {}
 
 #[cfg(test)]
 mod test {
@@ -37,7 +38,7 @@ mod test {
         {
             let mut a = A(5, &x);
             let mut i = 0;
-            modify(&mut a, |mut a| {
+            a.modify(|mut a| {
                 a.0 += 1;
                 i += 1;
                 a
@@ -45,7 +46,7 @@ mod test {
             assert_eq!(a.0, 6);
             assert_eq!(i, 1);
             assert_eq!(x.load(Ordering::Relaxed), 0);
-            modify(&mut a, |a| A(a.0 - 2, a.1));
+            a.modify(|a| A(a.0 - 2, a.1));
             assert_eq!(a.0, 4);
             assert_eq!(x.load(Ordering::Relaxed), 1);
         }
