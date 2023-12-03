@@ -1,5 +1,6 @@
+use crate::{mem::new_in_place::NewInPlace, common::ref_mut::RefMut};
+
 use super::{
-    super::{super::common::ref_mut::RefMut, new_in_place::NewInPlace},
     header::FlexibleArrayHeader,
     FlexibleArray,
 };
