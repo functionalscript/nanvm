@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@wasm-pack
-      - run: wasm-pack test --node --release
+      - run: wasm-pack test --node --release ./nanvm-lib
 
   npm:
     runs-on: ubuntu-latest

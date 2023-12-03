@@ -1,4 +1,4 @@
-use nanvm::tokenizer::{tokenize, TokenizerStateIterator};
+use nanvm_lib::tokenizer::{tokenize, TokenizerStateIterator};
 
 fn main() {
     let s = "[0,1";
