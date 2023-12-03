@@ -59,7 +59,13 @@ impl Ord for BigInt {
             return self_len.cmp(&other_len);
         }
 
-        for (self_digit, other_digit) in self.value.iter().copied().rev().zip(other.value.iter().copied().rev()) {
+        for (self_digit, other_digit) in self
+            .value
+            .iter()
+            .copied()
+            .rev()
+            .zip(other.value.iter().copied().rev())
+        {
             if self_digit != other_digit {
                 return self_digit.cmp(&other_digit);
             }
