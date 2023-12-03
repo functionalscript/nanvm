@@ -1,3 +1,4 @@
+mod len;
 mod header;
 mod new;
 
@@ -7,35 +8,35 @@ use core::{
     slice::from_raw_parts_mut,
 };
 
-use self::header::FlexibleArrayHeader;
+use self::header::FlexibleHeader;
 
 use super::{field_layout::FieldLayout, Object};
 
 #[repr(transparent)]
-pub struct FlexibleArray<T: FlexibleArrayHeader> {
+pub struct Flexible<T: FlexibleHeader> {
     pub header: T,
 }
 
-impl<T: FlexibleArrayHeader> FlexibleArray<T> {
-    const FLEXIBLE_ARRAY_HEADER_LAYOUT: FieldLayout<T, T::Item> =
+impl<T: FlexibleHeader> Flexible<T> {
+    const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
         FieldLayout::align_to(align_of::<T::Item>());
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         unsafe {
             from_raw_parts_mut(
-                Self::FLEXIBLE_ARRAY_HEADER_LAYOUT.to_adjacent(&mut self.header),
+                Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent(&mut self.header),
                 self.header.len(),
             )
         }
     }
-    pub const fn flexible_array_size(len: usize) -> usize {
-        Self::FLEXIBLE_ARRAY_HEADER_LAYOUT.size + len * size_of::<T::Item>()
+    pub const fn flexible_size(len: usize) -> usize {
+        Self::FLEXIBLE_HEADER_LAYOUT.size + len * size_of::<T::Item>()
     }
 }
 
-impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
-    const OBJECT_ALIGN: usize = Self::FLEXIBLE_ARRAY_HEADER_LAYOUT.align;
+impl<T: FlexibleHeader> Object for Flexible<T> {
+    const OBJECT_ALIGN: usize = Self::FLEXIBLE_HEADER_LAYOUT.align;
     fn object_size(&self) -> usize {
-        Self::flexible_array_size(self.header.len())
+        Self::flexible_size(self.header.len())
     }
     unsafe fn object_drop_in_place(&mut self) {
         drop_in_place(self.get_items_mut());
@@ -59,11 +60,11 @@ mod test {
         mem::{field_layout::FieldLayout, object::Object},
     };
 
-    use super::{FlexibleArray, FlexibleArrayHeader};
+    use super::{Flexible, FlexibleHeader};
 
     struct X<H, I>(H, PhantomData<I>);
 
-    impl<H: Into<usize> + Copy, I> FlexibleArrayHeader for X<H, I> {
+    impl<H: Into<usize> + Copy, I> FlexibleHeader for X<H, I> {
         type Item = I;
         fn len(&self) -> usize {
             self.0.into()
@@ -87,7 +88,7 @@ mod test {
             len: 5,
             items: [42, 43, 44, 45, 46],
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<u16, u8>>;
+        let v = ptr(&mut y) as *mut Flexible<X<u16, u8>>;
         unsafe {
             assert_eq!((*v).header.len(), 5);
             assert_eq!((*v).object_size(), 7);
@@ -103,7 +104,7 @@ mod test {
             len: 3,
             items: [42, 43, 44],
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<u16, u32>>;
+        let v = ptr(&mut y) as *mut Flexible<X<u16, u32>>;
         unsafe {
             assert_eq!((*v).header.len(), 3);
             assert_eq!((*v).object_size(), 16);
@@ -125,7 +126,7 @@ mod test {
             len: unsafe { N.try_into().unwrap_unchecked() },
             items,
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<H, I>>;
+        let v = ptr(&mut y) as *mut Flexible<X<H, I>>;
         unsafe {
             assert_eq!((*v).header.len(), N);
             assert_eq!((*v).object_size(), size);
@@ -152,7 +153,7 @@ mod test {
         }
     }
 
-    impl FlexibleArrayHeader for DropCount {
+    impl FlexibleHeader for DropCount {
         type Item = DropCount;
         fn len(&self) -> usize {
             3
@@ -178,7 +179,7 @@ mod test {
                     DropCount(&i as *const AtomicUsize),
                 ],
             };
-            let v = unsafe { x.as_mut_ptr() as *mut FlexibleArray<DropCount> };
+            let v = unsafe { x.as_mut_ptr() as *mut Flexible<DropCount> };
             unsafe {
                 assert_eq!((*v).header.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
@@ -198,14 +199,14 @@ mod test {
     }
 
     #[repr(C)]
-    struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
+    struct StaticVariable<T: FlexibleHeader, const L: usize> {
         header: T,
         items: [T::Item; L],
     }
 
     struct E();
 
-    impl FlexibleArrayHeader for E {
+    impl FlexibleHeader for E {
         type Item = u64;
         fn len(&self) -> usize {
             3
@@ -214,13 +215,13 @@ mod test {
 
     const _: () = assert!(size_of::<StaticVariable<E, 3>>() == 24);
 
-    const _: () = assert!(FlexibleArray::<E>::OBJECT_ALIGN == 8);
-    const _: () = assert!(FlexibleArray::<E>::FLEXIBLE_ARRAY_HEADER_LAYOUT.align == 8);
+    const _: () = assert!(Flexible::<E>::OBJECT_ALIGN == 8);
+    const _: () = assert!(Flexible::<E>::FLEXIBLE_HEADER_LAYOUT.align == 8);
     const _: () = assert!(size_of::<E>() == 0);
     const FL: FieldLayout<E, u64> = FieldLayout::align_to(align_of::<u64>());
     const _: () = assert!(FL.align == 8);
     const _: () = assert!(FL.size == 0);
-    const _: () = assert!(FlexibleArray::<E>::FLEXIBLE_ARRAY_HEADER_LAYOUT.size == 0);
+    const _: () = assert!(Flexible::<E>::FLEXIBLE_HEADER_LAYOUT.size == 0);
 
     #[test]
     #[wasm_bindgen_test]
@@ -233,7 +234,7 @@ mod test {
                 unsafe { I += 1 };
             }
         }
-        impl FlexibleArrayHeader for EmptyHeader {
+        impl FlexibleHeader for EmptyHeader {
             type Item = u64;
             fn len(&self) -> usize {
                 3
@@ -245,7 +246,7 @@ mod test {
                 header: EmptyHeader(),
                 items,
             };
-            let y = unsafe { &mut *(x.as_mut_ptr() as *mut FlexibleArray<EmptyHeader>) };
+            let y = unsafe { &mut *(x.as_mut_ptr() as *mut Flexible<EmptyHeader>) };
             assert_eq!(size_of::<StaticVariable<EmptyHeader, 3>>(), 24);
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);

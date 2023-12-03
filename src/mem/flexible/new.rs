@@ -1,16 +1,22 @@
 use crate::{common::ref_mut::RefMut, mem::new_in_place::NewInPlace};
 
-use super::{header::FlexibleArrayHeader, FlexibleArray};
+use super::{header::FlexibleHeader, Flexible};
 
-struct FlexibleArrayNew<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
+pub struct FlexibleNew<H: FlexibleHeader, I: Iterator<Item = H::Item>> {
     header: H,
     items: I,
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for FlexibleArrayNew<H, I> {
-    type Result = FlexibleArray<H>;
+impl<H: FlexibleHeader, I: Iterator<Item = H::Item>> FlexibleNew<H, I> {
+    pub fn new(header: H, items: I) -> Self {
+        Self { header, items }
+    }
+}
+
+impl<H: FlexibleHeader, I: Iterator<Item = H::Item>> NewInPlace for FlexibleNew<H, I> {
+    type Result = Flexible<H>;
     fn result_size(&self) -> usize {
-        Self::Result::flexible_array_size(self.header.len())
+        Self::Result::flexible_size(self.header.len())
     }
     unsafe fn new_in_place(self, p: *mut Self::Result) {
         let v = &mut *p;
@@ -31,12 +37,12 @@ mod test {
     use crate::{common::ref_mut::RefMut, mem::object::Object};
 
     use super::{
-        super::{super::NewInPlace, FlexibleArrayHeader},
-        FlexibleArrayNew,
+        super::{super::NewInPlace, FlexibleHeader},
+        FlexibleNew,
     };
 
     #[repr(C)]
-    struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
+    struct StaticVariable<T: FlexibleHeader, const L: usize> {
         header: T,
         items: [T::Item; L],
     }
@@ -50,7 +56,7 @@ mod test {
                 }
             }
         }
-        impl FlexibleArrayHeader for Header {
+        impl FlexibleHeader for Header {
             type Item = u8;
             fn len(&self) -> usize {
                 self.0 as usize
@@ -58,7 +64,7 @@ mod test {
         }
         let mut i = 0;
         {
-            let new = FlexibleArrayNew {
+            let new = FlexibleNew {
                 header: Header(5, &mut i),
                 items: [42, 43, 44, 45, 46, 47, 48].into_iter().take(t),
             };
