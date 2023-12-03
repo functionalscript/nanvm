@@ -4,9 +4,10 @@ use crate::mem::{
     block::{header::BlockHeader, Block},
     object::Object,
     ref_::update::RefUpdate,
+    Manager,
 };
 
-use std::alloc::dealloc;
+use super::Global;
 
 pub struct GlobalHeader(AtomicIsize);
 
@@ -25,7 +26,7 @@ impl BlockHeader for GlobalHeader {
         let object = block.object();
         let object_size = object.object_size();
         object.object_drop_in_place();
-        dealloc(
+        Global::dealloc(
             block as *mut _ as *mut u8,
             Block::<Self, T>::block_layout(object_size),
         );
