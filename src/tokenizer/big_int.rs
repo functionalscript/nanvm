@@ -1,4 +1,8 @@
-use std::{iter, ops::{Add, Sub}, cmp::Ordering};
+use std::{
+    cmp::Ordering,
+    iter,
+    ops::{Add, Sub},
+};
 
 use crate::common::default::default;
 
@@ -10,18 +14,17 @@ struct BigInt {
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
 enum Sign {
-    Positive,
-    Negative,
+    Positive = 1,
+    Negative = -1,
 }
 
-impl Add for BigInt {
+impl Add for &BigInt {
     type Output = BigInt;
 
     fn add(self, other: Self) -> Self::Output {
         match self.sign == other.sign {
-            true => add_same_sign(self.sign, self.value, other.value),
-            _ => todo!()
-            //false => substract_same_sign(self, other),
+            true => add_same_sign(self.sign, &self.value, &other.value),
+            _ => todo!(), //false => substract_same_sign(self, other),
         }
     }
 }
@@ -34,11 +37,7 @@ impl PartialOrd for Sign {
 
 impl Ord for Sign {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Sign::Positive, Sign::Negative) => Ordering::Greater,
-            (Sign::Negative, Sign::Positive) => Ordering::Less,
-            _ => Ordering::Equal
-        }
+        (*self as i8).cmp(&(*other as i8))
     }
 }
 
@@ -70,16 +69,18 @@ impl Ord for BigInt {
     }
 }
 
-fn add_same_sign(sign: Sign, lhs: Vec<u64>, rhs: Vec<u64>) -> BigInt {
+fn add_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
     let mut value: Vec<_> = default();
     let mut carry = 0;
     let iter = match rhs.len() > lhs.len() {
         true => rhs
-            .into_iter()
-            .zip(lhs.into_iter().chain(iter::repeat(0))),
+            .iter()
+            .copied()
+            .zip(lhs.iter().copied().chain(iter::repeat(0))),
         false => lhs
-            .into_iter()
-            .zip(rhs.into_iter().chain(iter::repeat(0))),
+            .iter()
+            .copied()
+            .zip(rhs.iter().copied().chain(iter::repeat(0))),
     };
     for (a, b) in iter {
         let next = a.wrapping_add(carry).wrapping_add(b);
@@ -89,10 +90,7 @@ fn add_same_sign(sign: Sign, lhs: Vec<u64>, rhs: Vec<u64>) -> BigInt {
     if carry == 1 {
         value.push(1);
     }
-    BigInt {
-        sign,
-        value,
-    }
+    BigInt { sign, value }
 }
 
 fn substract_same_sign(sign: Sign, lhs: Vec<u64>, rhs: Vec<u64>) -> BigInt {
@@ -164,8 +162,14 @@ mod test {
             sign: Sign::Positive,
             value: [2].vec(),
         };
-        let result = a + b;
-        assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [3].vec()});
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [3].vec()
+            }
+        );
 
         let a = BigInt {
             sign: Sign::Negative,
@@ -175,8 +179,14 @@ mod test {
             sign: Sign::Negative,
             value: [2].vec(),
         };
-        let result = a + b;
-        assert_eq!(&result, &BigInt { sign: Sign::Negative, value: [3].vec()});
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Negative,
+                value: [3].vec()
+            }
+        );
 
         let a = BigInt {
             sign: Sign::Positive,
@@ -186,8 +196,14 @@ mod test {
             sign: Sign::Positive,
             value: [2, 4].vec(),
         };
-        let result = a + b;
-        assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [3, 4].vec()});
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [3, 4].vec()
+            }
+        );
 
         let a = BigInt {
             sign: Sign::Positive,
@@ -197,7 +213,13 @@ mod test {
             sign: Sign::Positive,
             value: [1 << 63].vec(),
         };
-        let result = a + b;
-        assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [0, 1].vec()});
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [0, 1].vec()
+            }
+        );
     }
 }
