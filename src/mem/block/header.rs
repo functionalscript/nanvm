@@ -7,7 +7,7 @@ use crate::{
 
 use super::Block;
 
-pub trait BlockHeader: Sized {
+pub trait BlockHeader: Default + Sized {
     // required
     unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
     unsafe fn dealloc(ptr: *mut u8, layout: Layout);
@@ -26,12 +26,18 @@ mod test {
 
     use crate::{
         common::ref_mut::RefMut,
-        mem::{block::Block, fixed::Fixed, object::Object, ref_::update::RefUpdate},
+        mem::{block::Block, fixed::Fixed, ref_::update::RefUpdate},
     };
 
     use super::BlockHeader;
 
     struct XBH(isize);
+
+    impl Default for XBH {
+        fn default() -> Self {
+            Self(0)
+        }
+    }
 
     impl BlockHeader for XBH {
         unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
@@ -45,7 +51,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         let mut x = Block::<XBH, Fixed<()>> {
-            header: XBH(0),
+            header: XBH::default(),
             _0: PhantomData,
         };
         let p = unsafe { x.header.block::<Fixed<()>>() };
