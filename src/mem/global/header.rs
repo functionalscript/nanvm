@@ -17,8 +17,8 @@ impl Default for GlobalHeader {
 
 impl BlockHeader for GlobalHeader {
     #[inline(always)]
-    unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
-        self.0.fetch_add(i as isize, Ordering::Relaxed)
+    unsafe fn ref_update(&mut self, val: RefUpdate) -> isize {
+        self.0.fetch_add(val as isize, Ordering::Relaxed)
     }
     unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
         dealloc(ptr, layout);

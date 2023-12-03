@@ -20,7 +20,7 @@ pub trait BlockHeader: Default + Sized {
 
 #[cfg(test)]
 mod test {
-    use core::marker::PhantomData;
+    use core::{alloc::Layout, marker::PhantomData};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -44,7 +44,7 @@ mod test {
             self.0 += i as isize;
             self.0
         }
-        unsafe fn dealloc(p: *mut u8, layout: std::alloc::Layout) {}
+        unsafe fn dealloc(p: *mut u8, layout: Layout) {}
     }
 
     #[test]

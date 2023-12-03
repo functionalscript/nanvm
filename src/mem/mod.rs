@@ -23,17 +23,19 @@ pub trait Manager: Sized {
     type BlockHeader: BlockHeader;
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
-    unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
-        let p = self.alloc(Block::<Self::BlockHeader, N::Result>::block_layout(
-            new_in_place.result_size(),
-        )) as *mut Block<Self::BlockHeader, _>;
-        let block = &mut *p;
-        block
-            .header
-            .as_mut_ptr()
-            .write(Self::BlockHeader::default());
-        new_in_place.new_in_place(block.object());
-        Ref::new(p)
+    fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
+        unsafe {
+            let p = self.alloc(Block::<Self::BlockHeader, N::Result>::block_layout(
+                new_in_place.result_size(),
+            )) as *mut Block<Self::BlockHeader, _>;
+            let block = &mut *p;
+            block
+                .header
+                .as_mut_ptr()
+                .write(Self::BlockHeader::default());
+            new_in_place.new_in_place(block.object());
+            Ref::new(p)
+        }
     }
 }
 
