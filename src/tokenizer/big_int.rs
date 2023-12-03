@@ -77,6 +77,17 @@ mod test {
 
         let a = BigInt {
             sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [2, 4].vec(),
+        };
+        let result = a + b;
+        assert_eq!(&result, &BigInt { sign: Sign::Positive, value: [3, 4].vec()});
+
+        let a = BigInt {
+            sign: Sign::Positive,
             value: [1 << 63].vec(),
         };
         let b = BigInt {
