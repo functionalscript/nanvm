@@ -1,2 +1,3 @@
 [workspace]
 members = ["nanvm-lib"]
+resolver = "2"
