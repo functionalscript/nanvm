@@ -1,7 +1,7 @@
 mod block;
 mod field_layout;
 mod fixed;
-mod flexible;
+mod flexible_array;
 mod global;
 mod new_in_place;
 mod object;

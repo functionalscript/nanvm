@@ -1,23 +1,23 @@
 use core::marker::PhantomData;
 
-use super::{header::FlexibleHeader, new::FlexibleNew};
+use super::{header::FlexibleArrayHeader, new::FlexibleArrayNew};
 
 #[repr(transparent)]
-pub struct FlexibleLen<I> {
+pub struct FlexibleArrayLen<I> {
     len: usize,
     _0: PhantomData<I>,
 }
 
-impl<I> FlexibleHeader for FlexibleLen<I> {
+impl<I> FlexibleArrayHeader for FlexibleArrayLen<I> {
     type Item = I;
     fn len(&self) -> usize {
         self.len
     }
 }
 
-impl<I: ExactSizeIterator> From<I> for FlexibleNew<FlexibleLen<I::Item>, I> {
+impl<I: ExactSizeIterator> From<I> for FlexibleArrayNew<FlexibleArrayLen<I::Item>, I> {
     fn from(items: I) -> Self {
-        FlexibleLen {
+        FlexibleArrayLen {
             len: items.len(),
             _0: PhantomData,
         }
@@ -30,7 +30,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        flexible::{len::FlexibleLen, new::FlexibleNew, Flexible},
+        flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
         new_in_place::NewInPlace,
         object::Object,
     };
@@ -55,7 +55,7 @@ mod test {
         {
             let p = &mut i as *mut _;
             let v = [Item(p), Item(p), Item(p), Item(p)];
-            let x: FlexibleNew<_, _> = v.into_iter().into();
+            let x: FlexibleArrayNew<_, _> = v.into_iter().into();
             unsafe { x.new_in_place(buffer.as_ptr() as *mut _) }
             assert_eq!(i, 0);
             assert_eq!(buffer[0], 4);
@@ -63,7 +63,7 @@ mod test {
             assert_eq!(p, buffer[2] as *mut _);
             assert_eq!(p, buffer[3] as *mut _);
             assert_eq!(p, buffer[4] as *mut _);
-            let px = buffer.as_mut_ptr() as *mut Flexible<FlexibleLen<Item>>;
+            let px = buffer.as_mut_ptr() as *mut FlexibleArray<FlexibleArrayLen<Item>>;
             unsafe { (*px).object_drop_in_place() };
             assert_eq!(i, 4);
         }

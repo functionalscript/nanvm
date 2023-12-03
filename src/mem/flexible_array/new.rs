@@ -1,20 +1,20 @@
 use crate::{common::ref_mut::RefMut, mem::new_in_place::NewInPlace};
 
-use super::{header::FlexibleHeader, Flexible};
+use super::{header::FlexibleArrayHeader, FlexibleArray};
 
-pub struct FlexibleNew<H: FlexibleHeader, I: Iterator<Item = H::Item>> {
+pub struct FlexibleArrayNew<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
     header: H,
     items: I,
 }
 
-impl<H: FlexibleHeader, I: Iterator<Item = H::Item>> FlexibleNew<H, I> {
+impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> FlexibleArrayNew<H, I> {
     pub fn new(header: H, items: I) -> Self {
         Self { header, items }
     }
 }
 
-impl<H: FlexibleHeader, I: Iterator<Item = H::Item>> NewInPlace for FlexibleNew<H, I> {
-    type Result = Flexible<H>;
+impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for FlexibleArrayNew<H, I> {
+    type Result = FlexibleArray<H>;
     fn result_size(&self) -> usize {
         Self::Result::flexible_size(self.header.len())
     }
@@ -37,12 +37,12 @@ mod test {
     use crate::{common::ref_mut::RefMut, mem::object::Object};
 
     use super::{
-        super::{super::NewInPlace, FlexibleHeader},
-        FlexibleNew,
+        super::{super::NewInPlace, FlexibleArrayHeader},
+        FlexibleArrayNew,
     };
 
     #[repr(C)]
-    struct StaticVariable<T: FlexibleHeader, const L: usize> {
+    struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
         header: T,
         items: [T::Item; L],
     }
@@ -56,7 +56,7 @@ mod test {
                 }
             }
         }
-        impl FlexibleHeader for Header {
+        impl FlexibleArrayHeader for Header {
             type Item = u8;
             fn len(&self) -> usize {
                 self.0 as usize
@@ -64,7 +64,7 @@ mod test {
         }
         let mut i = 0;
         {
-            let new = FlexibleNew {
+            let new = FlexibleArrayNew {
                 header: Header(5, &mut i),
                 items: [42, 43, 44, 45, 46, 47, 48].into_iter().take(t),
             };
