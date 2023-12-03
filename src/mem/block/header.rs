@@ -39,11 +39,6 @@ mod test {
         unsafe fn delete<T: Object>(block: &mut Block<Self, T>) {}
     }
 
-    #[repr(C)]
-    struct XB {
-        header: XBH,
-    }
-
     #[test]
     #[wasm_bindgen_test]
     fn test() {
