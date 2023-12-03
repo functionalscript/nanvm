@@ -18,7 +18,7 @@ impl Default for GlobalHeader {
 
 impl BlockHeader for GlobalHeader {
     #[inline(always)]
-    unsafe fn ref_update(&self, i: RefUpdate) -> isize {
+    unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
         self.0.fetch_add(i as isize, Ordering::Relaxed)
     }
     unsafe fn delete<T: Object>(block: &mut Block<Self, T>) {
