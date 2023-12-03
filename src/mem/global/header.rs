@@ -1,13 +1,12 @@
 use core::sync::atomic::{AtomicIsize, Ordering};
 
+use std::alloc::dealloc;
+
 use crate::mem::{
     block::{header::BlockHeader, Block},
     object::Object,
     ref_::update::RefUpdate,
-    Manager,
 };
-
-use super::Global;
 
 pub struct GlobalHeader(AtomicIsize);
 
@@ -26,9 +25,12 @@ impl BlockHeader for GlobalHeader {
         let object = block.object();
         let object_size = object.object_size();
         object.object_drop_in_place();
-        Global::dealloc(
+        Self::dealloc(
             block as *mut _ as *mut u8,
             Block::<Self, T>::block_layout(object_size),
         );
+    }
+    unsafe fn dealloc(p: *mut u8, layout: std::alloc::Layout) {
+        dealloc(p, layout);
     }
 }

@@ -16,9 +16,6 @@ impl Manager for Global {
     unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
         alloc(layout)
     }
-    unsafe fn dealloc(p: *mut u8, layout: Layout) {
-        dealloc(p, layout);
-    }
     unsafe fn new<N: NewInPlace>(mut self, new_in_place: N) -> Ref<N::Result, Self> {
         let p = self.alloc(Block::<GlobalHeader, N::Result>::block_layout(
             new_in_place.result_size(),
