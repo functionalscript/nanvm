@@ -1,4 +1,4 @@
-use std::{iter, ops::Add, cmp::Ordering};
+use std::{iter, ops::{Add, Sub}, cmp::Ordering};
 
 use crate::common::default::default;
 
@@ -19,8 +19,9 @@ impl Add for BigInt {
 
     fn add(self, other: Self) -> Self::Output {
         match self.sign == other.sign {
-            true => add_same_sign(self, other),
-            false => substract_same_sign(self, other),
+            true => add_same_sign(self.sign, self.value, other.value),
+            _ => todo!()
+            //false => substract_same_sign(self, other),
         }
     }
 }
@@ -69,34 +70,32 @@ impl Ord for BigInt {
     }
 }
 
-fn add_same_sign(lhs: BigInt, rhs: BigInt) -> BigInt {
-    let mut result: Vec<_> = default();
+fn add_same_sign(sign: Sign, lhs: Vec<u64>, rhs: Vec<u64>) -> BigInt {
+    let mut value: Vec<_> = default();
     let mut carry = 0;
-    let iter = match rhs.value.len() > lhs.value.len() {
+    let iter = match rhs.len() > lhs.len() {
         true => rhs
-            .value
-            .iter()
-            .zip(lhs.value.iter().chain(iter::repeat(&0))),
+            .into_iter()
+            .zip(lhs.into_iter().chain(iter::repeat(0))),
         false => lhs
-            .value
-            .iter()
-            .zip(rhs.value.iter().chain(iter::repeat(&0))),
+            .into_iter()
+            .zip(rhs.into_iter().chain(iter::repeat(0))),
     };
     for (a, b) in iter {
-        let next = a.wrapping_add(carry).wrapping_add(*b);
-        result.push(next);
-        carry = if next < *a { 1 } else { 0 };
+        let next = a.wrapping_add(carry).wrapping_add(b);
+        value.push(next);
+        carry = if next < a { 1 } else { 0 };
     }
     if carry == 1 {
-        result.push(1);
+        value.push(1);
     }
     BigInt {
-        sign: lhs.sign,
-        value: result,
+        sign,
+        value,
     }
 }
 
-fn substract_same_sign(lhs: BigInt, rhs: BigInt) -> BigInt {
+fn substract_same_sign(sign: Sign, lhs: Vec<u64>, rhs: Vec<u64>) -> BigInt {
     todo!()
 }
 
