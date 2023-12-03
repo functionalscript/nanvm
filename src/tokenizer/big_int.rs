@@ -1,8 +1,4 @@
-use std::{
-    cmp::Ordering,
-    iter,
-    ops::Add,
-};
+use std::{cmp::Ordering, iter, ops::Add};
 
 use crate::common::default::default;
 
