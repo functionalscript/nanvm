@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Sub},
+    ops::Add,
 };
 
 use crate::common::default::default;
@@ -89,12 +89,12 @@ fn add_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
             .zip(rhs.iter().copied().chain(iter::repeat(0))),
     };
     for (a, b) in iter {
-        let next = a.wrapping_add(carry).wrapping_add(b);
-        value.push(next);
-        carry = if next < a { 1 } else { 0 };
+        let next = a as u128 + b as u128 + carry;
+        value.push(next as u64);
+        carry = next >> 64;
     }
-    if carry == 1 {
-        value.push(1);
+    if carry != 0 {
+        value.push(carry as u64);
     }
     BigInt { sign, value }
 }
@@ -225,6 +225,35 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: [0, 1].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_add_overflow() {
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [u64::MAX, 0, 1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [u64::MAX, u64::MAX].vec(),
+        };
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [u64::MAX - 1, 0, 2].vec()
+            }
+        );
+        let result = &b + &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [u64::MAX - 1, 0, 2].vec()
             }
         );
     }
