@@ -7,11 +7,14 @@ mod new_in_place;
 mod object;
 mod ref_;
 
+use core::alloc::Layout;
+
 use self::{block::header::BlockHeader, new_in_place::NewInPlace, object::Object, ref_::Ref};
 
 /// Block = (Header, Object)
 pub trait Manager: Sized {
     type BlockHeader: BlockHeader;
+    unsafe fn alloc(&mut self, layout: Layout) -> *mut u8;
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     unsafe fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self>;
 }
