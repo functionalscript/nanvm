@@ -1,9 +1,6 @@
-use crate::{mem::new_in_place::NewInPlace, common::ref_mut::RefMut};
+use crate::{common::ref_mut::RefMut, mem::new_in_place::NewInPlace};
 
-use super::{
-    header::FlexibleArrayHeader,
-    FlexibleArray,
-};
+use super::{header::FlexibleArrayHeader, FlexibleArray};
 
 struct FlexibleArrayNew<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
     header: H,
