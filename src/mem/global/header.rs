@@ -1,11 +1,8 @@
-use core::{
-    alloc::Layout,
-    sync::atomic::{AtomicIsize, Ordering},
-};
-
-use std::alloc::dealloc;
+use core::sync::atomic::{AtomicIsize, Ordering};
 
 use crate::mem::{block::header::BlockHeader, ref_::update::RefUpdate};
+
+use super::Global;
 
 pub struct GlobalHeader(AtomicIsize);
 
@@ -16,11 +13,9 @@ impl Default for GlobalHeader {
 }
 
 impl BlockHeader for GlobalHeader {
+    type Manager = Global;
     #[inline(always)]
     unsafe fn ref_update(&mut self, val: RefUpdate) -> isize {
         self.0.fetch_add(val as isize, Ordering::Relaxed)
-    }
-    unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
-        dealloc(ptr, layout);
     }
 }

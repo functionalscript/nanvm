@@ -1,16 +1,14 @@
-use core::alloc::Layout;
-
 use crate::{
     common::ref_mut::RefMut,
-    mem::{object::Object, ref_::update::RefUpdate},
+    mem::{object::Object, ref_::update::RefUpdate, Manager},
 };
 
 use super::Block;
 
 pub trait BlockHeader: Default + Sized {
     // required
+    type Manager: Manager;
     unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
-    unsafe fn dealloc(ptr: *mut u8, layout: Layout);
     //
     #[inline(always)]
     unsafe fn block<T: Object>(&mut self) -> &mut Block<Self, T> {
@@ -26,7 +24,7 @@ mod test {
 
     use crate::{
         common::ref_mut::RefMut,
-        mem::{block::Block, fixed::Fixed, ref_::update::RefUpdate},
+        mem::{block::Block, fixed::Fixed, ref_::update::RefUpdate, Manager},
     };
 
     use super::BlockHeader;
@@ -39,12 +37,22 @@ mod test {
         }
     }
 
+    struct D();
+
+    impl Manager for D {
+        type BlockHeader = XBH;
+        unsafe fn alloc(self, layout: Layout) -> *mut u8 {
+            todo!()
+        }
+        unsafe fn dealloc(ptr: *mut u8, layout: Layout) {}
+    }
+
     impl BlockHeader for XBH {
+        type Manager = D;
         unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
             self.0 += i as isize;
             self.0
         }
-        unsafe fn dealloc(p: *mut u8, layout: Layout) {}
     }
 
     #[test]

@@ -4,7 +4,7 @@ use core::{alloc::Layout, marker::PhantomData};
 
 use self::header::BlockHeader;
 
-use super::{field_layout::FieldLayout, object::Object};
+use super::{field_layout::FieldLayout, object::Object, Manager};
 
 #[repr(transparent)]
 pub struct Block<BH: BlockHeader, T: Object> {
@@ -32,6 +32,9 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
         let object = self.object();
         let object_size = object.object_size();
         object.object_drop_in_place();
-        BH::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
+        <BH::Manager as Manager>::dealloc(
+            self as *mut _ as *mut u8,
+            Self::block_layout(object_size),
+        );
     }
 }

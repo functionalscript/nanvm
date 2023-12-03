@@ -22,6 +22,7 @@ use self::{
 pub trait Manager: Sized {
     type BlockHeader: BlockHeader;
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
+    unsafe fn dealloc(ptr: *mut u8, layout: Layout);
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
         unsafe {
