@@ -3,7 +3,7 @@ use std::alloc::{alloc, dealloc};
 
 use self::header::GlobalHeader;
 
-use super::Manager;
+use super::manager::Manager;
 
 mod header;
 

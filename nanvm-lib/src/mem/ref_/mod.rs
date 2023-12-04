@@ -4,8 +4,8 @@ use self::update::RefUpdate;
 
 use super::{
     block::{header::BlockHeader, Block},
+    manager::Manager,
     object::Object,
-    Manager,
 };
 
 /// A reference to an object allocated by a memory manager.

@@ -4,7 +4,7 @@ use core::{alloc::Layout, marker::PhantomData};
 
 use self::header::BlockHeader;
 
-use super::{field_layout::FieldLayout, object::Object, Manager};
+use super::{field_layout::FieldLayout, manager::Manager, object::Object};
 
 #[repr(transparent)]
 pub struct Block<BH: BlockHeader, T: Object> {

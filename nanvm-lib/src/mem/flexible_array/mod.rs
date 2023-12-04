@@ -10,7 +10,7 @@ use core::{
 
 use self::header::FlexibleArrayHeader;
 
-use super::{field_layout::FieldLayout, Object};
+use super::{field_layout::FieldLayout, object::Object};
 
 #[repr(transparent)]
 pub struct FlexibleArray<T: FlexibleArrayHeader> {
