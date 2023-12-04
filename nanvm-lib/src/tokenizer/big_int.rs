@@ -301,7 +301,7 @@ mod test {
             &result,
             &BigInt {
                 sign: Sign::Positive,
-                value: [u64::MAX, 0].vec()
+                value: [u64::MAX, 0].vec() //TODO: normalize
             }
         );
     }
