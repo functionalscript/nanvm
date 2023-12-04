@@ -108,7 +108,7 @@ fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
         .copied()
         .zip(rhs.iter().copied().chain(iter::repeat(0)));
     for (a, b) in iter {
-        let next = a as u128 - b as u128 - 1;
+        let next = a as u128 - b as u128 - borrow;
         value.push(next as u64);
         borrow = next >> 64 & 1;
     }
@@ -117,13 +117,13 @@ fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
 
 #[cfg(test)]
 mod test {
-    use std::{cmp::Ordering};
+    use std::cmp::Ordering;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::common::array::ArrayEx;
 
-use crate::common::default::default;
+    use crate::common::default::default;
 
     use super::{BigInt, Sign};
 
@@ -256,6 +256,31 @@ use crate::common::default::default;
             &BigInt {
                 sign: Sign::Positive,
                 value: default()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [3].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [2].vec(),
+        };
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1].vec()
+            }
+        );
+        let result = &b + &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1].vec()
             }
         );
     }
