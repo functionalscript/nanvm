@@ -1,8 +1,12 @@
-use std::{cmp::Ordering, iter, ops::Add};
+use std::{
+    cmp::Ordering,
+    iter,
+    ops::{Add, Neg, Sub},
+};
 
 use crate::common::default::default;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 struct BigInt {
     sign: Sign,
     value: Vec<u64>,
@@ -15,8 +19,15 @@ enum Sign {
 }
 
 impl BigInt {
-    fn normalize(mut self) {
-        todo!()
+    fn normalize(&mut self) {
+        loop {
+            match self.value.last() {
+                Some(&last) if last == 0 => {
+                    self.value.pop();
+                }
+                _ => break,
+            }
+        }
     }
 }
 
@@ -35,6 +46,30 @@ impl Add for &BigInt {
                 Ordering::Less => substract_same_sign(other.sign, &other.value, &self.value),
             },
         }
+    }
+}
+
+impl Sub for BigInt {
+    type Output = BigInt;
+
+    fn sub(self, other: Self) -> Self::Output {
+        self.add(&-other)
+    }
+}
+
+impl Neg for BigInt {
+    type Output = BigInt;
+
+    fn neg(mut self) -> Self::Output {
+        if self.value.is_empty() {
+            return self;
+        }
+        self.sign = if self.sign == Sign::Positive {
+            Sign::Negative
+        } else {
+            Sign::Positive
+        };
+        self
     }
 }
 
@@ -118,7 +153,9 @@ fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
         value.push(next as u64);
         borrow = next >> 64 & 1;
     }
-    BigInt { sign, value }
+    let mut result = BigInt { sign, value };
+    result.normalize();
+    result
 }
 
 #[cfg(test)]
@@ -337,6 +374,141 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: [u64::MAX - 1, 0, 2].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_sub_same_sign() {
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1 << 63].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [1 << 63].vec(),
+        };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: default()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [3].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [2].vec(),
+        };
+        let result = a.clone() - b.clone();
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1].vec()
+            }
+        );
+        let result = b - a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Negative,
+                value: [1].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [0, 1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [u64::MAX].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_sub_different_sign() {
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [2].vec(),
+        };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [3].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [2].vec(),
+        };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Negative,
+                value: [3].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [2, 4].vec(),
+        };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [3, 4].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1 << 63].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [1 << 63].vec(),
+        };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [0, 1].vec()
             }
         );
     }
