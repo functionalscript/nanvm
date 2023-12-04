@@ -14,9 +14,7 @@ use crate::common::ref_mut::RefMut;
 use self::{
     block::{header::BlockHeader, Block},
     fixed::Fixed,
-    flexible_array::{
-        header::FlexibleArrayHeader, len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray,
-    },
+    flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
     new_in_place::NewInPlace,
     object::Object,
     ref_::Ref,
@@ -35,12 +33,14 @@ pub trait Manager: Sized {
             let p = self.alloc(Block::<Self::BlockHeader, N::Result>::block_layout(
                 new_in_place.result_size(),
             )) as *mut Block<Self::BlockHeader, _>;
-            let block = &mut *p;
-            block
-                .header
-                .as_mut_ptr()
-                .write(Self::BlockHeader::default());
-            new_in_place.new_in_place(block.object());
+            {
+                let block = &mut *p;
+                block
+                    .header
+                    .as_mut_ptr()
+                    .write(Self::BlockHeader::default());
+                new_in_place.new_in_place(block.object());
+            }
             Ref::new(p)
         }
     }
