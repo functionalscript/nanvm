@@ -33,11 +33,14 @@ jobs:
     - run: cargo test --verbose ${{ matrix.type }}
 
   test-wasm:
+    strategy:
+      matrix:
+        type: ['', '--release']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@wasm-pack
-      - run: wasm-pack test --node --release ./nanvm-lib
+      - run: wasm-pack test --node ${{ matrix.type }} ./nanvm-lib
 
   npm:
     runs-on: ubuntu-latest
