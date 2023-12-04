@@ -1,6 +1,6 @@
 # JSON tokenizer
 
-## BitInt
+## BigInt
 
 ### Multiplication
 
@@ -14,3 +14,4 @@
 |      |r0   |r1           |r2                   |...|r(n+m)|
 |------|-----|-------------|---------------------|---|------|
 |result|a0*b0|a0*b1 + b0*a1|a0*b2 + a1*b1 + a2*b0|...|an*bm |
+
