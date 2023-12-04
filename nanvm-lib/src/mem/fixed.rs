@@ -1,4 +1,4 @@
-use super::{new_in_place::NewInPlace, Object};
+use super::{new_in_place::NewInPlace, object::Object};
 
 #[repr(transparent)]
 pub struct Fixed<T>(pub T);

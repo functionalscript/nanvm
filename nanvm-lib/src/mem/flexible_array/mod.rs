@@ -1,6 +1,6 @@
-mod header;
-mod len;
-mod new;
+pub mod header;
+pub mod len;
+pub mod new;
 
 use core::{
     mem::{align_of, size_of},
@@ -10,7 +10,7 @@ use core::{
 
 use self::header::FlexibleArrayHeader;
 
-use super::{field_layout::FieldLayout, Object};
+use super::{field_layout::FieldLayout, object::Object};
 
 #[repr(transparent)]
 pub struct FlexibleArray<T: FlexibleArrayHeader> {
