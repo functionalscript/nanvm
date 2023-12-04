@@ -108,7 +108,7 @@ fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
         .copied()
         .zip(rhs.iter().copied().chain(iter::repeat(0)));
     for (a, b) in iter {
-        let next = a as u128 - b as u128 - borrow;
+        let next = a as i128 - b as i128 - borrow;
         value.push(next as u64);
         borrow = next >> 64 & 1;
     }
@@ -173,7 +173,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_add() {
+    fn test_add_same_sign() {
         let a = BigInt {
             sign: Sign::Positive,
             value: [1].vec(),
@@ -241,7 +241,11 @@ mod test {
                 value: [0, 1].vec()
             }
         );
+    }
 
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_add_different_sign() {
         let a = BigInt {
             sign: Sign::Positive,
             value: [1 << 63].vec(),
@@ -281,6 +285,23 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: [1].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [0, 1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [u64::MAX, 0].vec()
             }
         );
     }
