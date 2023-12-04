@@ -13,6 +13,10 @@ use crate::common::ref_mut::RefMut;
 
 use self::{
     block::{header::BlockHeader, Block},
+    fixed::Fixed,
+    flexible_array::{
+        header::FlexibleArrayHeader, len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray,
+    },
     new_in_place::NewInPlace,
     object::Object,
     ref_::Ref,
@@ -20,9 +24,11 @@ use self::{
 
 /// Block = (Header, Object)
 pub trait Manager: Sized {
+    // required:
     type BlockHeader: BlockHeader;
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
     unsafe fn dealloc(ptr: *mut u8, layout: Layout);
+    // optional:
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     fn new<N: NewInPlace>(self, new_in_place: N) -> Ref<N::Result, Self> {
         unsafe {
@@ -37,6 +43,15 @@ pub trait Manager: Sized {
             new_in_place.new_in_place(block.object());
             Ref::new(p)
         }
+    }
+    fn fixed_new<T>(self, value: T) -> Ref<Fixed<T>, Self> {
+        self.new(Fixed(value))
+    }
+    fn flexible_array_new<I>(
+        self,
+        items: impl ExactSizeIterator<Item = I>,
+    ) -> Ref<FlexibleArray<FlexibleArrayLen<I>>, Self> {
+        self.new(FlexibleArrayNew::from(items))
     }
 }
 
