@@ -21,6 +21,7 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-latest', 'windows-latest', 'macos-13']
+        type: ['', '--release']
 
     runs-on: ${{ matrix.os }}
 
@@ -28,14 +29,18 @@ jobs:
     - uses: actions/checkout@v4
     - run: sysctl -n machdep.cpu.brand_string
       if: matrix.os == 'macos-13'
-    - run: cargo test --verbose --release
+    - run: cargo build ${{ matrix.type }}
+    - run: cargo test --verbose ${{ matrix.type }}
 
   test-wasm:
+    strategy:
+      matrix:
+        type: ['', '--release']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@wasm-pack
-      - run: wasm-pack test --node --release ./nanvm-lib
+      - run: wasm-pack test --node ${{ matrix.type }} ./nanvm-lib
 
   npm:
     runs-on: ubuntu-latest

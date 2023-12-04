@@ -34,12 +34,14 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{common::ref_mut::RefMut, mem::object::Object};
-
-    use super::{
-        super::{super::NewInPlace, FlexibleArrayHeader},
-        FlexibleArrayNew,
+    use crate::{
+        common::ref_mut::RefMut,
+        mem::{
+            flexible_array::header::FlexibleArrayHeader, new_in_place::NewInPlace, object::Object,
+        },
     };
+
+    use super::FlexibleArrayNew;
 
     #[repr(C)]
     struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
