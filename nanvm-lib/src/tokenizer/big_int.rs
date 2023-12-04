@@ -14,6 +14,12 @@ enum Sign {
     Negative = -1,
 }
 
+impl BigInt {
+    fn normalize(mut self) {
+        todo!()
+    }
+}
+
 impl Add for &BigInt {
     type Output = BigInt;
 
@@ -301,7 +307,7 @@ mod test {
             &result,
             &BigInt {
                 sign: Sign::Positive,
-                value: [u64::MAX, 0].vec() //TODO: normalize
+                value: [u64::MAX].vec()
             }
         );
     }
