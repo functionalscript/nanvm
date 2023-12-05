@@ -6,7 +6,7 @@ use std::{
 
 use crate::common::default::default;
 
-#[derive(Debug, PartialEq, Clone, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq, Default)]
 struct BigInt {
     sign: Sign,
     value: Vec<u64>,
@@ -18,7 +18,15 @@ enum Sign {
     Negative = -1,
 }
 
+impl Default for Sign {
+    fn default() -> Self {
+        Self::Positive
+    }
+}
+
 impl BigInt {
+    const ZERO: BigInt = BigInt { sign: Sign::Positive, value: Vec::new() };
+
     fn normalize(&mut self) {
         loop {
             match self.value.last() {
@@ -33,13 +41,6 @@ impl BigInt {
     fn is_zero(&self) -> bool {
         self.value.len() == 0
     }
-
-    fn zero() -> BigInt {
-        BigInt {
-            sign: Sign::Positive,
-            value: default(),
-        }
-    }
 }
 
 impl Add for &BigInt {
@@ -49,7 +50,7 @@ impl Add for &BigInt {
         match self.sign == other.sign {
             true => add_same_sign(self.sign, &self.value, &other.value),
             false => match cmp_values(&self.value, &other.value) {
-                Ordering::Equal => BigInt::zero(),
+                Ordering::Equal => BigInt::ZERO,
                 Ordering::Greater => substract_same_sign(self.sign, &self.value, &other.value),
                 Ordering::Less => substract_same_sign(other.sign, &other.value, &self.value),
             },
@@ -114,7 +115,7 @@ impl Mul for &BigInt {
 
     fn mul(self, other: Self) -> Self::Output {
         if (self.is_zero() || other.is_zero()) {
-            return BigInt::zero();
+            return BigInt::ZERO;
         }
         let mut value: Vec<_> = default();
         let lhs_max = self.value.len() - 1;
@@ -339,10 +340,7 @@ mod test {
         let result = &a + &b;
         assert_eq!(
             &result,
-            &BigInt {
-                sign: Sign::Positive,
-                value: default()
-            }
+            &BigInt::ZERO
         );
 
         let a = BigInt {
@@ -431,10 +429,7 @@ mod test {
         let result = a - b;
         assert_eq!(
             &result,
-            &BigInt {
-                sign: Sign::Positive,
-                value: default()
-            }
+            &BigInt::ZERO
         );
 
         let a = BigInt {
@@ -555,24 +550,23 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_mul() {
-        let zero = BigInt::zero();
         let a = BigInt {
             sign: Sign::Positive,
             value: [1].vec(),
         };
-        let result = &a * &zero;
-        assert_eq!(&result, &BigInt::zero(),);
-        let result = &zero * &a;
-        assert_eq!(&result, &BigInt::zero(),);
+        let result = &a * &BigInt::ZERO;
+        assert_eq!(&result, &BigInt::ZERO);
+        let result = &BigInt::ZERO * &a;
+        assert_eq!(&result, &BigInt::ZERO);
 
         let a = BigInt {
             sign: Sign::Negative,
             value: [1].vec(),
         };
-        let result = &a * &zero;
-        assert_eq!(&result, &BigInt::zero(),);
-        let result = &zero * &a;
-        assert_eq!(&result, &BigInt::zero(),);
+        let result = &a * &BigInt::ZERO;
+        assert_eq!(&result, &BigInt::ZERO);
+        let result = &BigInt::ZERO * &a;
+        assert_eq!(&result, &BigInt::ZERO);
 
         let a = BigInt {
             sign: Sign::Negative,
