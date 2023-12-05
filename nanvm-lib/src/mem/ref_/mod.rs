@@ -1,3 +1,4 @@
+pub mod mut_ref;
 pub mod update;
 
 use self::update::RefUpdate;
@@ -15,6 +16,9 @@ pub struct Ref<T: Object, M: Manager>(*mut Block<M::BlockHeader, T>);
 impl<T: Object, M: Manager> Ref<T, M> {
     pub unsafe fn new(v: *mut Block<M::BlockHeader, T>) -> Self {
         Self(v)
+    }
+    pub fn get_object(&self) -> &T {
+        unsafe { (*self.0).object() }
     }
 }
 
