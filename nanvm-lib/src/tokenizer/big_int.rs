@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Neg, Sub},
+    ops::{Add, Mul, Neg, Sub},
 };
 
 use crate::common::default::default;
@@ -29,6 +29,17 @@ impl BigInt {
             }
         }
     }
+
+    fn is_zero(&self) -> bool {
+        self.value.len() == 0
+    }
+
+    fn zero() -> BigInt {
+        BigInt {
+            sign: Sign::Positive,
+            value: default(),
+        }
+    }
 }
 
 impl Add for &BigInt {
@@ -38,10 +49,7 @@ impl Add for &BigInt {
         match self.sign == other.sign {
             true => add_same_sign(self.sign, &self.value, &other.value),
             false => match cmp_values(&self.value, &other.value) {
-                Ordering::Equal => BigInt {
-                    sign: Sign::Positive,
-                    value: default(),
-                },
+                Ordering::Equal => BigInt::zero(),
                 Ordering::Greater => substract_same_sign(self.sign, &self.value, &other.value),
                 Ordering::Less => substract_same_sign(other.sign, &other.value, &self.value),
             },
@@ -98,6 +106,27 @@ impl Ord for BigInt {
         }
 
         cmp_values(&self.value, &other.value)
+    }
+}
+
+impl Mul for &BigInt {
+    type Output = BigInt;
+
+    fn mul(self, other: Self) -> Self::Output {
+        if (self.is_zero() || other.is_zero()) {
+            return BigInt::zero();
+        }
+        let mut value: Vec<_> = default();
+        let total_len = self.value.len() + other.value.len();
+        let mut i = 0;
+        while i < total_len {
+            i = i + 1;
+        }
+        let sign = match self.sign == other.sign {
+            true => Sign::Positive,
+            false => Sign::Negative,
+        };
+        BigInt { sign, value }
     }
 }
 
