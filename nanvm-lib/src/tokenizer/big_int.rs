@@ -607,5 +607,13 @@ mod test {
                 value: [1, 4, 10, 16, 17, 12].vec()
             },
         );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1, 4, 10, 16, 17, 12].vec()
+            },
+        );
     }
 }
