@@ -17,7 +17,7 @@
     pub fn get_ref(self) -> Ref<T>;
   }
   ```
-- `Ref<T>` can be cloned. It's a reference counter. If we own `Ref<T>` and the number of references is 1, we can get a `MutRef<T>` from it, otherwise we will have to create a new object `T`.
+- `Ref<T>` can be cloned. It's a reference counter. If we own `Ref<T>` and the number of references is `1`, we can get a `MutRef<T>` from it, otherwise we will have to create a new object `T`.
   ```rust
   impl<T> Clone for Ref<T>;
   impl<T> Ref {
@@ -40,3 +40,7 @@
     }
   }
   ```
+
+## Notes
+
+If you implement a mock version of a reference counter, it should return a number which is greater than `1` when calling `ref_count()`. Otherwise, `try_get_mut_ref()` will assume that it has an exclusive ownership of the object, which is not true in general.
