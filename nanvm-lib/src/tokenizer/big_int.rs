@@ -25,7 +25,10 @@ impl Default for Sign {
 }
 
 impl BigInt {
-    const ZERO: BigInt = BigInt { sign: Sign::Positive, value: Vec::new() };
+    const ZERO: BigInt = BigInt {
+        sign: Sign::Positive,
+        value: Vec::new(),
+    };
 
     fn normalize(&mut self) {
         loop {
@@ -119,7 +122,7 @@ impl Mul for &BigInt {
         }
         let mut value: Vec<_> = default();
         let lhs_max = self.value.len() - 1;
-        let rhs_max = other.value.len() -1 ;
+        let rhs_max = other.value.len() - 1;
         let total_max = self.value.len() + other.value.len() - 1;
         let mut i = 0;
         while i < total_max {
@@ -338,10 +341,7 @@ mod test {
             value: [1 << 63].vec(),
         };
         let result = &a + &b;
-        assert_eq!(
-            &result,
-            &BigInt::ZERO
-        );
+        assert_eq!(&result, &BigInt::ZERO);
 
         let a = BigInt {
             sign: Sign::Positive,
@@ -427,10 +427,7 @@ mod test {
             value: [1 << 63].vec(),
         };
         let result = a - b;
-        assert_eq!(
-            &result,
-            &BigInt::ZERO
-        );
+        assert_eq!(&result, &BigInt::ZERO);
 
         let a = BigInt {
             sign: Sign::Positive,
@@ -598,7 +595,7 @@ mod test {
             &result,
             &BigInt {
                 sign: Sign::Positive,
-                value: [5, 16, 34, 52, 45, 28] .vec()
+                value: [5, 16, 34, 52, 45, 28].vec()
             },
         );
         let result = &b * &a;
@@ -606,7 +603,7 @@ mod test {
             &result,
             &BigInt {
                 sign: Sign::Positive,
-                value: [5, 16, 34, 52, 45, 28] .vec()
+                value: [5, 16, 34, 52, 45, 28].vec()
             },
         );
     }
