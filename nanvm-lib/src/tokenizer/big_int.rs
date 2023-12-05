@@ -1,5 +1,5 @@
 use std::{
-    cmp::{Ordering, min, max},
+    cmp::{max, min, Ordering},
     iter,
     ops::{Add, Mul, Neg, Sub},
 };
@@ -561,30 +561,18 @@ mod test {
             value: [1].vec(),
         };
         let result = &a * &zero;
-        assert_eq!(
-            &result,
-            &BigInt::zero(),
-        );
+        assert_eq!(&result, &BigInt::zero(),);
         let result = &zero * &a;
-        assert_eq!(
-            &result,
-            &BigInt::zero(),
-        );
+        assert_eq!(&result, &BigInt::zero(),);
 
         let a = BigInt {
             sign: Sign::Negative,
             value: [1].vec(),
         };
         let result = &a * &zero;
-        assert_eq!(
-            &result,
-            &BigInt::zero(),
-        );
+        assert_eq!(&result, &BigInt::zero(),);
         let result = &zero * &a;
-        assert_eq!(
-            &result,
-            &BigInt::zero(),
-        );
+        assert_eq!(&result, &BigInt::zero(),);
 
         let a = BigInt {
             sign: Sign::Negative,
@@ -597,7 +585,10 @@ mod test {
         let result = &a * &b;
         assert_eq!(
             &result,
-            &BigInt { sign: Sign::Positive, value: [1].vec()},
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1].vec()
+            },
         );
     }
 }
