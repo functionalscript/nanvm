@@ -1,12 +1,12 @@
 use std::{
-    cmp::Ordering,
+    cmp::{max, min, Ordering},
     iter,
-    ops::{Add, Neg, Sub},
+    ops::{Add, Mul, Neg, Sub},
 };
 
 use crate::common::default::default;
 
-#[derive(Debug, PartialEq, Clone, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq, Default)]
 struct BigInt {
     sign: Sign,
     value: Vec<u64>,
@@ -18,7 +18,18 @@ enum Sign {
     Negative = -1,
 }
 
+impl Default for Sign {
+    fn default() -> Self {
+        Self::Positive
+    }
+}
+
 impl BigInt {
+    const ZERO: BigInt = BigInt {
+        sign: Sign::Positive,
+        value: Vec::new(),
+    };
+
     fn normalize(&mut self) {
         loop {
             match self.value.last() {
@@ -29,6 +40,10 @@ impl BigInt {
             }
         }
     }
+
+    fn is_zero(&self) -> bool {
+        self.value.len() == 0
+    }
 }
 
 impl Add for &BigInt {
@@ -38,10 +53,7 @@ impl Add for &BigInt {
         match self.sign == other.sign {
             true => add_same_sign(self.sign, &self.value, &other.value),
             false => match cmp_values(&self.value, &other.value) {
-                Ordering::Equal => BigInt {
-                    sign: Sign::Positive,
-                    value: default(),
-                },
+                Ordering::Equal => BigInt::ZERO,
                 Ordering::Greater => substract_same_sign(self.sign, &self.value, &other.value),
                 Ordering::Less => substract_same_sign(other.sign, &other.value, &self.value),
             },
@@ -98,6 +110,37 @@ impl Ord for BigInt {
         }
 
         cmp_values(&self.value, &other.value)
+    }
+}
+
+impl Mul for &BigInt {
+    type Output = BigInt;
+
+    fn mul(self, other: Self) -> Self::Output {
+        if (self.is_zero() || other.is_zero()) {
+            return BigInt::ZERO;
+        }
+        let mut value: Vec<_> = default();
+        let lhs_max = self.value.len() - 1;
+        let rhs_max = other.value.len() - 1;
+        let total_max = self.value.len() + other.value.len() - 1;
+        let mut i = 0;
+        while i < total_max {
+            let mut j = if i > rhs_max { i - rhs_max } else { 0 };
+            let max = if i < lhs_max { i } else { lhs_max };
+            let mut d = 0;
+            while j <= max {
+                d = d + self.value[j] * other.value[i - j];
+                j = j + 1;
+            }
+            value.push(d);
+            i = i + 1;
+        }
+        let sign = match self.sign == other.sign {
+            true => Sign::Positive,
+            false => Sign::Negative,
+        };
+        BigInt { sign, value }
     }
 }
 
@@ -298,13 +341,7 @@ mod test {
             value: [1 << 63].vec(),
         };
         let result = &a + &b;
-        assert_eq!(
-            &result,
-            &BigInt {
-                sign: Sign::Positive,
-                value: default()
-            }
-        );
+        assert_eq!(&result, &BigInt::ZERO);
 
         let a = BigInt {
             sign: Sign::Positive,
@@ -390,13 +427,7 @@ mod test {
             value: [1 << 63].vec(),
         };
         let result = a - b;
-        assert_eq!(
-            &result,
-            &BigInt {
-                sign: Sign::Positive,
-                value: default()
-            }
-        );
+        assert_eq!(&result, &BigInt::ZERO);
 
         let a = BigInt {
             sign: Sign::Positive,
@@ -510,6 +541,70 @@ mod test {
                 sign: Sign::Positive,
                 value: [0, 1].vec()
             }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_mul() {
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let result = &a * &BigInt::ZERO;
+        assert_eq!(&result, &BigInt::ZERO);
+        let result = &BigInt::ZERO * &a;
+        assert_eq!(&result, &BigInt::ZERO);
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let result = &a * &BigInt::ZERO;
+        assert_eq!(&result, &BigInt::ZERO);
+        let result = &BigInt::ZERO * &a;
+        assert_eq!(&result, &BigInt::ZERO);
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1].vec()
+            },
+        );
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1, 2, 3, 4].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [5, 6, 7].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [5, 16, 34, 52, 45, 28].vec()
+            },
+        );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [5, 16, 34, 52, 45, 28].vec()
+            },
         );
     }
 }
