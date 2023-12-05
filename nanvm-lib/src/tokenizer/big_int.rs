@@ -541,4 +541,39 @@ mod test {
             }
         );
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_mul() {
+        let zero = BigInt::zero();
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let result = &a * &zero;
+        assert_eq!(
+            &result,
+            &BigInt::zero(),
+        );
+        let result = &zero * &a;
+        assert_eq!(
+            &result,
+            &BigInt::zero(),
+        );
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let result = &a * &zero;
+        assert_eq!(
+            &result,
+            &BigInt::zero(),
+        );
+        let result = &zero * &a;
+        assert_eq!(
+            &result,
+            &BigInt::zero(),
+        );
+    }
 }
