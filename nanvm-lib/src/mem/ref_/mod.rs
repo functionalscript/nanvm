@@ -17,6 +17,9 @@ impl<T: Object, M: Manager> Ref<T, M> {
     pub unsafe fn new(v: *mut Block<M::BlockHeader, T>) -> Self {
         Self(v)
     }
+    pub fn get_object(&self) -> &T {
+        unsafe { (*self.0).object() }
+    }
 }
 
 impl<T: Object, M: Manager> Clone for Ref<T, M> {

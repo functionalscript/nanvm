@@ -14,7 +14,7 @@
     pub fn get_object(&self) -> &T;
     pub fn get_mut_object(&mut self) -> &mut T;
     // we need to pass ownership of `MutRef<T>` to the caller.
-    pub fn get_ref(self) -> Ref<T>;
+    pub fn to_ref(self) -> Ref<T>;
   }
   ```
 - `Ref<T>` can be cloned. It's a reference counter. If we own `Ref<T>` and the number of references is `1`, we can get a `MutRef<T>` from it, otherwise we will have to create a new object `T`.
@@ -23,7 +23,7 @@
   impl<T> Ref {
     pub fn get_object(&self) -> &T;
     // we need to pass ownership of `Ref<T>` to the caller.
-    pub fn try_get_mut_ref(self) -> Result<MutRef<T>, Self> {
+    pub fn try_to_mut_ref(self) -> Result<MutRef<T>, Self> {
         if self.ref_count() == 1 {
             Ok(...)
         } else {
@@ -32,8 +32,8 @@
     }
     pub fn clone_object_from_ref(&self) -> MutRef<T>;
     // we need to pass ownership of `Ref<T>` to the caller.
-    pub fn clone_object(self) -> MutRef<T> {
-        match self.try_get_mut_ref() {
+    pub fn to_mut_ref(self) -> MutRef<T> {
+        match self.get_mut_ref() {
             Ok(x) => x,
             Err(x) => x.clone_object_from_ref(),
         }
