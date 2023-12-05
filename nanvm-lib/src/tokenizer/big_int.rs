@@ -597,14 +597,14 @@ mod test {
         };
         let b = BigInt {
             sign: Sign::Negative,
-            value: [1, 2, 3].vec(),
+            value: [5, 6, 7].vec(),
         };
         let result = &a * &b;
         assert_eq!(
             &result,
             &BigInt {
                 sign: Sign::Positive,
-                value: [1, 4, 10, 16, 17, 12].vec()
+                value: [5, 16, 34, 52, 45, 28] .vec()
             },
         );
         let result = &b * &a;
@@ -612,7 +612,7 @@ mod test {
             &result,
             &BigInt {
                 sign: Sign::Positive,
-                value: [1, 4, 10, 16, 17, 12].vec()
+                value: [5, 16, 34, 52, 45, 28] .vec()
             },
         );
     }
