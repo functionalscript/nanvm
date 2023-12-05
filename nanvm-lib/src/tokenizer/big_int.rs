@@ -1,5 +1,5 @@
 use std::{
-    cmp::Ordering,
+    cmp::{Ordering, min, max},
     iter,
     ops::{Add, Mul, Neg, Sub},
 };
@@ -117,9 +117,19 @@ impl Mul for &BigInt {
             return BigInt::zero();
         }
         let mut value: Vec<_> = default();
-        let total_len = self.value.len() + other.value.len();
+        let lhs_len = self.value.len();
+        let rhs_len = other.value.len();
+        let total_len = lhs_len + rhs_len - 1;
         let mut i = 0;
         while i < total_len {
+            let mut j = if i > rhs_len { i - rhs_len } else { 0 };
+            let max = if i < lhs_len { i } else { lhs_len };
+            let mut d = 0;
+            while j <= max {
+                d = d + self.value[j] * other.value[i - j];
+                j = j + 1;
+            }
+            value.push(d);
             i = i + 1;
         }
         let sign = match self.sign == other.sign {
@@ -574,6 +584,20 @@ mod test {
         assert_eq!(
             &result,
             &BigInt::zero(),
+        );
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [1].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigInt { sign: Sign::Positive, value: [1].vec()},
         );
     }
 }
