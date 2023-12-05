@@ -125,9 +125,7 @@ impl Mul for &BigInt {
             let mut j = if i > rhs_max { i - rhs_max } else { 0 };
             let max = if i < lhs_max { i } else { lhs_max };
             let mut d = 0;
-            println!("i = {} j = {} max = {}", i, j, max);
             while j <= max {
-                println!("i = {} j = {} max = {}", i, j, max);
                 d = d + self.value[j] * other.value[i - j];
                 j = j + 1;
             }
