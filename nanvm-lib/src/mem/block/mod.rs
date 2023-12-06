@@ -1,9 +1,6 @@
 pub mod header;
 
-use core::{
-    alloc::Layout,
-    marker::PhantomData,
-};
+use core::{alloc::Layout, marker::PhantomData};
 
 use self::header::BlockHeader;
 
