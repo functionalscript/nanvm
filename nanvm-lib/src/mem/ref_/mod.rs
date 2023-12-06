@@ -1,22 +1,24 @@
 pub mod mut_ref;
 pub mod update;
 
+use core::ops::Deref;
+
 use self::update::RefUpdate;
 
 use super::{
     block::{header::BlockHeader, Block},
     manager::Manager,
-    object::{holder::ObjectHolder, Object},
+    object::Object,
 };
 
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
 pub struct Ref<T: Object, M: Manager>(*mut Block<M::BlockHeader, T>);
 
-impl<T: Object, M: Manager> ObjectHolder for Ref<T, M> {
-    type Object = T;
+impl<T: Object, M: Manager> Deref for Ref<T, M> {
+    type Target = T;
     #[inline(always)]
-    fn object(&self) -> &T {
+    fn deref(&self) -> &T {
         unsafe { (*self.0).object() }
     }
 }

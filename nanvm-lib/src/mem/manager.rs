@@ -1,4 +1,4 @@
-use core::alloc::Layout;
+use core::{alloc::Layout, ops::DerefMut};
 
 use crate::common::ref_mut::RefMut;
 
@@ -7,7 +7,6 @@ use super::{
     fixed::Fixed,
     flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
     new_in_place::NewInPlace,
-    object::holder_mut::ObjectHolderMut,
     ref_::Ref,
 };
 
@@ -23,14 +22,14 @@ pub trait Manager: Sized {
         unsafe {
             let p = self.alloc(Block::<Self::BlockHeader, N::Result>::block_layout(
                 new_in_place.result_size(),
-            )) as *mut Block<Self::BlockHeader, _>;
+            )) as *mut Block<Self::BlockHeader, N::Result>;
             {
                 let block = &mut *p;
                 block
                     .header
                     .as_mut_ptr()
                     .write(Self::BlockHeader::default());
-                new_in_place.new_in_place(block.mut_object());
+                new_in_place.new_in_place(block.object_mut());
             }
             Ref::new(p)
         }
