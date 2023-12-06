@@ -1,5 +1,5 @@
 use std::{
-    cmp::{max, min, Ordering},
+    cmp::Ordering,
     iter,
     ops::{Add, Mul, Neg, Sub},
 };
@@ -117,7 +117,7 @@ impl Mul for &BigInt {
     type Output = BigInt;
 
     fn mul(self, other: Self) -> Self::Output {
-        if (self.is_zero() || other.is_zero()) {
+        if self.is_zero() || other.is_zero() {
             return BigInt::ZERO;
         }
         let mut value: Vec<_> = default();
@@ -187,7 +187,7 @@ fn add_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
 fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
     let mut value: Vec<_> = default();
     let mut borrow = 0;
-    let mut iter = lhs
+    let iter = lhs
         .iter()
         .copied()
         .zip(rhs.iter().copied().chain(iter::repeat(0)));
@@ -208,8 +208,6 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::common::array::ArrayEx;
-
-    use crate::common::default::default;
 
     use super::{BigInt, Sign};
 
