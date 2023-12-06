@@ -3,6 +3,11 @@ use core::{
     ptr::drop_in_place,
 };
 
+trait OBjectHolder {
+    type Object: Object;
+    fn object(&self) -> &Self::Object;
+}
+
 /// Object properties
 pub trait Object: Sized {
     const OBJECT_ALIGN: usize = align_of::<Self>();

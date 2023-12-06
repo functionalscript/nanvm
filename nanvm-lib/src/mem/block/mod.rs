@@ -15,7 +15,7 @@ pub struct Block<BH: BlockHeader, T: Object> {
 impl<BH: BlockHeader, T: Object> Block<BH, T> {
     const BLOCK_HEADER_LAYOUT: FieldLayout<BH, T> = FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
-    pub unsafe fn object(&mut self) -> &mut T {
+    pub unsafe fn mut_object(&mut self) -> &mut T {
         &mut *Self::BLOCK_HEADER_LAYOUT.to_adjacent(&mut self.header)
     }
     #[inline(always)]
@@ -29,7 +29,7 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
     }
     #[inline(always)]
     pub unsafe fn delete(&mut self) {
-        let object = self.object();
+        let object = self.mut_object();
         let object_size = object.object_size();
         object.object_drop_in_place();
         <BH::Manager as Manager>::dealloc(

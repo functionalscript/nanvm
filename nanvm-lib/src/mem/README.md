@@ -11,8 +11,8 @@
 - `MutRef<T>` can't be cloned. It's not a reference counter.
   ```rust
   impl<T> MutRef {
-    pub fn get_object(&self) -> &T;
-    pub fn get_mut_object(&mut self) -> &mut T;
+    pub fn object(&self) -> &T;
+    pub fn mut_object(&mut self) -> &mut T;
     // we need to pass ownership of `MutRef<T>` to the caller.
     pub fn to_ref(self) -> Ref<T>;
   }
@@ -21,7 +21,7 @@
   ```rust
   impl<T> Clone for Ref<T>;
   impl<T> Ref {
-    pub fn get_object(&self) -> &T;
+    pub fn object(&self) -> &T;
     // we need to pass ownership of `Ref<T>` to the caller.
     pub fn try_to_mut_ref(self) -> Result<MutRef<T>, Self> {
         if self.ref_count() == 1 {

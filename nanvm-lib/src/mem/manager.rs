@@ -29,7 +29,7 @@ pub trait Manager: Sized {
                     .header
                     .as_mut_ptr()
                     .write(Self::BlockHeader::default());
-                new_in_place.new_in_place(block.object());
+                new_in_place.new_in_place(block.mut_object());
             }
             Ref::new(p)
         }
