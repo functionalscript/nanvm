@@ -6,19 +6,24 @@ use self::update::RefUpdate;
 use super::{
     block::{header::BlockHeader, Block},
     manager::Manager,
-    object::Object,
+    object::{holder::ObjectHolder, Object},
 };
 
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
 pub struct Ref<T: Object, M: Manager>(*mut Block<M::BlockHeader, T>);
 
+impl<T: Object, M: Manager> ObjectHolder for Ref<T, M> {
+    type Object = T;
+    #[inline(always)]
+    fn object(&self) -> &T {
+        unsafe { (*self.0).object() }
+    }
+}
+
 impl<T: Object, M: Manager> Ref<T, M> {
     pub unsafe fn new(v: *mut Block<M::BlockHeader, T>) -> Self {
         Self(v)
-    }
-    pub fn object(&self) -> &T {
-        unsafe { (*self.0).mut_object() }
     }
 }
 

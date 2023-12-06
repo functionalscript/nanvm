@@ -24,7 +24,10 @@ impl<T, A> FieldLayout<T, A> {
             _0: PhantomData,
         }
     }
-    pub fn to_adjacent(&self, r: &mut T) -> *mut A {
+    pub fn to_adjacent(&self, r: &T) -> *const A {
+        unsafe { (r as *const _ as *const u8).add(self.size) as *const A }
+    }
+    pub fn to_adjacent_mut(&self, r: &mut T) -> *mut A {
         unsafe { (r.as_mut_ptr() as *mut u8).add(self.size) as *mut A }
     }
 }

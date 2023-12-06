@@ -30,9 +30,6 @@ impl<T: Object, M: Manager> MutRef<T, M> {
 impl<T: Object, M: Manager> Drop for MutRef<T, M> {
     fn drop(&mut self) {
         self.valid_assert();
-        unsafe {
-            let p = &mut *self.0;
-            p.delete();
-        }
+        unsafe { (&mut *self.0).delete() }
     }
 }

@@ -7,6 +7,7 @@ use super::{
     fixed::Fixed,
     flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
     new_in_place::NewInPlace,
+    object::holder_mut::ObjectHolderMut,
     ref_::Ref,
 };
 

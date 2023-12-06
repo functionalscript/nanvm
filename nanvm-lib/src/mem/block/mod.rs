@@ -4,7 +4,11 @@ use core::{alloc::Layout, marker::PhantomData};
 
 use self::header::BlockHeader;
 
-use super::{field_layout::FieldLayout, manager::Manager, object::Object};
+use super::{
+    field_layout::FieldLayout,
+    manager::Manager,
+    object::{holder::ObjectHolder, holder_mut::ObjectHolderMut, Object},
+};
 
 #[repr(transparent)]
 pub struct Block<BH: BlockHeader, T: Object> {
@@ -12,12 +16,23 @@ pub struct Block<BH: BlockHeader, T: Object> {
     _0: PhantomData<T>,
 }
 
+impl<BH: BlockHeader, T: Object> ObjectHolder for Block<BH, T> {
+    type Object = T;
+    #[inline(always)]
+    fn object(&self) -> &Self::Object {
+        unsafe { &*Self::BLOCK_HEADER_LAYOUT.to_adjacent(&self.header) }
+    }
+}
+
+impl<BH: BlockHeader, T: Object> ObjectHolderMut for Block<BH, T> {
+    #[inline(always)]
+    fn mut_object(&mut self) -> &mut Self::Object {
+        unsafe { &mut *Self::BLOCK_HEADER_LAYOUT.to_adjacent_mut(&mut self.header) }
+    }
+}
+
 impl<BH: BlockHeader, T: Object> Block<BH, T> {
     const BLOCK_HEADER_LAYOUT: FieldLayout<BH, T> = FieldLayout::align_to(T::OBJECT_ALIGN);
-    #[inline(always)]
-    pub unsafe fn mut_object(&mut self) -> &mut T {
-        &mut *Self::BLOCK_HEADER_LAYOUT.to_adjacent(&mut self.header)
-    }
     #[inline(always)]
     pub fn block_layout(object_size: usize) -> Layout {
         unsafe {
