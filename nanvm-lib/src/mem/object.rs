@@ -3,7 +3,7 @@ use core::{
     ptr::drop_in_place,
 };
 
-trait OBjectHolder {
+trait ObjectHolder {
     type Object: Object;
     fn object(&self) -> &Self::Object;
 }
