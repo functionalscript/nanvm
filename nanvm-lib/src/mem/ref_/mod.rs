@@ -95,7 +95,6 @@ mod test {
     }
 
     impl BlockHeader for BH {
-        type Manager = M;
         unsafe fn ref_update(&mut self, _: super::update::RefUpdate) -> isize {
             panic!()
         }

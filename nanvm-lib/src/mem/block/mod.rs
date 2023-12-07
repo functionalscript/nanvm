@@ -64,7 +64,6 @@ mod test {
     struct BH();
 
     impl BlockHeader for BH {
-        type Manager = M;
         unsafe fn ref_update(&mut self, _: RefUpdate) -> isize {
             todo!()
         }
