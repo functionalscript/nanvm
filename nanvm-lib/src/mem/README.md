@@ -24,7 +24,7 @@
   impl<T> Ref {
     // we need to pass ownership of `Ref<T>` to the caller.
     pub fn try_to_mut_ref(self) -> Result<MutRef<T>, Self> {
-        if self.ref_count() == 1 {
+        if self.ref_count() == 0 {
             Ok(...)
         } else {
             Err(self)
