@@ -133,6 +133,11 @@ mod test {
         {
             let y = unsafe { Ref::new(x) };
             assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
+            {
+                let z = y.clone();
+                assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 1);
+            }
+            assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
         }
         assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, -1);
     }
