@@ -8,6 +8,7 @@ pub struct AtomicCounter {
 }
 
 impl Default for AtomicCounter {
+    #[inline(always)]
     fn default() -> Self {
         Self {
             counter: AtomicIsize::new(0),
