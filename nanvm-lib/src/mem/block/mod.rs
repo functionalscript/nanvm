@@ -44,9 +44,13 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
 
 #[cfg(test)]
 mod test {
+    use core::alloc::Layout;
+
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{block::Block, fixed::Fixed, manager::Manager, ref_::update::RefUpdate};
+    use crate::mem::{
+        block::Block, fixed::Fixed, manager::Manager, object::Object, ref_::update::RefUpdate,
+    };
 
     use super::header::BlockHeader;
 
@@ -54,12 +58,10 @@ mod test {
 
     impl Manager for M {
         type BlockHeader = BH;
-        unsafe fn alloc(self, layout: std::alloc::Layout) -> *mut u8 {
+        unsafe fn alloc(self, layout: Layout) -> *mut u8 {
             todo!()
         }
-        unsafe fn dealloc(ptr: *mut u8, layout: std::alloc::Layout) {
-            todo!()
-        }
+        unsafe fn dealloc(ptr: *mut u8, layout: Layout) {}
     }
 
     #[derive(Default)]
@@ -76,5 +78,13 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).size(), 0);
+        assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).align(), 1);
+        assert_eq!(Block::<BH, Fixed<()>>::block_layout(2).size(), 2);
+        assert_eq!(Block::<BH, Fixed<()>>::block_layout(2).align(), 1);
+        let b = Block::<BH, Fixed<()>> {
+            header: BH::default(),
+            _0: Default::default(),
+        };
+        assert_eq!(b.object().object_size(), 0);
     }
 }
