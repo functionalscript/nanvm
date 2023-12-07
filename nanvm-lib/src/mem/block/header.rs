@@ -70,7 +70,7 @@ mod test {
         unsafe {
             assert_eq!(x.header.ref_update(RefUpdate::Read), 0);
             assert_eq!(x.header.ref_update(RefUpdate::AddRef), 0);
-            assert_eq!(x.header.ref_update(RefUpdate::AddRef), 1);
+            assert_eq!(x.header.ref_update(RefUpdate::Read), 1);
         }
     }
 }
