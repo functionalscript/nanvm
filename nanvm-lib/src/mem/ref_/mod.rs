@@ -52,7 +52,7 @@ impl<T: Object, M: Manager> Clone for Ref<T, M> {
 impl<T: Object, M: Manager> Drop for Ref<T, M> {
     fn drop(&mut self) {
         unsafe {
-            if self.ref_update(RefUpdate::Release) == 0 {
+            if self.ref_update(RefUpdate::Release) == 1 {
                 (*self.p).delete();
             }
         }

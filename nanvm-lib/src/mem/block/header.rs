@@ -50,8 +50,9 @@ mod test {
     impl BlockHeader for XBH {
         type Manager = D;
         unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
-            self.0 += i as isize;
-            self.0
+            let result = self.0;
+            self.0 += result as isize;
+            result
         }
     }
 
