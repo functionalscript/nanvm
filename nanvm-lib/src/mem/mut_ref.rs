@@ -15,6 +15,12 @@ pub struct MutRef<T: Object, M: Manager>(*mut Block<M::BlockHeader, T>);
 
 impl<T: Object, M: Manager> MutRef<T, M> {
     #[inline(always)]
+    pub unsafe fn new(v: *mut Block<M::BlockHeader, T>) -> Self {
+        let result = Self(v);
+        result.valid_assert();
+        result
+    }
+    #[inline(always)]
     fn valid_assert(&self) {
         unsafe { assert_eq!((*self.0).header.ref_update(RefUpdate::Read), 1) };
     }

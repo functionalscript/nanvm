@@ -12,27 +12,29 @@ use super::{
 
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
-pub struct Ref<T: Object, M: Manager>(*mut Block<M::BlockHeader, T>);
+pub struct Ref<T: Object, M: Manager> { p: *mut Block<M::BlockHeader, T> }
 
 impl<T: Object, M: Manager> Deref for Ref<T, M> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &T {
-        unsafe { (*self.0).object() }
+        unsafe { (*self.p).object() }
     }
 }
 
 impl<T: Object, M: Manager> Ref<T, M> {
-    pub unsafe fn new(v: *mut Block<M::BlockHeader, T>) -> Self {
-        Self(v)
+    #[inline(always)]
+    pub unsafe fn new(p: *mut Block<M::BlockHeader, T>) -> Self {
+        Self { p }
     }
 }
 
 impl<T: Object, M: Manager> Clone for Ref<T, M> {
+    #[inline(always)]
     fn clone(&self) -> Self {
-        let v = self.0;
-        unsafe { (*v).header.ref_update(RefUpdate::AddRef) };
-        Self(v)
+        let p = self.p;
+        unsafe { (*p).header.ref_update(RefUpdate::AddRef) };
+        Self { p }
     }
 }
 
