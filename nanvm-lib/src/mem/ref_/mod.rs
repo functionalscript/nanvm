@@ -14,12 +14,12 @@ use super::{
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
 pub struct Ref<T: Object, M: Manager> {
-    p: *mut Block<M::BlockHeader, T>,
+    p: *mut Block<M, T>,
 }
 
 impl<T: Object, M: Manager> Ref<T, M> {
     #[inline(always)]
-    pub unsafe fn new(p: *mut Block<M::BlockHeader, T>) -> Self {
+    pub unsafe fn new(p: *mut Block<M, T>) -> Self {
         Self { p }
     }
     #[inline(always)]
@@ -105,7 +105,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         let mut buffer: [(); 0] = [];
-        let x = buffer.as_mut_ptr() as *mut Block<BH, Fixed<()>>;
+        let x = buffer.as_mut_ptr() as *mut Block<M, Fixed<()>>;
         // let y = unsafe { Ref::new(x) };
     }
 }

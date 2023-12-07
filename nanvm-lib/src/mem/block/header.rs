@@ -11,7 +11,7 @@ pub trait BlockHeader: Default + Sized {
     unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
     //
     #[inline(always)]
-    unsafe fn block<T: Object>(&mut self) -> &mut Block<Self, T> {
+    unsafe fn block<T: Object>(&mut self) -> &mut Block<Self::Manager, T> {
         &mut *(self.as_mut_ptr() as *mut _)
     }
 }
@@ -59,7 +59,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test() {
-        let mut x = Block::<XBH, Fixed<()>> {
+        let mut x = Block::<D, Fixed<()>> {
             header: XBH::default(),
             _0: PhantomData,
         };

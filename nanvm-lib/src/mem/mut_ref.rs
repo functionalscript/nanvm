@@ -11,11 +11,11 @@ use super::ref_::Ref;
 
 /// A reference to a mutable object allocated by a memory manager.
 #[repr(transparent)]
-pub struct MutRef<T: Object, M: Manager>(*mut Block<M::BlockHeader, T>);
+pub struct MutRef<T: Object, M: Manager>(*mut Block<M, T>);
 
 impl<T: Object, M: Manager> MutRef<T, M> {
     #[inline(always)]
-    pub unsafe fn new(v: *mut Block<M::BlockHeader, T>) -> Self {
+    pub unsafe fn new(v: *mut Block<M, T>) -> Self {
         let result = Self(v);
         result.valid_assert();
         result

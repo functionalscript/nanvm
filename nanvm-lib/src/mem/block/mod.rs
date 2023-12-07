@@ -2,18 +2,17 @@ pub mod header;
 
 use core::{alloc::Layout, marker::PhantomData};
 
-use self::header::BlockHeader;
-
 use super::{field_layout::FieldLayout, manager::Manager, object::Object};
 
 #[repr(transparent)]
-pub struct Block<BH: BlockHeader, T: Object> {
-    pub header: BH,
+pub struct Block<M: Manager, T: Object> {
+    pub header: M::BlockHeader,
     _0: PhantomData<T>,
 }
 
-impl<BH: BlockHeader, T: Object> Block<BH, T> {
-    const BLOCK_HEADER_LAYOUT: FieldLayout<BH, T> = FieldLayout::align_to(T::OBJECT_ALIGN);
+impl<M: Manager, T: Object> Block<M, T> {
+    const BLOCK_HEADER_LAYOUT: FieldLayout<M::BlockHeader, T> =
+        FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
     pub const fn block_layout(object_size: usize) -> Layout {
         unsafe {
@@ -27,10 +26,7 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
         let object = self.object_mut();
         let object_size = object.object_size();
         object.object_drop_in_place();
-        <BH::Manager as Manager>::dealloc(
-            self as *mut _ as *mut u8,
-            Self::block_layout(object_size),
-        );
+        M::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
     }
     #[inline(always)]
     pub fn object(&self) -> &T {
@@ -77,11 +73,11 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_0() {
-        assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).size(), 0);
-        assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).align(), 1);
-        assert_eq!(Block::<BH, Fixed<()>>::block_layout(2).size(), 2);
-        assert_eq!(Block::<BH, Fixed<()>>::block_layout(2).align(), 1);
-        let mut b = Block::<BH, Fixed<()>> {
+        assert_eq!(Block::<M, Fixed<()>>::block_layout(0).size(), 0);
+        assert_eq!(Block::<M, Fixed<()>>::block_layout(0).align(), 1);
+        assert_eq!(Block::<M, Fixed<()>>::block_layout(2).size(), 2);
+        assert_eq!(Block::<M, Fixed<()>>::block_layout(2).align(), 1);
+        let mut b = Block::<M, Fixed<()>> {
             header: BH::default(),
             _0: Default::default(),
         };

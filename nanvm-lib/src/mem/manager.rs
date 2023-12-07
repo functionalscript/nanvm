@@ -20,9 +20,9 @@ pub trait Manager: Sized {
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     fn new<N: NewInPlace>(self, new_in_place: N) -> MutRef<N::Result, Self> {
         unsafe {
-            let p = self.alloc(Block::<Self::BlockHeader, N::Result>::block_layout(
+            let p = self.alloc(Block::<Self, N::Result>::block_layout(
                 new_in_place.result_size(),
-            )) as *mut Block<Self::BlockHeader, N::Result>;
+            )) as *mut Block<Self, N::Result>;
             {
                 let block = &mut *p;
                 block
