@@ -67,4 +67,45 @@ impl<T: Object, M: Manager> Deref for Ref<T, M> {
     }
 }
 
-// TODO: tests
+#[cfg(test)]
+mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::mem::{
+        block::{header::BlockHeader, Block},
+        fixed::Fixed,
+        manager::Manager,
+    };
+
+    use super::Ref;
+
+    #[derive(Default)]
+    struct BH();
+
+    struct M();
+
+    impl Manager for M {
+        type BlockHeader = BH;
+        unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
+            panic!()
+        }
+        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
+            panic!()
+        }
+    }
+
+    impl BlockHeader for BH {
+        type Manager = M;
+        unsafe fn ref_update(&mut self, _: super::update::RefUpdate) -> isize {
+            panic!()
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test() {
+        let mut buffer: [(); 0] = [];
+        let x = buffer.as_mut_ptr() as *mut Block<BH, Fixed<()>>;
+        // let y = unsafe { Ref::new(x) };
+    }
+}
