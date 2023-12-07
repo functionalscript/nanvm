@@ -62,7 +62,7 @@ impl Manager for &Local {
 
 #[cfg(test)]
 mod test {
-    use core::{mem::size_of, sync::atomic::Ordering};
+    use core::{mem::size_of, ops::Deref, sync::atomic::Ordering};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -105,6 +105,16 @@ mod test {
             let r3 = mr2.to_ref();
             assert_eq!(r3.header.len(), 3);
             assert_eq!(r3.items(), &[1, 2, 3]);
+            {
+                let r4 = r3.clone();
+                let r5 = r4.deref();
+                // drop(r4);
+                assert_eq!(r5.header.len(), 3);
+                assert_eq!(r5.items(), &[1, 2, 3]);
+                let r6 = &*r4;
+                assert_eq!(r5.header.len(), 3);
+                assert_eq!(r5.items(), &[1, 2, 3]);
+            }
             drop(r2);
             assert_eq!(local.counter.load(Ordering::Relaxed), 3);
             drop(r);
