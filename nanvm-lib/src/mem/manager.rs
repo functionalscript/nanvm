@@ -1,4 +1,4 @@
-use core::{alloc::Layout, ops::DerefMut};
+use core::alloc::Layout;
 
 use crate::common::ref_mut::RefMut;
 

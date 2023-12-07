@@ -15,7 +15,7 @@ pub struct Block<BH: BlockHeader, T: Object> {
 impl<BH: BlockHeader, T: Object> Block<BH, T> {
     const BLOCK_HEADER_LAYOUT: FieldLayout<BH, T> = FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
-    pub fn block_layout(object_size: usize) -> Layout {
+    pub const fn block_layout(object_size: usize) -> Layout {
         unsafe {
             Layout::from_size_align_unchecked(
                 Self::BLOCK_HEADER_LAYOUT.size + object_size,
