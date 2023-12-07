@@ -1,4 +1,3 @@
-pub mod mut_ref;
 pub mod update;
 
 use core::ops::Deref;

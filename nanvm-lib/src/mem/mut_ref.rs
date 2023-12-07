@@ -7,7 +7,7 @@ use crate::mem::{
     ref_::update::RefUpdate,
 };
 
-use super::Ref;
+use super::ref_::Ref;
 
 /// A reference to a mutable object allocated by a memory manager.
 #[repr(transparent)]
@@ -21,7 +21,7 @@ impl<T: Object, M: Manager> MutRef<T, M> {
     #[inline(always)]
     pub fn to_ref(self) -> Ref<T, M> {
         self.valid_assert();
-        let result = Ref(self.0);
+        let result = unsafe { Ref::new(self.0) };
         forget(self);
         result
     }

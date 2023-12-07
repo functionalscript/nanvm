@@ -4,6 +4,7 @@ mod fixed;
 mod flexible_array;
 mod global;
 mod manager;
+mod mut_ref;
 mod new_in_place;
 mod object;
 mod ref_;
