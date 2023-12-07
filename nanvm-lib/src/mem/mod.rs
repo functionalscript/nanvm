@@ -19,6 +19,6 @@ mod test {
         d: u8,
     }
 
-    const _: () = assert!(size_of::<MyStruct>() == 6);
+    const _: () = assert!(size_of::<MyStruct>() == 7);
     const _: () = assert!(align_of::<MyStruct>() == 2);
 }
