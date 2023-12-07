@@ -15,12 +15,7 @@ impl<M: Manager, T: Object> Block<M, T> {
         FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
     pub const fn block_layout(object_size: usize) -> Layout {
-        unsafe {
-            Layout::from_size_align_unchecked(
-                Self::BLOCK_HEADER_LAYOUT.size + object_size,
-                Self::BLOCK_HEADER_LAYOUT.align,
-            )
-        }
+        Self::BLOCK_HEADER_LAYOUT.layout(object_size)
     }
     pub unsafe fn delete(&mut self) {
         let object = self.object_mut();

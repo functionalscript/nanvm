@@ -1,4 +1,7 @@
-use core::mem::forget;
+use core::{
+    mem::forget,
+    ops::{Deref, DerefMut},
+};
 
 use crate::mem::{
     block::{header::BlockHeader, Block},
@@ -38,5 +41,20 @@ impl<T: Object, M: Manager> Drop for MutRef<T, M> {
     fn drop(&mut self) {
         self.valid_assert();
         unsafe { (&mut *self.0).delete() }
+    }
+}
+
+impl<T: Object, M: Manager> Deref for MutRef<T, M> {
+    type Target = T;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { (*self.0).object() }
+    }
+}
+
+impl<T: Object, M: Manager> DerefMut for MutRef<T, M> {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { (*self.0).object_mut() }
     }
 }

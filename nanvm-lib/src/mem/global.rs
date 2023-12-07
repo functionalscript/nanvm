@@ -5,7 +5,7 @@ use super::{atomic_counter::AtomicCounter, manager::Manager};
 
 pub struct Global();
 
-const GLOBAL: Global = Global();
+pub const GLOBAL: Global = Global();
 
 impl Manager for Global {
     type BlockHeader = AtomicCounter;

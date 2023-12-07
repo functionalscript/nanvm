@@ -69,7 +69,7 @@ impl<T: Object, M: Manager> Deref for Ref<T, M> {
 
 #[cfg(test)]
 mod test {
-    use core::mem::{forget, size_of};
+    use core::mem::forget;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
