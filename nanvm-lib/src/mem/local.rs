@@ -10,6 +10,7 @@ use super::{
     manager::Manager,
 };
 
+#[derive(Debug)]
 struct Local {
     counter: AtomicUsize,
     size: AtomicUsize,
@@ -72,14 +73,45 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test() {
+        const SIZE: usize = size_of::<usize>() + size_of::<isize>() + size_of::<i32>();
         let local = Local::default();
         {
             let mr = local.fixed_new(42);
             assert_eq!(mr.0, 42);
             assert_eq!(local.counter.load(Ordering::Relaxed), 1);
+            assert_eq!(local.size.load(Ordering::Relaxed), SIZE);
+            let r = mr.to_ref();
+            assert_eq!(r.0, 42);
+            let mr = r.try_to_mut_ref().unwrap();
+            assert_eq!(mr.0, 42);
+            let r = mr.to_ref();
+            let r1 = r.clone();
+            let r2 = r1.try_to_mut_ref().unwrap_err();
+            let mr = local.fixed_new(44);
+            assert_eq!(mr.0, 44);
+            assert_eq!(local.counter.load(Ordering::Relaxed), 2);
+            assert_eq!(local.size.load(Ordering::Relaxed), SIZE << 1);
+            let mut mr2 = local.flexible_array_new([1, 2, 3].into_iter());
+            assert_eq!(mr2.get_items_mut(), &[1, 2, 3]);
+            assert_eq!(local.counter.load(Ordering::Relaxed), 3);
             assert_eq!(
                 local.size.load(Ordering::Relaxed),
-                size_of::<usize>() + size_of::<isize>() + size_of::<i32>()
+                (SIZE << 1)
+                    + size_of::<usize>()
+                    + size_of::<isize>()
+                    + size_of::<usize>()
+                    + size_of::<[i32; 3]>()
+            );
+            drop(r2);
+            assert_eq!(local.counter.load(Ordering::Relaxed), 3);
+            drop(r);
+            assert_eq!(local.counter.load(Ordering::Relaxed), 2);
+            assert_eq!(
+                local.size.load(Ordering::Relaxed),
+                SIZE + size_of::<usize>()
+                    + size_of::<isize>()
+                    + size_of::<usize>()
+                    + size_of::<[i32; 3]>()
             );
         }
         assert_eq!(local.counter.load(Ordering::Relaxed), 0);

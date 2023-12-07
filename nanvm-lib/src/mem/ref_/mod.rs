@@ -13,6 +13,7 @@ use super::{
 
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct Ref<T: Object, M: Manager> {
     p: *mut Block<M, T>,
 }

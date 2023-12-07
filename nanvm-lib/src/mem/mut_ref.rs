@@ -14,6 +14,7 @@ use super::ref_::Ref;
 
 /// A reference to a mutable object allocated by a memory manager.
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct MutRef<T: Object, M: Manager>(*mut Block<M, T>);
 
 impl<T: Object, M: Manager> MutRef<T, M> {

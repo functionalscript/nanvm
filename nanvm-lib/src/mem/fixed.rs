@@ -1,6 +1,7 @@
 use super::{new_in_place::NewInPlace, object::Object};
 
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct Fixed<T>(pub T);
 
 impl<T> Object for Fixed<T> {}
