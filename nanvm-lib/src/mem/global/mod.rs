@@ -49,7 +49,7 @@ mod test {
         let mut i = 0;
         assert_eq!(i, 0);
         {
-            let x = GLOBAL.fixed_new(X(&mut i));
+            let _ = GLOBAL.fixed_new(X(&mut i));
         }
         assert_eq!(i, 1);
     }
