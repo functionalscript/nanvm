@@ -23,7 +23,7 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for Flexibl
         let v = &mut *p;
         v.header.as_mut_ptr().write(self.header);
         let mut src = self.items;
-        for dst in v.get_items_mut() {
+        for dst in v.items_mut() {
             dst.as_mut_ptr().write(src.next().unwrap());
         }
     }
@@ -87,7 +87,7 @@ mod test {
                 assert_eq!(r.header.1, unsafe { (&mut i).as_mut_ptr() });
                 assert_eq!(r.object_size(), size_of::<usize>() * 2 + 5);
                 assert_eq!(mem.items, [42, 43, 44, 45, 46]);
-                assert_eq!(r.get_items_mut(), &[42, 43, 44, 45, 46]);
+                assert_eq!(r.items_mut(), &[42, 43, 44, 45, 46]);
                 assert_eq!(i, 0);
                 unsafe { (*v).object_drop_in_place() };
                 assert_eq!(i, 1);

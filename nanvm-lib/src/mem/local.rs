@@ -92,7 +92,7 @@ mod test {
             assert_eq!(local.counter.load(Ordering::Relaxed), 2);
             assert_eq!(local.size.load(Ordering::Relaxed), SIZE << 1);
             let mut mr2 = local.flexible_array_new([1, 2, 3].into_iter());
-            assert_eq!(mr2.get_items_mut(), &[1, 2, 3]);
+            assert_eq!(mr2.items_mut(), &[1, 2, 3]);
             assert_eq!(local.counter.load(Ordering::Relaxed), 3);
             assert_eq!(
                 local.size.load(Ordering::Relaxed),
@@ -103,7 +103,7 @@ mod test {
                     + size_of::<[i32; 3]>()
             );
             let r3 = mr2.to_ref();
-            assert_eq!(r3.get_items(), &[1, 2, 3]);
+            assert_eq!(r3.items(), &[1, 2, 3]);
             drop(r2);
             assert_eq!(local.counter.load(Ordering::Relaxed), 3);
             drop(r);
