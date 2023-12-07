@@ -1,9 +1,12 @@
+mod atomic_counter;
 mod block;
 mod field_layout;
 mod fixed;
 mod flexible_array;
 mod global;
-mod manager;
+mod local;
+pub mod manager;
+pub mod mut_ref;
 mod new_in_place;
 mod object;
 mod ref_;

@@ -10,12 +10,14 @@ pub struct FlexibleArrayLen<I> {
 
 impl<I> FlexibleArrayHeader for FlexibleArrayLen<I> {
     type Item = I;
+    #[inline(always)]
     fn len(&self) -> usize {
         self.len
     }
 }
 
 impl<I: ExactSizeIterator> From<I> for FlexibleArrayNew<FlexibleArrayLen<I::Item>, I> {
+    #[inline(always)]
     fn from(items: I) -> Self {
         FlexibleArrayLen {
             len: items.len(),

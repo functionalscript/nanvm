@@ -7,11 +7,10 @@ use super::Block;
 
 pub trait BlockHeader: Default + Sized {
     // required
-    type Manager: Manager;
     unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
     //
     #[inline(always)]
-    unsafe fn block<T: Object>(&mut self) -> &mut Block<Self, T> {
+    unsafe fn block<M: Manager, T: Object>(&mut self) -> &mut Block<M, T> {
         &mut *(self.as_mut_ptr() as *mut _)
     }
 }
@@ -48,23 +47,28 @@ mod test {
     }
 
     impl BlockHeader for XBH {
-        type Manager = D;
         unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
+            let result = self.0;
             self.0 += i as isize;
-            self.0
+            result
         }
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test() {
-        let mut x = Block::<XBH, Fixed<()>> {
+        let mut x = Block::<D, Fixed<()>> {
             header: XBH::default(),
             _0: PhantomData,
         };
-        let p = unsafe { x.header.block::<Fixed<()>>() };
+        let p = unsafe { x.header.block::<D, Fixed<()>>() };
         unsafe {
             assert_eq!(p.as_mut_ptr(), (&mut x).as_mut_ptr());
+        }
+        unsafe {
+            assert_eq!(x.header.ref_update(RefUpdate::Read), 0);
+            assert_eq!(x.header.ref_update(RefUpdate::AddRef), 0);
+            assert_eq!(x.header.ref_update(RefUpdate::Read), 1);
         }
     }
 }

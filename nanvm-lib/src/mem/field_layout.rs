@@ -1,9 +1,10 @@
 use core::{
+    alloc::Layout,
     marker::PhantomData,
     mem::{align_of, size_of},
 };
 
-use crate::common::{ref_mut::RefMut, usize::max};
+use crate::common::usize::max;
 
 pub struct FieldLayout<T, A> {
     pub align: usize,
@@ -24,8 +25,21 @@ impl<T, A> FieldLayout<T, A> {
             _0: PhantomData,
         }
     }
-    pub fn to_adjacent(&self, r: &mut T) -> *mut A {
-        unsafe { (r.as_mut_ptr() as *mut u8).add(self.size) as *mut A }
+    #[inline(always)]
+    pub const unsafe fn to_adjacent(&self, r: &T) -> *const A {
+        unsafe { (r as *const _ as *const u8).add(self.size) as *const _ }
+    }
+    #[inline(always)]
+    pub unsafe fn to_adjacent_mut(&self, r: &mut T) -> *mut A {
+        unsafe { (r as *mut _ as *mut u8).add(self.size) as *mut _ }
+    }
+    #[inline(always)]
+    pub unsafe fn from_adjancent_mut(&self, r: &mut A) -> *mut T {
+        unsafe { (r as *mut _ as *mut u8).sub(self.size) as *mut _ }
+    }
+    #[inline(always)]
+    pub const fn layout(&self, a_size: usize) -> Layout {
+        unsafe { Layout::from_size_align_unchecked(self.size + a_size, self.align) }
     }
 }
 

@@ -1,15 +1,18 @@
 use super::{new_in_place::NewInPlace, object::Object};
 
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct Fixed<T>(pub T);
 
 impl<T> Object for Fixed<T> {}
 
 impl<T> NewInPlace for Fixed<T> {
     type Result = Fixed<T>;
+    #[inline(always)]
     fn result_size(&self) -> usize {
         Self::Result::object_size(self)
     }
+    #[inline(always)]
     unsafe fn new_in_place(self, p: *mut Self::Result) {
         p.write(self);
     }

@@ -10,21 +10,21 @@
 
 - `MutRef<T>` can't be cloned. It's not a reference counter.
   ```rust
+  impl<T> Deref for MutRef<T>;
+  impl<T> DerefMut for MutRef<T>;
   impl<T> MutRef {
-    pub fn get_object(&self) -> &T;
-    pub fn get_mut_object(&mut self) -> &mut T;
     // we need to pass ownership of `MutRef<T>` to the caller.
     pub fn to_ref(self) -> Ref<T>;
   }
   ```
-- `Ref<T>` can be cloned. It's a reference counter. If we own `Ref<T>` and the number of references is `1`, we can get a `MutRef<T>` from it, otherwise we will have to create a new object `T`.
+- `Ref<T>` can be cloned. It's a reference counter. If we own `Ref<T>` and the number of references is `0`, we can get a `MutRef<T>` from it, otherwise we will have to create a new object `T`.
   ```rust
   impl<T> Clone for Ref<T>;
+  impl<T> Deref for Ref<T>;
   impl<T> Ref {
-    pub fn get_object(&self) -> &T;
     // we need to pass ownership of `Ref<T>` to the caller.
     pub fn try_to_mut_ref(self) -> Result<MutRef<T>, Self> {
-        if self.ref_count() == 1 {
+        if self.ref_count() == 0 {
             Ok(...)
         } else {
             Err(self)
@@ -43,4 +43,4 @@
 
 ## Notes
 
-If you implement a mock version of a reference counter, it should return a number which is greater than `1` when calling `ref_count()`. Otherwise, `try_get_mut_ref()` will assume that it has an exclusive ownership of the object, which is not true in general.
+If you implement a mock version of a reference counter, it should return a number which is greater than `0` when calling `ref_count()`. Otherwise, `try_get_mut_ref()` will assume that it has an exclusive ownership of the object, which is not true in general.

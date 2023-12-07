@@ -5,7 +5,7 @@ pub mod new;
 use core::{
     mem::{align_of, size_of},
     ptr::drop_in_place,
-    slice::from_raw_parts_mut,
+    slice::{from_raw_parts, from_raw_parts_mut},
 };
 
 use self::header::FlexibleArrayHeader;
@@ -20,14 +20,25 @@ pub struct FlexibleArray<T: FlexibleArrayHeader> {
 impl<T: FlexibleArrayHeader> FlexibleArray<T> {
     const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
         FieldLayout::align_to(align_of::<T::Item>());
-    pub fn get_items_mut(&mut self) -> &mut [T::Item] {
+    #[inline(always)]
+    pub fn items(&self) -> &[T::Item] {
         unsafe {
-            from_raw_parts_mut(
-                Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent(&mut self.header),
+            from_raw_parts(
+                Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent(&self.header),
                 self.header.len(),
             )
         }
     }
+    #[inline(always)]
+    pub fn items_mut(&mut self) -> &mut [T::Item] {
+        unsafe {
+            from_raw_parts_mut(
+                Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent_mut(&mut self.header),
+                self.header.len(),
+            )
+        }
+    }
+    #[inline(always)]
     pub const fn flexible_size(len: usize) -> usize {
         Self::FLEXIBLE_HEADER_LAYOUT.size + len * size_of::<T::Item>()
     }
@@ -35,11 +46,12 @@ impl<T: FlexibleArrayHeader> FlexibleArray<T> {
 
 impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
     const OBJECT_ALIGN: usize = Self::FLEXIBLE_HEADER_LAYOUT.align;
+    #[inline(always)]
     fn object_size(&self) -> usize {
         Self::flexible_size(self.header.len())
     }
     unsafe fn object_drop_in_place(&mut self) {
-        drop_in_place(self.get_items_mut());
+        drop_in_place(self.items_mut());
         drop_in_place(self);
     }
 }
@@ -92,7 +104,7 @@ mod test {
         unsafe {
             assert_eq!((*v).header.len(), 5);
             assert_eq!((*v).object_size(), 7);
-            let items = (*v).get_items_mut();
+            let items = (*v).items_mut();
             assert_eq!(items, &[42, 43, 44, 45, 46]);
         }
     }
@@ -108,7 +120,7 @@ mod test {
         unsafe {
             assert_eq!((*v).header.len(), 3);
             assert_eq!((*v).object_size(), 16);
-            let items = (*v).get_items_mut();
+            let items = (*v).items_mut();
             assert_eq!(items, &[42, 43, 44]);
         }
     }
@@ -130,7 +142,7 @@ mod test {
         unsafe {
             assert_eq!((*v).header.len(), N);
             assert_eq!((*v).object_size(), size);
-            assert_eq!(&*(*v).get_items_mut(), &old[..]);
+            assert_eq!(&*(*v).items_mut(), &old[..]);
         }
     }
 
@@ -184,7 +196,7 @@ mod test {
                 assert_eq!((*v).header.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
                 assert_eq!((*v).object_size(), size_of::<DropCount>() * 4);
-                let a = &*(*v).get_items_mut();
+                let a = &*(*v).items_mut();
                 assert_eq!(a.len(), 3);
                 assert_eq!(a[0].0, &i as *const AtomicUsize);
                 assert_eq!(a[1].0, &i as *const AtomicUsize);
@@ -251,7 +263,7 @@ mod test {
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);
             assert_eq!(
-                y.get_items_mut(),
+                y.items_mut(),
                 &[0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef]
             );
             assert_eq!(unsafe { I }, 0);
