@@ -66,7 +66,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::manager::Manager;
+    use crate::mem::{flexible_array::header::FlexibleArrayHeader, manager::Manager};
 
     use super::Local;
 
@@ -103,6 +103,7 @@ mod test {
                     + size_of::<[i32; 3]>()
             );
             let r3 = mr2.to_ref();
+            assert_eq!(r3.header.len(), 3);
             assert_eq!(r3.items(), &[1, 2, 3]);
             drop(r2);
             assert_eq!(local.counter.load(Ordering::Relaxed), 3);
