@@ -12,7 +12,7 @@ pub struct GlobalHeader {
 impl Default for GlobalHeader {
     fn default() -> Self {
         Self {
-            counter: AtomicIsize::new(1),
+            counter: AtomicIsize::new(0),
         }
     }
 }
@@ -37,10 +37,12 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         let mut x = super::GlobalHeader::default();
-        assert_eq!(x.counter.load(Ordering::Relaxed), 1);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, 1);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::AddRef) }, 1);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Release) }, 2);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, 1);
+        assert_eq!(x.counter.load(Ordering::Relaxed), 0);
+        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, 0);
+        assert_eq!(unsafe { x.ref_update(RefUpdate::AddRef) }, 0);
+        assert_eq!(unsafe { x.ref_update(RefUpdate::Release) }, 1);
+        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, 0);
+        assert_eq!(unsafe { x.ref_update(RefUpdate::Release) }, 0);
+        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, -1);
     }
 }

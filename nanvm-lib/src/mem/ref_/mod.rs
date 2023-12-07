@@ -28,7 +28,7 @@ impl<T: Object, M: Manager> Ref<T, M> {
     }
     pub fn try_to_mut_ref(mut self) -> Result<MutRef<T, M>, Self> {
         unsafe {
-            if self.ref_update(RefUpdate::Read) == 1 {
+            if self.ref_update(RefUpdate::Read) == 0 {
                 let result = MutRef::new(self.p);
                 forget(self);
                 Ok(result)
@@ -52,7 +52,7 @@ impl<T: Object, M: Manager> Clone for Ref<T, M> {
 impl<T: Object, M: Manager> Drop for Ref<T, M> {
     fn drop(&mut self) {
         unsafe {
-            if self.ref_update(RefUpdate::Release) == 1 {
+            if self.ref_update(RefUpdate::Release) == 0 {
                 (*self.p).delete();
             }
         }

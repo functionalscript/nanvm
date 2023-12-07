@@ -51,7 +51,7 @@ mod test {
         type Manager = D;
         unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
             let result = self.0;
-            self.0 += result as isize;
+            self.0 += i as isize;
             result
         }
     }
@@ -66,6 +66,11 @@ mod test {
         let p = unsafe { x.header.block::<Fixed<()>>() };
         unsafe {
             assert_eq!(p.as_mut_ptr(), (&mut x).as_mut_ptr());
+        }
+        unsafe {
+            assert_eq!(x.header.ref_update(RefUpdate::Read), 0);
+            assert_eq!(x.header.ref_update(RefUpdate::AddRef), 0);
+            assert_eq!(x.header.ref_update(RefUpdate::AddRef), 1);
         }
     }
 }

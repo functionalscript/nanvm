@@ -22,7 +22,7 @@ impl<T: Object, M: Manager> MutRef<T, M> {
     }
     #[inline(always)]
     fn valid_assert(&self) {
-        unsafe { assert_eq!((*self.0).header.ref_update(RefUpdate::Read), 1) };
+        unsafe { assert_eq!((*self.0).header.ref_update(RefUpdate::Read), 0) };
     }
     #[inline(always)]
     pub fn to_ref_(self) -> Ref<T, M> {
