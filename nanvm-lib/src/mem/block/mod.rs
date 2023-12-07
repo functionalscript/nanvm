@@ -76,15 +76,18 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test() {
+    fn test_0() {
         assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).size(), 0);
         assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).align(), 1);
         assert_eq!(Block::<BH, Fixed<()>>::block_layout(2).size(), 2);
         assert_eq!(Block::<BH, Fixed<()>>::block_layout(2).align(), 1);
-        let b = Block::<BH, Fixed<()>> {
+        let mut b = Block::<BH, Fixed<()>> {
             header: BH::default(),
             _0: Default::default(),
         };
         assert_eq!(b.object().object_size(), 0);
+        let x = b.object_mut();
+        assert_eq!(x.object_size(), 0);
+        unsafe { b.delete() };
     }
 }
