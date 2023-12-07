@@ -1,18 +1,14 @@
 use core::alloc::Layout;
 use std::alloc::{alloc, dealloc};
 
-use self::header::GlobalHeader;
-
-use super::manager::Manager;
-
-mod header;
+use super::{counter::Counter, manager::Manager};
 
 pub struct Global();
 
 const GLOBAL: Global = Global();
 
 impl Manager for Global {
-    type BlockHeader = GlobalHeader;
+    type BlockHeader = Counter;
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
         alloc(layout)
     }
