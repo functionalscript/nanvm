@@ -1,5 +1,5 @@
+mod atomic_counter;
 mod block;
-mod counter;
 mod field_layout;
 mod fixed;
 mod flexible_array;
