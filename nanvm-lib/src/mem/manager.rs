@@ -6,8 +6,8 @@ use super::{
     block::{header::BlockHeader, Block},
     fixed::Fixed,
     flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
-    new_in_place::NewInPlace,
     mut_ref::MutRef,
+    new_in_place::NewInPlace,
 };
 
 /// Block = (Header, Object)
@@ -34,9 +34,11 @@ pub trait Manager: Sized {
             MutRef::new(p)
         }
     }
+    #[inline(always)]
     fn fixed_new<T>(self, value: T) -> MutRef<Fixed<T>, Self> {
         self.new(Fixed(value))
     }
+    #[inline(always)]
     fn flexible_array_new<I>(
         self,
         items: impl ExactSizeIterator<Item = I>,

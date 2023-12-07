@@ -6,12 +6,14 @@ use super::Global;
 
 #[repr(transparent)]
 pub struct GlobalHeader {
-    counter: AtomicIsize
+    counter: AtomicIsize,
 }
 
 impl Default for GlobalHeader {
     fn default() -> Self {
-        Self { counter: AtomicIsize::new(1) }
+        Self {
+            counter: AtomicIsize::new(1),
+        }
     }
 }
 
