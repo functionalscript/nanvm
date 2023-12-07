@@ -69,14 +69,14 @@ impl<T: Object, M: Manager> Deref for Ref<T, M> {
 
 #[cfg(test)]
 mod test {
-    use core::mem::forget;
+    use core::mem::{forget, size_of};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
         block::{header::BlockHeader, Block},
         fixed::Fixed,
-        manager::Manager,
+        manager::Manager, atomic_counter::AtomicCounter, ref_::update::RefUpdate,
     };
 
     use super::Ref;
@@ -109,5 +109,30 @@ mod test {
         let x = buffer.as_mut_ptr() as *mut Block<M, Fixed<()>>;
         let y = unsafe { Ref::new(x) };
         forget(y);
+    }
+
+    struct M1();
+
+    impl Manager for M1 {
+        type BlockHeader = AtomicCounter;
+        unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
+            panic!()
+        }
+        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_1() {
+        let mut buffer: [isize; 1] = [0];
+        let x = buffer.as_mut_ptr() as *mut Block<M1, Fixed<()>>;
+        let p = unsafe { &mut (*x).header };
+        assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
+        {
+            let y = unsafe { Ref::new(x) };
+            assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
+        }
+        assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, -1);
     }
 }
