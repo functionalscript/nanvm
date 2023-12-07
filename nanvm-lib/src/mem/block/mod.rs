@@ -23,7 +23,6 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
             )
         }
     }
-    #[inline(always)]
     pub unsafe fn delete(&mut self) {
         let object = self.object_mut();
         let object_size = object.object_size();
@@ -40,5 +39,42 @@ impl<BH: BlockHeader, T: Object> Block<BH, T> {
     #[inline(always)]
     pub fn object_mut(&mut self) -> &mut T {
         unsafe { &mut *Self::BLOCK_HEADER_LAYOUT.to_adjacent_mut(&mut self.header) }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::mem::{block::Block, fixed::Fixed, manager::Manager, ref_::update::RefUpdate};
+
+    use super::header::BlockHeader;
+
+    struct M();
+
+    impl Manager for M {
+        type BlockHeader = BH;
+        unsafe fn alloc(self, layout: std::alloc::Layout) -> *mut u8 {
+            todo!()
+        }
+        unsafe fn dealloc(ptr: *mut u8, layout: std::alloc::Layout) {
+            todo!()
+        }
+    }
+
+    #[derive(Default)]
+    struct BH();
+
+    impl BlockHeader for BH {
+        type Manager = M;
+        unsafe fn ref_update(&mut self, _: RefUpdate) -> isize {
+            todo!()
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test() {
+        assert_eq!(Block::<BH, Fixed<()>>::block_layout(0).size(), 0);
     }
 }

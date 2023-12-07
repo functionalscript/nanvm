@@ -20,6 +20,7 @@ pub struct FlexibleArray<T: FlexibleArrayHeader> {
 impl<T: FlexibleArrayHeader> FlexibleArray<T> {
     const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
         FieldLayout::align_to(align_of::<T::Item>());
+    #[inline(always)]
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         unsafe {
             from_raw_parts_mut(
@@ -28,6 +29,7 @@ impl<T: FlexibleArrayHeader> FlexibleArray<T> {
             )
         }
     }
+    #[inline(always)]
     pub const fn flexible_size(len: usize) -> usize {
         Self::FLEXIBLE_HEADER_LAYOUT.size + len * size_of::<T::Item>()
     }
@@ -35,6 +37,7 @@ impl<T: FlexibleArrayHeader> FlexibleArray<T> {
 
 impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
     const OBJECT_ALIGN: usize = Self::FLEXIBLE_HEADER_LAYOUT.align;
+    #[inline(always)]
     fn object_size(&self) -> usize {
         Self::flexible_size(self.header.len())
     }

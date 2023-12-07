@@ -15,6 +15,7 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> FlexibleArrayNew<H, I>
 
 impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for FlexibleArrayNew<H, I> {
     type Result = FlexibleArray<H>;
+    #[inline(always)]
     fn result_size(&self) -> usize {
         Self::Result::flexible_size(self.header.len())
     }
