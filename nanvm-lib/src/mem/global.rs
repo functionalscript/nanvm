@@ -9,9 +9,11 @@ const GLOBAL: Global = Global();
 
 impl Manager for Global {
     type BlockHeader = AtomicCounter;
+    #[inline(always)]
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
         alloc(layout)
     }
+    #[inline(always)]
     unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
         dealloc(ptr, layout)
     }
