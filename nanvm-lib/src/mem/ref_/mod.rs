@@ -74,9 +74,11 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
+        atomic_counter::AtomicCounter,
         block::{header::BlockHeader, Block},
         fixed::Fixed,
-        manager::Manager, atomic_counter::AtomicCounter, ref_::update::RefUpdate,
+        manager::Manager,
+        ref_::update::RefUpdate,
     };
 
     use super::Ref;
@@ -118,8 +120,7 @@ mod test {
         unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
             panic!()
         }
-        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
-        }
+        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {}
     }
 
     #[test]
