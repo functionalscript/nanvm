@@ -102,6 +102,8 @@ mod test {
                     + size_of::<usize>()
                     + size_of::<[i32; 3]>()
             );
+            let r3 = mr2.to_ref();
+            assert_eq!(r3.get_items(), &[1, 2, 3]);
             drop(r2);
             assert_eq!(local.counter.load(Ordering::Relaxed), 3);
             drop(r);

@@ -1,13 +1,13 @@
 [package]
 name = "nanvm-lib"
-version = { workspace = true }
-edition = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
-repository = { workspace = true }
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "NaNVM library"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
-wasm-bindgen-test = { workspace = true }
+wasm-bindgen-test.workspace = true

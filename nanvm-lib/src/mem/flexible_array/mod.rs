@@ -5,7 +5,7 @@ pub mod new;
 use core::{
     mem::{align_of, size_of},
     ptr::drop_in_place,
-    slice::from_raw_parts_mut,
+    slice::{from_raw_parts, from_raw_parts_mut},
 };
 
 use self::header::FlexibleArrayHeader;
@@ -20,6 +20,15 @@ pub struct FlexibleArray<T: FlexibleArrayHeader> {
 impl<T: FlexibleArrayHeader> FlexibleArray<T> {
     const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
         FieldLayout::align_to(align_of::<T::Item>());
+    #[inline(always)]
+    pub fn get_items(&self) -> &[T::Item] {
+        unsafe {
+            from_raw_parts(
+                Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent(&self.header),
+                self.header.len(),
+            )
+        }
+    }
     #[inline(always)]
     pub fn get_items_mut(&mut self) -> &mut [T::Item] {
         unsafe {
