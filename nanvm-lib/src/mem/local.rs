@@ -1,6 +1,6 @@
 use core::{
     alloc::Layout,
-    sync::atomic::{Ordering, AtomicUsize},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 use super::{
@@ -61,7 +61,7 @@ impl Manager for &Local {
 
 #[cfg(test)]
 mod test {
-    use core::{sync::atomic::Ordering, mem::size_of};
+    use core::{mem::size_of, sync::atomic::Ordering};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -77,7 +77,10 @@ mod test {
             let mr = local.fixed_new(42);
             assert_eq!(mr.0, 42);
             assert_eq!(local.counter.load(Ordering::Relaxed), 1);
-            assert_eq!(local.size.load(Ordering::Relaxed), size_of::<usize>() + size_of::<isize>() + size_of::<i32>());
+            assert_eq!(
+                local.size.load(Ordering::Relaxed),
+                size_of::<usize>() + size_of::<isize>() + size_of::<i32>()
+            );
         }
         assert_eq!(local.counter.load(Ordering::Relaxed), 0);
         assert_eq!(local.size.load(Ordering::Relaxed), 0);
