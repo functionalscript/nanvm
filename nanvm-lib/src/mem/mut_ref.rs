@@ -25,7 +25,7 @@ impl<T: Object, M: Manager> MutRef<T, M> {
         unsafe { assert_eq!((*self.0).header.ref_update(RefUpdate::Read), 0) };
     }
     #[inline(always)]
-    pub fn to_ref_(self) -> Ref<T, M> {
+    pub fn to_ref(self) -> Ref<T, M> {
         self.valid_assert();
         let result = unsafe { Ref::new(self.0) };
         forget(self);

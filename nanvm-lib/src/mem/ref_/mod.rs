@@ -69,6 +69,8 @@ impl<T: Object, M: Manager> Deref for Ref<T, M> {
 
 #[cfg(test)]
 mod test {
+    use core::mem::forget;
+
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
@@ -105,6 +107,7 @@ mod test {
     fn test() {
         let mut buffer: [(); 0] = [];
         let x = buffer.as_mut_ptr() as *mut Block<M, Fixed<()>>;
-        // let y = unsafe { Ref::new(x) };
+        let y = unsafe { Ref::new(x) };
+        forget(y);
     }
 }
