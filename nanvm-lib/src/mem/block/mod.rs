@@ -40,11 +40,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        block::Block,
-        fixed::Fixed,
-        manager::{Dealloc, Manager},
-        object::Object,
-        ref_::update::RefUpdate,
+        block::Block, fixed::Fixed, manager::Dealloc, object::Object, ref_::update::RefUpdate,
     };
 
     use super::header::BlockHeader;
@@ -54,13 +50,6 @@ mod test {
     impl Dealloc for M {
         type BlockHeader = BH;
         unsafe fn dealloc(_: *mut u8, _: Layout) {}
-    }
-
-    impl Manager for M {
-        type Dealloc = Self;
-        unsafe fn alloc(self, layout: Layout) -> *mut u8 {
-            todo!()
-        }
     }
 
     #[derive(Default)]

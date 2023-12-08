@@ -23,12 +23,7 @@ mod test {
 
     use crate::{
         common::ref_mut::RefMut,
-        mem::{
-            block::Block,
-            fixed::Fixed,
-            manager::{Dealloc, Manager},
-            ref_::update::RefUpdate,
-        },
+        mem::{block::Block, fixed::Fixed, manager::Dealloc, ref_::update::RefUpdate},
     };
 
     use super::BlockHeader;

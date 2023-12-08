@@ -15,24 +15,30 @@ use super::{
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct Ref<T: Object, D: Dealloc> {
-    p: *const Block<T, D>,
+    ptr: *const Block<T, D>,
 }
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
     #[inline(always)]
-    pub unsafe fn new(p: *const Block<T, D>) -> Self {
-        Self { p }
+    pub unsafe fn new(ptr: *const Block<T, D>) -> Self {
+        Self { ptr }
     }
     #[inline(always)]
     unsafe fn ref_update(&self, i: RefUpdate) -> isize {
-        (*self.p).header.ref_update(i)
+        (*self.ptr).header.ref_update(i)
+    }
+    unsafe fn update(&self, i: RefUpdate) -> Option<*mut Block<T, D>> {
+        if self.ref_update(i) == 0 {
+            Some(self.ptr as *mut _)
+        } else {
+            None
+        }
     }
     pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {
         unsafe {
-            if self.ref_update(RefUpdate::Read) == 0 {
-                let result = MutRef::new(self.p as *mut _);
+            if let Some(ptr) = self.update(RefUpdate::Read) {
                 forget(self);
-                Ok(result)
+                Ok(MutRef::new(ptr))
             } else {
                 Err(self)
             }
@@ -45,7 +51,7 @@ impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
     fn clone(&self) -> Self {
         unsafe {
             self.ref_update(RefUpdate::AddRef);
-            Self { p: self.p }
+            Self { ptr: self.ptr }
         }
     }
 }
@@ -53,8 +59,8 @@ impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
 impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
     fn drop(&mut self) {
         unsafe {
-            if self.ref_update(RefUpdate::Release) == 0 {
-                (*(self.p as *mut Block<T, D>)).delete();
+            if let Some(ptr) = self.update(RefUpdate::Release) {
+                (*ptr).delete();
             }
         }
     }
@@ -64,7 +70,7 @@ impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &T {
-        unsafe { (*self.p).object() }
+        unsafe { (*self.ptr).object() }
     }
 }
 
@@ -123,13 +129,6 @@ mod test {
     impl Dealloc for M1 {
         type BlockHeader = AtomicCounter;
         unsafe fn dealloc(_: *mut u8, _: Layout) {}
-    }
-
-    impl Manager for M1 {
-        type Dealloc = Self;
-        unsafe fn alloc(self, _: Layout) -> *mut u8 {
-            panic!()
-        }
     }
 
     #[test]
