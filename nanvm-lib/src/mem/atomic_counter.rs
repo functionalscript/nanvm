@@ -3,17 +3,9 @@ use core::sync::atomic::{AtomicIsize, Ordering};
 use crate::mem::{block::header::BlockHeader, ref_::counter_update::RefCounterUpdate};
 
 #[repr(transparent)]
+#[derive(Default)]
 pub struct AtomicCounter {
     counter: AtomicIsize,
-}
-
-impl Default for AtomicCounter {
-    #[inline(always)]
-    fn default() -> Self {
-        Self {
-            counter: AtomicIsize::new(0),
-        }
-    }
 }
 
 impl BlockHeader for AtomicCounter {
