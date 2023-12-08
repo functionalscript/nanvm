@@ -7,7 +7,7 @@ use super::{
     atomic_counter::AtomicCounter,
     field_layout::FieldLayout,
     global::{Global, GLOBAL},
-    manager::{Manager, Dealloc},
+    manager::{Dealloc, Manager},
 };
 
 #[derive(Debug)]

@@ -1,7 +1,10 @@
 use core::alloc::Layout;
 use std::alloc::{alloc, dealloc};
 
-use super::{atomic_counter::AtomicCounter, manager::{Manager, Dealloc}};
+use super::{
+    atomic_counter::AtomicCounter,
+    manager::{Dealloc, Manager},
+};
 
 #[derive(Debug)]
 pub struct Global();

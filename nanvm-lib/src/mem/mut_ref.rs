@@ -10,7 +10,7 @@ use crate::mem::{
     ref_::update::RefUpdate,
 };
 
-use super::{ref_::Ref, manager::Dealloc};
+use super::{manager::Dealloc, ref_::Ref};
 
 /// A reference to a mutable object allocated by a memory manager.
 #[repr(transparent)]

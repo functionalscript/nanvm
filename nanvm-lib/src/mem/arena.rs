@@ -1,7 +1,10 @@
 use core::{alloc::Layout, cell::RefCell, marker::PhantomData};
 
 use super::{
-    block::header::BlockHeader, field_layout::align_to, manager::{Manager, Dealloc}, ref_::update::RefUpdate,
+    block::header::BlockHeader,
+    field_layout::align_to,
+    manager::{Dealloc, Manager},
+    ref_::update::RefUpdate,
 };
 
 #[derive(Debug)]

@@ -6,7 +6,7 @@ use self::update::RefUpdate;
 
 use super::{
     block::{header::BlockHeader, Block},
-    manager::{Manager, Dealloc},
+    manager::{Dealloc, Manager},
     mut_ref::MutRef,
     object::Object,
 };
@@ -78,7 +78,7 @@ mod test {
         atomic_counter::AtomicCounter,
         block::{header::BlockHeader, Block},
         fixed::Fixed,
-        manager::{Manager, Dealloc},
+        manager::{Dealloc, Manager},
         ref_::update::RefUpdate,
     };
 
@@ -122,8 +122,7 @@ mod test {
 
     impl Dealloc for M1 {
         type BlockHeader = AtomicCounter;
-        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
-        }
+        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {}
     }
 
     impl Manager for M1 {

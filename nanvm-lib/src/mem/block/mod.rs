@@ -2,7 +2,11 @@ pub mod header;
 
 use core::{alloc::Layout, marker::PhantomData};
 
-use super::{field_layout::FieldLayout, manager::{Manager, Dealloc}, object::Object};
+use super::{
+    field_layout::FieldLayout,
+    manager::{Dealloc, Manager},
+    object::Object,
+};
 
 #[repr(transparent)]
 pub struct Block<D: Dealloc, T: Object> {
@@ -40,7 +44,11 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        block::Block, fixed::Fixed, manager::{Manager, Dealloc}, object::Object, ref_::update::RefUpdate,
+        block::Block,
+        fixed::Fixed,
+        manager::{Dealloc, Manager},
+        object::Object,
+        ref_::update::RefUpdate,
     };
 
     use super::header::BlockHeader;
