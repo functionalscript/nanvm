@@ -1,4 +1,4 @@
-use core::{alloc::Layout, cell::RefCell, marker::PhantomData};
+use core::{alloc::Layout, cell::Cell, marker::PhantomData};
 
 use super::{
     block::header::BlockHeader,
@@ -11,7 +11,7 @@ use super::{
 struct Arena<M: Manager> {
     begin: usize,
     end: usize,
-    current: RefCell<usize>,
+    current: Cell<usize>,
     _0: PhantomData<M>,
 }
 
@@ -25,7 +25,7 @@ impl<M: Manager> Arena<M> {
         Arena {
             begin,
             end: begin + size,
-            current: RefCell::new(begin),
+            current: Cell::new(begin),
             _0: PhantomData,
         }
     }
@@ -58,13 +58,12 @@ impl<'a, M: Manager> Manager for &'a Arena<M> {
     type Dealloc = &'a Arena<M>;
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
         let align = layout.align();
-        let mut c = self.current.borrow_mut();
-        let current = align_to(*c, align);
+        let current = align_to(self.current.get(), align);
         let end = current + layout.size();
         if end > self.end {
             panic!("out of memory");
         }
-        *c = end;
+        self.current.set(end);
         current as *mut u8
     }
 }
@@ -82,13 +81,13 @@ mod test {
     fn test() {
         let arena = Arena::new(GLOBAL, 1024);
         {
-            assert_eq!(arena.begin, *arena.current.borrow());
+            assert_eq!(arena.begin, arena.current.get());
             assert_eq!(arena.end - arena.begin, 1024);
             let r = arena.fixed_new(42u8).to_ref();
             let r2 = r.try_to_mut_ref().unwrap_err();
-            assert_eq!(arena.begin + 1, *arena.current.borrow());
+            assert_eq!(arena.begin + 1, arena.current.get());
             let mr = arena.fixed_new(43);
-            assert_eq!(arena.begin + 8, *arena.current.borrow());
+            assert_eq!(arena.begin + 8, arena.current.get());
         }
     }
 
@@ -96,10 +95,10 @@ mod test {
     #[wasm_bindgen_test]
     fn test_1() {
         let arena = Arena::new(GLOBAL, 1);
-        assert_eq!(arena.begin, *arena.current.borrow());
+        assert_eq!(arena.begin, arena.current.get());
         assert_eq!(arena.end - arena.begin, 1);
         let r = arena.fixed_new(42u8).to_ref();
-        assert_eq!(arena.end, *arena.current.borrow());
+        assert_eq!(arena.end, arena.current.get());
     }
 
     #[test]
@@ -107,10 +106,10 @@ mod test {
     #[wasm_bindgen_test]
     fn test_out_of_memory() {
         let arena = Arena::new(GLOBAL, 1);
-        assert_eq!(arena.begin, *arena.current.borrow());
+        assert_eq!(arena.begin, arena.current.get());
         assert_eq!(arena.end - arena.begin, 1);
         let r = arena.fixed_new(42u8).to_ref();
-        assert_eq!(arena.end, *arena.current.borrow());
+        assert_eq!(arena.end, arena.current.get());
         let r2 = arena.fixed_new(42u8).to_ref();
     }
 }
