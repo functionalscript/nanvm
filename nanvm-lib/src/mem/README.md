@@ -46,3 +46,7 @@
 ## Notes
 
 If you implement a mock version of a reference counter, it should return a number which is greater than `0` when calling `ref_count()`. Otherwise, `try_get_mut_ref()` will assume that it has an exclusive ownership of the object, which is not true in general.
+
+## Future Changes
+
+Each manager should have a type `Dealloc`. In this case, `Ref` and `MutRef` will depend on the type instead of a complete manager. We need to be able to pass a manager as `&mut` to `new` without taking a complete ownership of the manager. This feature will be usefull for single-threaded allocators because we don't need to use `CellRef` for arenas.
