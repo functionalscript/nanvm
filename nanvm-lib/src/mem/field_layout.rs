@@ -12,16 +12,18 @@ pub struct FieldLayout<T, A> {
     _0: PhantomData<(T, A)>,
 }
 
+pub const fn align_to(i: usize, align: usize) -> usize {
+    let mask = align - 1;
+    (i + mask) & !mask
+}
+
 impl<T, A> FieldLayout<T, A> {
     pub const fn align_to(adjacent_align: usize) -> FieldLayout<T, A> {
         assert!(adjacent_align.is_power_of_two());
         assert!(adjacent_align >= align_of::<A>());
         FieldLayout {
             align: max(align_of::<T>(), adjacent_align),
-            size: {
-                let mask = adjacent_align - 1;
-                (size_of::<T>() + mask) & !mask
-            },
+            size: align_to(size_of::<T>(), adjacent_align),
             _0: PhantomData,
         }
     }
@@ -34,7 +36,7 @@ impl<T, A> FieldLayout<T, A> {
         unsafe { (r as *mut _ as *mut u8).add(self.size) as *mut _ }
     }
     #[inline(always)]
-    pub unsafe fn from_adjancent_mut(&self, r: &mut A) -> *mut T {
+    pub unsafe fn from_adjacent_mut(&self, r: &mut A) -> *mut T {
         unsafe { (r as *mut _ as *mut u8).sub(self.size) as *mut _ }
     }
     #[inline(always)]

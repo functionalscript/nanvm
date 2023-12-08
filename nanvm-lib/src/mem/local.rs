@@ -1,27 +1,31 @@
 use core::{
     alloc::Layout,
-    sync::atomic::{AtomicUsize, Ordering},
+    cell::Cell,
+    sync::atomic::{AtomicIsize, Ordering},
 };
 
+use crate::common::default::default;
+
 use super::{
-    atomic_counter::AtomicCounter,
+    block::header::BlockHeader,
     field_layout::FieldLayout,
     global::{Global, GLOBAL},
-    manager::Manager,
+    manager::{Dealloc, Manager},
+    ref_::counter_update::RefCounterUpdate,
 };
 
 #[derive(Debug)]
 struct Local {
-    counter: AtomicUsize,
-    size: AtomicUsize,
+    counter: Cell<isize>,
+    size: Cell<usize>,
 }
 
 impl Default for Local {
     #[inline(always)]
     fn default() -> Self {
         Self {
-            counter: AtomicUsize::new(0),
-            size: AtomicUsize::new(0),
+            counter: default(),
+            size: default(),
         }
     }
 }
@@ -38,31 +42,36 @@ impl Local {
     }
 }
 
-impl Manager for &Local {
-    type BlockHeader = AtomicCounter;
-    unsafe fn alloc(self, block_layout: Layout) -> *mut u8 {
-        let (header_layout, layout) = Local::layout(block_layout);
-        self.counter.fetch_add(1, Ordering::Relaxed);
-        self.size.fetch_add(layout.size(), Ordering::Relaxed);
-        let p = GLOBAL.alloc(layout) as *mut Header;
-        *p = self;
-        header_layout.to_adjacent(&mut *p) as *mut u8
-    }
+impl Dealloc for &Local {
+    type BlockHeader = AtomicIsize;
+    #[inline(always)]
     unsafe fn dealloc(block_p: *mut u8, block_layout: Layout) {
         let (header_layout, layout) = Local::layout(block_layout);
-        let p = header_layout.from_adjancent_mut(&mut *block_p);
+        let p = header_layout.from_adjacent_mut(&mut *block_p);
         {
             let local = &**p;
-            local.counter.fetch_sub(1, Ordering::Relaxed);
-            local.size.fetch_sub(layout.size(), Ordering::Relaxed);
+            local.counter.ref_counter_update(RefCounterUpdate::Release);
+            local.size.set(local.size.get() - layout.size());
         }
         Global::dealloc(p as *mut u8, layout);
     }
 }
 
+impl Manager for &Local {
+    type Dealloc = Self;
+    unsafe fn alloc(self, block_layout: Layout) -> *mut u8 {
+        let (header_layout, layout) = Local::layout(block_layout);
+        self.counter.ref_counter_update(RefCounterUpdate::AddRef);
+        self.size.set(self.size.get() + layout.size());
+        let p = GLOBAL.alloc(layout) as *mut Header;
+        *p = self;
+        header_layout.to_adjacent(&mut *p) as *mut u8
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use core::{mem::size_of, ops::Deref, sync::atomic::Ordering};
+    use core::{mem::size_of, ops::Deref};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -78,8 +87,8 @@ mod test {
         {
             let mr = local.fixed_new(42);
             assert_eq!(mr.0, 42);
-            assert_eq!(local.counter.load(Ordering::Relaxed), 1);
-            assert_eq!(local.size.load(Ordering::Relaxed), SIZE);
+            assert_eq!(local.counter.get(), 1);
+            assert_eq!(local.size.get(), SIZE);
             let r = mr.to_ref();
             assert_eq!(r.0, 42);
             let mr = r.try_to_mut_ref().unwrap();
@@ -89,13 +98,13 @@ mod test {
             let r2 = r1.try_to_mut_ref().unwrap_err();
             let mr = local.fixed_new(44);
             assert_eq!(mr.0, 44);
-            assert_eq!(local.counter.load(Ordering::Relaxed), 2);
-            assert_eq!(local.size.load(Ordering::Relaxed), SIZE << 1);
+            assert_eq!(local.counter.get(), 2);
+            assert_eq!(local.size.get(), SIZE << 1);
             let mut mr2 = local.flexible_array_new([1, 2, 3].into_iter());
             assert_eq!(mr2.items_mut(), &[1, 2, 3]);
-            assert_eq!(local.counter.load(Ordering::Relaxed), 3);
+            assert_eq!(local.counter.get(), 3);
             assert_eq!(
-                local.size.load(Ordering::Relaxed),
+                local.size.get(),
                 (SIZE << 1)
                     + size_of::<usize>()
                     + size_of::<isize>()
@@ -116,18 +125,18 @@ mod test {
                 assert_eq!(r5.items(), &[1, 2, 3]);
             }
             drop(r2);
-            assert_eq!(local.counter.load(Ordering::Relaxed), 3);
+            assert_eq!(local.counter.get(), 3);
             drop(r);
-            assert_eq!(local.counter.load(Ordering::Relaxed), 2);
+            assert_eq!(local.counter.get(), 2);
             assert_eq!(
-                local.size.load(Ordering::Relaxed),
+                local.size.get(),
                 SIZE + size_of::<usize>()
                     + size_of::<isize>()
                     + size_of::<usize>()
                     + size_of::<[i32; 3]>()
             );
         }
-        assert_eq!(local.counter.load(Ordering::Relaxed), 0);
-        assert_eq!(local.size.load(Ordering::Relaxed), 0);
+        assert_eq!(local.counter.get(), 0);
+        assert_eq!(local.size.get(), 0);
     }
 }

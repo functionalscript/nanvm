@@ -1,17 +1,19 @@
+mod atomicisize;
+mod cell_isize;
 pub mod header;
 
 use core::{alloc::Layout, marker::PhantomData};
 
-use super::{field_layout::FieldLayout, manager::Manager, object::Object};
+use super::{field_layout::FieldLayout, manager::Dealloc, object::Object};
 
 #[repr(transparent)]
-pub struct Block<M: Manager, T: Object> {
-    pub header: M::BlockHeader,
+pub struct Block<T: Object, D: Dealloc> {
+    pub header: D::BlockHeader,
     _0: PhantomData<T>,
 }
 
-impl<M: Manager, T: Object> Block<M, T> {
-    const BLOCK_HEADER_LAYOUT: FieldLayout<M::BlockHeader, T> =
+impl<T: Object, D: Dealloc> Block<T, D> {
+    const BLOCK_HEADER_LAYOUT: FieldLayout<D::BlockHeader, T> =
         FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
     pub const fn block_layout(object_size: usize) -> Layout {
@@ -21,7 +23,7 @@ impl<M: Manager, T: Object> Block<M, T> {
         let object = self.object_mut();
         let object_size = object.object_size();
         object.object_drop_in_place();
-        M::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
+        D::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
     }
     #[inline(always)]
     pub fn object(&self) -> &T {
@@ -40,26 +42,24 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        block::Block, fixed::Fixed, manager::Manager, object::Object, ref_::update::RefUpdate,
+        block::Block, fixed::Fixed, manager::Dealloc, object::Object,
+        ref_::counter_update::RefCounterUpdate,
     };
 
     use super::header::BlockHeader;
 
     struct M();
 
-    impl Manager for M {
+    impl Dealloc for M {
         type BlockHeader = BH;
-        unsafe fn alloc(self, layout: Layout) -> *mut u8 {
-            todo!()
-        }
-        unsafe fn dealloc(ptr: *mut u8, layout: Layout) {}
+        unsafe fn dealloc(_: *mut u8, _: Layout) {}
     }
 
     #[derive(Default)]
     struct BH();
 
     impl BlockHeader for BH {
-        unsafe fn ref_update(&mut self, _: RefUpdate) -> isize {
+        unsafe fn ref_counter_update(&self, _: RefCounterUpdate) -> isize {
             todo!()
         }
     }
@@ -67,11 +67,11 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_0() {
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(0).size(), 0);
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(0).align(), 1);
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(2).size(), 2);
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(2).align(), 1);
-        let mut b = Block::<M, Fixed<()>> {
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(0).size(), 0);
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(0).align(), 1);
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(2).size(), 2);
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(2).align(), 1);
+        let mut b = Block::<Fixed<()>, M> {
             header: BH::default(),
             _0: Default::default(),
         };
