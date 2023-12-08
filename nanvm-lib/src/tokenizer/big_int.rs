@@ -124,16 +124,14 @@ impl Mul for &BigInt {
         let rhs_max = other.value.len() - 1;
         let total_max = self.value.len() + other.value.len() - 1;
         let mut value = vec![0; total_max + 1];
-        let mut i = 0;
+        let mut i: usize = 0;
         while i < total_max {
             let mut j = if i > rhs_max { i - rhs_max } else { 0 };
             let max = if i < lhs_max { i } else { lhs_max };
-            let mut d = 0;
             while j <= max {
-                d = d + self.value[j] * other.value[i - j];
+                value = add_to_vec(value, i, self.value[j] as u128 * other.value[i - j] as u128);
                 j = j + 1;
             }
-            value[i] = d;
             i = i + 1;
         }
         let sign = match self.sign == other.sign {
@@ -144,6 +142,16 @@ impl Mul for &BigInt {
         result.normalize();
         result
     }
+}
+
+fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
+    let sum = vec[index] as u128 + add;
+    vec[index] = sum as u64;
+    let carry = sum >> 64;
+    if (carry > 0) {
+        vec = add_to_vec(vec, index + 1, carry);
+    }
+    vec
 }
 
 fn cmp_values(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Ordering {
@@ -604,6 +612,31 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: [5, 16, 34, 52, 45, 28].vec()
+            },
+        );
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [u64::MAX].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [u64::MAX].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1, u64::MAX - 1].vec()
+            },
+        );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1, u64::MAX - 1].vec()
             },
         );
     }
