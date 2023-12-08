@@ -40,7 +40,8 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        block::Block, fixed::Fixed, manager::Dealloc, object::Object, ref_::counter_update::RefCounterUpdate,
+        block::Block, fixed::Fixed, manager::Dealloc, object::Object,
+        ref_::counter_update::RefCounterUpdate,
     };
 
     use super::header::BlockHeader;

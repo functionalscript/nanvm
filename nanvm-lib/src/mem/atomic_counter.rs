@@ -30,7 +30,8 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        atomic_counter::AtomicCounter, block::header::BlockHeader, ref_::counter_update::RefCounterUpdate,
+        atomic_counter::AtomicCounter, block::header::BlockHeader,
+        ref_::counter_update::RefCounterUpdate,
     };
 
     #[test]
@@ -40,9 +41,15 @@ mod test {
         assert_eq!(x.counter.load(Ordering::Relaxed), 0);
         assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, 0);
         assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::AddRef) }, 0);
-        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Release) }, 1);
+        assert_eq!(
+            unsafe { x.ref_counter_update(RefCounterUpdate::Release) },
+            1
+        );
         assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, 0);
-        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Release) }, 0);
+        assert_eq!(
+            unsafe { x.ref_counter_update(RefCounterUpdate::Release) },
+            0
+        );
         assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, -1);
     }
 }
