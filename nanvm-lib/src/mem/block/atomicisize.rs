@@ -20,7 +20,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test() {
-        let mut x = AtomicIsize::default();
+        let x = AtomicIsize::default();
         assert_eq!(x.load(Ordering::Relaxed), 0);
         assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, 0);
         assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::AddRef) }, 0);

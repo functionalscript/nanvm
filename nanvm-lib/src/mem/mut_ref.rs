@@ -3,12 +3,7 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use crate::mem::{
-    block::{header::BlockHeader, Block},
-    manager::Manager,
-    object::Object,
-    ref_::counter_update::RefCounterUpdate,
-};
+use crate::mem::{block::Block, object::Object};
 
 use super::{manager::Dealloc, ref_::Ref};
 
