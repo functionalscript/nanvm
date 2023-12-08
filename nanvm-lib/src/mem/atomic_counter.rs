@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicIsize, Ordering};
 
-use crate::mem::{block::header::BlockHeader, ref_::update::RefUpdate};
+use crate::mem::{block::header::BlockHeader, ref_::counter_update::RefCounterUpdate};
 
 #[repr(transparent)]
 pub struct AtomicCounter {
@@ -18,7 +18,7 @@ impl Default for AtomicCounter {
 
 impl BlockHeader for AtomicCounter {
     #[inline(always)]
-    unsafe fn ref_update(&self, val: RefUpdate) -> isize {
+    unsafe fn ref_counter_update(&self, val: RefCounterUpdate) -> isize {
         self.counter.fetch_add(val as isize, Ordering::Relaxed)
     }
 }
@@ -30,7 +30,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        atomic_counter::AtomicCounter, block::header::BlockHeader, ref_::update::RefUpdate,
+        atomic_counter::AtomicCounter, block::header::BlockHeader, ref_::counter_update::RefCounterUpdate,
     };
 
     #[test]
@@ -38,11 +38,11 @@ mod test {
     fn test() {
         let mut x = AtomicCounter::default();
         assert_eq!(x.counter.load(Ordering::Relaxed), 0);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, 0);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::AddRef) }, 0);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Release) }, 1);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, 0);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Release) }, 0);
-        assert_eq!(unsafe { x.ref_update(RefUpdate::Read) }, -1);
+        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, 0);
+        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::AddRef) }, 0);
+        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Release) }, 1);
+        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, 0);
+        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Release) }, 0);
+        assert_eq!(unsafe { x.ref_counter_update(RefCounterUpdate::Read) }, -1);
     }
 }

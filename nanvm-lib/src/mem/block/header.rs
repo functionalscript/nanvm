@@ -1,13 +1,13 @@
 use crate::{
     common::ref_mut::RefMut,
-    mem::{manager::Dealloc, object::Object, ref_::update::RefUpdate},
+    mem::{manager::Dealloc, object::Object, ref_::counter_update::RefCounterUpdate},
 };
 
 use super::Block;
 
 pub trait BlockHeader: Default + Sized {
     // required
-    unsafe fn ref_update(&self, i: RefUpdate) -> isize;
+    unsafe fn ref_counter_update(&self, i: RefCounterUpdate) -> isize;
     //
     #[inline(always)]
     unsafe fn block<T: Object, D: Dealloc>(&mut self) -> &mut Block<T, D> {
@@ -23,7 +23,7 @@ mod test {
 
     use crate::{
         common::ref_mut::RefMut,
-        mem::{block::Block, fixed::Fixed, manager::Dealloc, ref_::update::RefUpdate},
+        mem::{block::Block, fixed::Fixed, manager::Dealloc, ref_::counter_update::RefCounterUpdate},
     };
 
     use super::BlockHeader;
@@ -39,7 +39,7 @@ mod test {
     }
 
     impl BlockHeader for XBH {
-        unsafe fn ref_update(&self, i: RefUpdate) -> isize {
+        unsafe fn ref_counter_update(&self, i: RefCounterUpdate) -> isize {
             let result = self.0.get();
             self.0.set(result + i as isize);
             result
@@ -58,9 +58,9 @@ mod test {
             assert_eq!(p.as_mut_ptr(), (&mut x).as_mut_ptr());
         }
         unsafe {
-            assert_eq!(x.header.ref_update(RefUpdate::Read), 0);
-            assert_eq!(x.header.ref_update(RefUpdate::AddRef), 0);
-            assert_eq!(x.header.ref_update(RefUpdate::Read), 1);
+            assert_eq!(x.header.ref_counter_update(RefCounterUpdate::Read), 0);
+            assert_eq!(x.header.ref_counter_update(RefCounterUpdate::AddRef), 0);
+            assert_eq!(x.header.ref_counter_update(RefCounterUpdate::Read), 1);
         }
     }
 }

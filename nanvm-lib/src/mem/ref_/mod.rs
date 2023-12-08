@@ -1,8 +1,11 @@
-pub mod update;
+pub mod counter_update;
 
-use core::{mem::forget, ops::Deref};
+use core::{
+    mem::{forget, size_of},
+    ops::Deref,
+};
 
-use self::update::RefUpdate;
+use self::counter_update::RefCounterUpdate;
 
 use super::{
     block::{header::BlockHeader, Block},
@@ -24,19 +27,17 @@ impl<T: Object, D: Dealloc> Ref<T, D> {
         Self { ptr }
     }
     #[inline(always)]
-    unsafe fn ref_update(&self, i: RefUpdate) -> isize {
-        (*self.ptr).header.ref_update(i)
-    }
-    unsafe fn update(&self, i: RefUpdate) -> Option<*mut Block<T, D>> {
-        if self.ref_update(i) == 0 {
-            Some(self.ptr as *mut _)
+    unsafe fn counter_update(&self, i: RefCounterUpdate) -> Option<*mut Block<T, D>> {
+        let ptr = self.ptr;
+        if (*ptr).header.ref_counter_update(i) == 0 {
+            Some(ptr as *mut _)
         } else {
             None
         }
     }
     pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {
         unsafe {
-            if let Some(ptr) = self.update(RefUpdate::Read) {
+            if let Some(ptr) = self.counter_update(RefCounterUpdate::Read) {
                 forget(self);
                 Ok(MutRef::new(ptr))
             } else {
@@ -50,7 +51,7 @@ impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
     #[inline(always)]
     fn clone(&self) -> Self {
         unsafe {
-            self.ref_update(RefUpdate::AddRef);
+            self.counter_update(RefCounterUpdate::AddRef);
             Self { ptr: self.ptr }
         }
     }
@@ -59,7 +60,7 @@ impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
 impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
     fn drop(&mut self) {
         unsafe {
-            if let Some(ptr) = self.update(RefUpdate::Release) {
+            if let Some(ptr) = self.counter_update(RefCounterUpdate::Release) {
                 (*ptr).delete();
             }
         }
@@ -84,8 +85,8 @@ mod test {
         atomic_counter::AtomicCounter,
         block::{header::BlockHeader, Block},
         fixed::Fixed,
-        manager::{Dealloc, Manager},
-        ref_::update::RefUpdate,
+        manager::Dealloc,
+        ref_::counter_update::RefCounterUpdate,
     };
 
     use super::Ref;
@@ -102,15 +103,8 @@ mod test {
         }
     }
 
-    impl Manager for M {
-        type Dealloc = Self;
-        unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
-            panic!()
-        }
-    }
-
     impl BlockHeader for BH {
-        unsafe fn ref_update(&self, _: super::update::RefUpdate) -> isize {
+        unsafe fn ref_counter_update(&self, _: super::counter_update::RefCounterUpdate) -> isize {
             panic!()
         }
     }
@@ -137,16 +131,16 @@ mod test {
         let mut buffer: [isize; 1] = [0];
         let x = buffer.as_mut_ptr() as *mut Block<Fixed<()>, M1>;
         let p = unsafe { &mut (*x).header };
-        assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
+        assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);
         {
             let y = unsafe { Ref::new(x) };
-            assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
+            assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);
             {
                 let z = y.clone();
-                assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 1);
+                assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 1);
             }
-            assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
+            assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);
         }
-        assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, -1);
+        assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, -1);
     }
 }

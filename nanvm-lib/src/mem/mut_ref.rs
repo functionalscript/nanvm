@@ -7,7 +7,7 @@ use crate::mem::{
     block::{header::BlockHeader, Block},
     manager::Manager,
     object::Object,
-    ref_::update::RefUpdate,
+    ref_::counter_update::RefCounterUpdate,
 };
 
 use super::{manager::Dealloc, ref_::Ref};

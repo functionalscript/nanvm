@@ -4,7 +4,7 @@ use super::{
     block::header::BlockHeader,
     field_layout::align_to,
     manager::{Dealloc, Manager},
-    ref_::update::RefUpdate,
+    ref_::counter_update::RefCounterUpdate,
 };
 
 #[derive(Debug)]
@@ -43,7 +43,7 @@ struct NoHeader();
 
 impl BlockHeader for NoHeader {
     #[inline(always)]
-    unsafe fn ref_update(&self, _val: RefUpdate) -> isize {
+    unsafe fn ref_counter_update(&self, _val: RefCounterUpdate) -> isize {
         1
     }
 }
