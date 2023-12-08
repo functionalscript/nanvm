@@ -84,4 +84,26 @@ mod test {
             assert_eq!(arena.begin + 8, *arena.current.borrow());
         }
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_1() {
+        let arena = Arena::new(GLOBAL, 1);
+        assert_eq!(arena.begin, *arena.current.borrow());
+        assert_eq!(arena.end - arena.begin, 1);
+        let r = arena.fixed_new(42u8).to_ref();
+        assert_eq!(arena.end, *arena.current.borrow());
+    }
+
+    #[test]
+    #[should_panic]
+    #[wasm_bindgen_test]
+    fn test_out_of_memory() {
+        let arena = Arena::new(GLOBAL, 1);
+        assert_eq!(arena.begin, *arena.current.borrow());
+        assert_eq!(arena.end - arena.begin, 1);
+        let r = arena.fixed_new(42u8).to_ref();
+        assert_eq!(arena.end, *arena.current.borrow());
+        let r2 = arena.fixed_new(42u8).to_ref();
+    }
 }
