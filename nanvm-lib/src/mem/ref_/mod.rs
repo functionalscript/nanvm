@@ -6,7 +6,7 @@ use self::update::RefUpdate;
 
 use super::{
     block::{header::BlockHeader, Block},
-    manager::Manager,
+    manager::{Manager, Dealloc},
     mut_ref::MutRef,
     object::Object,
 };
@@ -14,20 +14,20 @@ use super::{
 /// A reference to an object allocated by a memory manager.
 #[repr(transparent)]
 #[derive(Debug)]
-pub struct Ref<T: Object, M: Manager> {
-    p: *mut Block<M, T>,
+pub struct Ref<T: Object, D: Dealloc> {
+    p: *mut Block<D, T>,
 }
 
-impl<T: Object, M: Manager> Ref<T, M> {
+impl<T: Object, D: Dealloc> Ref<T, D> {
     #[inline(always)]
-    pub unsafe fn new(p: *mut Block<M, T>) -> Self {
+    pub unsafe fn new(p: *mut Block<D, T>) -> Self {
         Self { p }
     }
     #[inline(always)]
     unsafe fn ref_update(&self, i: RefUpdate) -> isize {
         (*self.p).header.ref_update(i)
     }
-    pub fn try_to_mut_ref(mut self) -> Result<MutRef<T, M>, Self> {
+    pub fn try_to_mut_ref(mut self) -> Result<MutRef<T, D>, Self> {
         unsafe {
             if self.ref_update(RefUpdate::Read) == 0 {
                 let result = MutRef::new(self.p);
@@ -40,7 +40,7 @@ impl<T: Object, M: Manager> Ref<T, M> {
     }
 }
 
-impl<T: Object, M: Manager> Clone for Ref<T, M> {
+impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
     #[inline(always)]
     fn clone(&self) -> Self {
         unsafe {
@@ -50,7 +50,7 @@ impl<T: Object, M: Manager> Clone for Ref<T, M> {
     }
 }
 
-impl<T: Object, M: Manager> Drop for Ref<T, M> {
+impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
     fn drop(&mut self) {
         unsafe {
             if self.ref_update(RefUpdate::Release) == 0 {
@@ -60,7 +60,7 @@ impl<T: Object, M: Manager> Drop for Ref<T, M> {
     }
 }
 
-impl<T: Object, M: Manager> Deref for Ref<T, M> {
+impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &T {
@@ -78,7 +78,7 @@ mod test {
         atomic_counter::AtomicCounter,
         block::{header::BlockHeader, Block},
         fixed::Fixed,
-        manager::Manager,
+        manager::{Manager, Dealloc},
         ref_::update::RefUpdate,
     };
 
@@ -89,12 +89,16 @@ mod test {
 
     struct M();
 
-    impl Manager for M {
+    impl Dealloc for M {
         type BlockHeader = BH;
-        unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
+        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
             panic!()
         }
-        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
+    }
+
+    impl Manager for M {
+        type Dealloc = Self;
+        unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
             panic!()
         }
     }
@@ -116,12 +120,17 @@ mod test {
 
     struct M1();
 
-    impl Manager for M1 {
+    impl Dealloc for M1 {
         type BlockHeader = AtomicCounter;
+        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {
+        }
+    }
+
+    impl Manager for M1 {
+        type Dealloc = Self;
         unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
             panic!()
         }
-        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {}
     }
 
     #[test]

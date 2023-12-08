@@ -7,7 +7,7 @@ use super::{
     atomic_counter::AtomicCounter,
     field_layout::FieldLayout,
     global::{Global, GLOBAL},
-    manager::Manager,
+    manager::{Manager, Dealloc},
 };
 
 #[derive(Debug)]
@@ -38,16 +38,9 @@ impl Local {
     }
 }
 
-impl Manager for &Local {
+impl Dealloc for &Local {
     type BlockHeader = AtomicCounter;
-    unsafe fn alloc(self, block_layout: Layout) -> *mut u8 {
-        let (header_layout, layout) = Local::layout(block_layout);
-        self.counter.fetch_add(1, Ordering::Relaxed);
-        self.size.fetch_add(layout.size(), Ordering::Relaxed);
-        let p = GLOBAL.alloc(layout) as *mut Header;
-        *p = self;
-        header_layout.to_adjacent(&mut *p) as *mut u8
-    }
+    #[inline(always)]
     unsafe fn dealloc(block_p: *mut u8, block_layout: Layout) {
         let (header_layout, layout) = Local::layout(block_layout);
         let p = header_layout.from_adjacent_mut(&mut *block_p);
@@ -57,6 +50,18 @@ impl Manager for &Local {
             local.size.fetch_sub(layout.size(), Ordering::Relaxed);
         }
         Global::dealloc(p as *mut u8, layout);
+    }
+}
+
+impl Manager for &Local {
+    type Dealloc = Self;
+    unsafe fn alloc(self, block_layout: Layout) -> *mut u8 {
+        let (header_layout, layout) = Local::layout(block_layout);
+        self.counter.fetch_add(1, Ordering::Relaxed);
+        self.size.fetch_add(layout.size(), Ordering::Relaxed);
+        let p = GLOBAL.alloc(layout) as *mut Header;
+        *p = self;
+        header_layout.to_adjacent(&mut *p) as *mut u8
     }
 }
 

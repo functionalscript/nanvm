@@ -1,7 +1,7 @@
 use core::{alloc::Layout, cell::RefCell, marker::PhantomData};
 
 use super::{
-    block::header::BlockHeader, field_layout::align_to, manager::Manager, ref_::update::RefUpdate,
+    block::header::BlockHeader, field_layout::align_to, manager::{Manager, Dealloc}, ref_::update::RefUpdate,
 };
 
 #[derive(Debug)]
@@ -31,7 +31,7 @@ impl<M: Manager> Arena<M> {
 impl<M: Manager> Drop for Arena<M> {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe { M::dealloc(self.begin as *mut u8, Self::layout(self.end - self.begin)) };
+        unsafe { M::Dealloc::dealloc(self.begin as *mut u8, Self::layout(self.end - self.begin)) };
     }
 }
 
@@ -45,8 +45,14 @@ impl BlockHeader for NoHeader {
     }
 }
 
-impl<M: Manager> Manager for &Arena<M> {
+impl<M: Manager> Dealloc for &Arena<M> {
     type BlockHeader = NoHeader;
+    #[inline(always)]
+    unsafe fn dealloc(_: *mut u8, _: Layout) {}
+}
+
+impl<'a, M: Manager> Manager for &'a Arena<M> {
+    type Dealloc = &'a Arena<M>;
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
         let align = layout.align();
         let mut c = self.current.borrow_mut();
@@ -58,8 +64,6 @@ impl<M: Manager> Manager for &Arena<M> {
         *c = end;
         current as *mut u8
     }
-    #[inline(always)]
-    unsafe fn dealloc(_: *mut u8, _: Layout) {}
 }
 
 #[cfg(test)]

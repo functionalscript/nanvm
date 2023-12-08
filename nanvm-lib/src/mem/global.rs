@@ -1,22 +1,26 @@
 use core::alloc::Layout;
 use std::alloc::{alloc, dealloc};
 
-use super::{atomic_counter::AtomicCounter, manager::Manager};
+use super::{atomic_counter::AtomicCounter, manager::{Manager, Dealloc}};
 
 #[derive(Debug)]
 pub struct Global();
 
 pub const GLOBAL: Global = Global();
 
-impl Manager for Global {
+impl Dealloc for Global {
     type BlockHeader = AtomicCounter;
-    #[inline(always)]
-    unsafe fn alloc(self, layout: Layout) -> *mut u8 {
-        alloc(layout)
-    }
     #[inline(always)]
     unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
         dealloc(ptr, layout)
+    }
+}
+
+impl Manager for Global {
+    type Dealloc = Global;
+    #[inline(always)]
+    unsafe fn alloc(self, layout: Layout) -> *mut u8 {
+        alloc(layout)
     }
 }
 

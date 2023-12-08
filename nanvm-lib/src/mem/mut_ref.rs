@@ -10,34 +10,34 @@ use crate::mem::{
     ref_::update::RefUpdate,
 };
 
-use super::ref_::Ref;
+use super::{ref_::Ref, manager::Dealloc};
 
 /// A reference to a mutable object allocated by a memory manager.
 #[repr(transparent)]
 #[derive(Debug)]
-pub struct MutRef<T: Object, M: Manager>(*mut Block<M, T>);
+pub struct MutRef<T: Object, D: Dealloc>(*mut Block<D, T>);
 
-impl<T: Object, M: Manager> MutRef<T, M> {
+impl<T: Object, D: Dealloc> MutRef<T, D> {
     #[inline(always)]
-    pub unsafe fn new(v: *mut Block<M, T>) -> Self {
+    pub unsafe fn new(v: *mut Block<D, T>) -> Self {
         Self(v)
     }
     #[inline(always)]
-    pub fn to_ref(self) -> Ref<T, M> {
+    pub fn to_ref(self) -> Ref<T, D> {
         let result = unsafe { Ref::new(self.0) };
         forget(self);
         result
     }
 }
 
-impl<T: Object, M: Manager> Drop for MutRef<T, M> {
+impl<T: Object, D: Dealloc> Drop for MutRef<T, D> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { (&mut *self.0).delete() }
     }
 }
 
-impl<T: Object, M: Manager> Deref for MutRef<T, M> {
+impl<T: Object, D: Dealloc> Deref for MutRef<T, D> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
@@ -45,7 +45,7 @@ impl<T: Object, M: Manager> Deref for MutRef<T, M> {
     }
 }
 
-impl<T: Object, M: Manager> DerefMut for MutRef<T, M> {
+impl<T: Object, D: Dealloc> DerefMut for MutRef<T, D> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { (*self.0).object_mut() }

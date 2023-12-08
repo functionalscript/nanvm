@@ -2,16 +2,16 @@ pub mod header;
 
 use core::{alloc::Layout, marker::PhantomData};
 
-use super::{field_layout::FieldLayout, manager::Manager, object::Object};
+use super::{field_layout::FieldLayout, manager::{Manager, Dealloc}, object::Object};
 
 #[repr(transparent)]
-pub struct Block<M: Manager, T: Object> {
-    pub header: M::BlockHeader,
+pub struct Block<D: Dealloc, T: Object> {
+    pub header: D::BlockHeader,
     _0: PhantomData<T>,
 }
 
-impl<M: Manager, T: Object> Block<M, T> {
-    const BLOCK_HEADER_LAYOUT: FieldLayout<M::BlockHeader, T> =
+impl<D: Dealloc, T: Object> Block<D, T> {
+    const BLOCK_HEADER_LAYOUT: FieldLayout<D::BlockHeader, T> =
         FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
     pub const fn block_layout(object_size: usize) -> Layout {
@@ -21,7 +21,7 @@ impl<M: Manager, T: Object> Block<M, T> {
         let object = self.object_mut();
         let object_size = object.object_size();
         object.object_drop_in_place();
-        M::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
+        D::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
     }
     #[inline(always)]
     pub fn object(&self) -> &T {
@@ -40,19 +40,23 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        block::Block, fixed::Fixed, manager::Manager, object::Object, ref_::update::RefUpdate,
+        block::Block, fixed::Fixed, manager::{Manager, Dealloc}, object::Object, ref_::update::RefUpdate,
     };
 
     use super::header::BlockHeader;
 
     struct M();
 
-    impl Manager for M {
+    impl Dealloc for M {
         type BlockHeader = BH;
+        unsafe fn dealloc(_: *mut u8, _: Layout) {}
+    }
+
+    impl Manager for M {
+        type Dealloc = Self;
         unsafe fn alloc(self, layout: Layout) -> *mut u8 {
             todo!()
         }
-        unsafe fn dealloc(ptr: *mut u8, layout: Layout) {}
     }
 
     #[derive(Default)]
