@@ -1,10 +1,9 @@
 use core::{
     alloc::Layout,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{AtomicIsize, AtomicUsize, Ordering},
 };
 
 use super::{
-    atomic_counter::AtomicCounter,
     field_layout::FieldLayout,
     global::{Global, GLOBAL},
     manager::{Dealloc, Manager},
@@ -39,7 +38,7 @@ impl Local {
 }
 
 impl Dealloc for &Local {
-    type BlockHeader = AtomicCounter;
+    type BlockHeader = AtomicIsize;
     #[inline(always)]
     unsafe fn dealloc(block_p: *mut u8, block_layout: Layout) {
         let (header_layout, layout) = Local::layout(block_layout);

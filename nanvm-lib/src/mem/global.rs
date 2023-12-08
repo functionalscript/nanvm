@@ -1,10 +1,7 @@
-use core::alloc::Layout;
+use core::{alloc::Layout, sync::atomic::AtomicIsize};
 use std::alloc::{alloc, dealloc};
 
-use super::{
-    atomic_counter::AtomicCounter,
-    manager::{Dealloc, Manager},
-};
+use super::manager::{Dealloc, Manager};
 
 #[derive(Debug)]
 pub struct Global();
@@ -12,7 +9,7 @@ pub struct Global();
 pub const GLOBAL: Global = Global();
 
 impl Dealloc for Global {
-    type BlockHeader = AtomicCounter;
+    type BlockHeader = AtomicIsize;
     #[inline(always)]
     unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
         dealloc(ptr, layout)

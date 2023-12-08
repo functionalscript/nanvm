@@ -77,12 +77,11 @@ impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
 
 #[cfg(test)]
 mod test {
-    use core::{alloc::Layout, mem::forget};
+    use core::{alloc::Layout, mem::forget, sync::atomic::AtomicIsize};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        atomic_counter::AtomicCounter,
         block::{header::BlockHeader, Block},
         fixed::Fixed,
         manager::Dealloc,
@@ -121,7 +120,7 @@ mod test {
     struct M1();
 
     impl Dealloc for M1 {
-        type BlockHeader = AtomicCounter;
+        type BlockHeader = AtomicIsize;
         unsafe fn dealloc(_: *mut u8, _: Layout) {}
     }
 
