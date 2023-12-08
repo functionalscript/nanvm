@@ -639,5 +639,30 @@ mod test {
                 value: [1, u64::MAX - 1].vec()
             },
         );
+
+        let a = BigInt {
+            sign: Sign::Negative,
+            value: [u64::MAX, u64::MAX, u64::MAX].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Negative,
+            value: [u64::MAX].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+            },
+        );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+            },
+        );
     }
 }
