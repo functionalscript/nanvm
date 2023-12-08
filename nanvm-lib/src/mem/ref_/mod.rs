@@ -6,7 +6,7 @@ use self::update::RefUpdate;
 
 use super::{
     block::{header::BlockHeader, Block},
-    manager::{Dealloc, Manager},
+    manager::Dealloc,
     mut_ref::MutRef,
     object::Object,
 };
@@ -15,12 +15,12 @@ use super::{
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct Ref<T: Object, D: Dealloc> {
-    p: *const Block<D, T>,
+    p: *const Block<T, D>,
 }
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
     #[inline(always)]
-    pub unsafe fn new(p: *mut Block<D, T>) -> Self {
+    pub unsafe fn new(p: *const Block<T, D>) -> Self {
         Self { p }
     }
     #[inline(always)]
@@ -54,7 +54,7 @@ impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
     fn drop(&mut self) {
         unsafe {
             if self.ref_update(RefUpdate::Release) == 0 {
-                (*(self.p as *mut Block<D, T>)).delete();
+                (*(self.p as *mut Block<T, D>)).delete();
             }
         }
     }
@@ -70,7 +70,7 @@ impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
 
 #[cfg(test)]
 mod test {
-    use core::mem::forget;
+    use core::{alloc::Layout, mem::forget};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -113,7 +113,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         let mut buffer: [(); 0] = [];
-        let x = buffer.as_mut_ptr() as *mut Block<M, Fixed<()>>;
+        let x = buffer.as_mut_ptr() as *mut Block<Fixed<()>, M>;
         let y = unsafe { Ref::new(x) };
         forget(y);
     }
@@ -122,12 +122,12 @@ mod test {
 
     impl Dealloc for M1 {
         type BlockHeader = AtomicCounter;
-        unsafe fn dealloc(_: *mut u8, _: core::alloc::Layout) {}
+        unsafe fn dealloc(_: *mut u8, _: Layout) {}
     }
 
     impl Manager for M1 {
         type Dealloc = Self;
-        unsafe fn alloc(self, _: core::alloc::Layout) -> *mut u8 {
+        unsafe fn alloc(self, _: Layout) -> *mut u8 {
             panic!()
         }
     }
@@ -136,7 +136,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_1() {
         let mut buffer: [isize; 1] = [0];
-        let x = buffer.as_mut_ptr() as *mut Block<M1, Fixed<()>>;
+        let x = buffer.as_mut_ptr() as *mut Block<Fixed<()>, M1>;
         let p = unsafe { &mut (*x).header };
         assert_eq!(unsafe { p.ref_update(RefUpdate::Read) }, 0);
         {

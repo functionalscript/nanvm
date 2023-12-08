@@ -15,11 +15,11 @@ use super::{manager::Dealloc, ref_::Ref};
 /// A reference to a mutable object allocated by a memory manager.
 #[repr(transparent)]
 #[derive(Debug)]
-pub struct MutRef<T: Object, D: Dealloc>(*mut Block<D, T>);
+pub struct MutRef<T: Object, D: Dealloc>(*mut Block<T, D>);
 
 impl<T: Object, D: Dealloc> MutRef<T, D> {
     #[inline(always)]
-    pub unsafe fn new(v: *mut Block<D, T>) -> Self {
+    pub unsafe fn new(v: *mut Block<T, D>) -> Self {
         Self(v)
     }
     #[inline(always)]

@@ -5,12 +5,12 @@ use core::{alloc::Layout, marker::PhantomData};
 use super::{field_layout::FieldLayout, manager::Dealloc, object::Object};
 
 #[repr(transparent)]
-pub struct Block<D: Dealloc, T: Object> {
+pub struct Block<T: Object, D: Dealloc> {
     pub header: D::BlockHeader,
     _0: PhantomData<T>,
 }
 
-impl<D: Dealloc, T: Object> Block<D, T> {
+impl<T: Object, D: Dealloc> Block<T, D> {
     const BLOCK_HEADER_LAYOUT: FieldLayout<D::BlockHeader, T> =
         FieldLayout::align_to(T::OBJECT_ALIGN);
     #[inline(always)]
@@ -75,11 +75,11 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_0() {
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(0).size(), 0);
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(0).align(), 1);
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(2).size(), 2);
-        assert_eq!(Block::<M, Fixed<()>>::block_layout(2).align(), 1);
-        let mut b = Block::<M, Fixed<()>> {
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(0).size(), 0);
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(0).align(), 1);
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(2).size(), 2);
+        assert_eq!(Block::<Fixed<()>, M>::block_layout(2).align(), 1);
+        let mut b = Block::<Fixed<()>, M> {
             header: BH::default(),
             _0: Default::default(),
         };
