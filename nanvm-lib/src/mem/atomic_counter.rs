@@ -18,7 +18,7 @@ impl Default for AtomicCounter {
 
 impl BlockHeader for AtomicCounter {
     #[inline(always)]
-    unsafe fn ref_update(&mut self, val: RefUpdate) -> isize {
+    unsafe fn ref_update(&self, val: RefUpdate) -> isize {
         self.counter.fetch_add(val as isize, Ordering::Relaxed)
     }
 }

@@ -15,7 +15,7 @@ use super::{
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct Ref<T: Object, D: Dealloc> {
-    p: *mut Block<D, T>,
+    p: *const Block<D, T>,
 }
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
@@ -27,10 +27,10 @@ impl<T: Object, D: Dealloc> Ref<T, D> {
     unsafe fn ref_update(&self, i: RefUpdate) -> isize {
         (*self.p).header.ref_update(i)
     }
-    pub fn try_to_mut_ref(mut self) -> Result<MutRef<T, D>, Self> {
+    pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {
         unsafe {
             if self.ref_update(RefUpdate::Read) == 0 {
-                let result = MutRef::new(self.p);
+                let result = MutRef::new(self.p as *mut _);
                 forget(self);
                 Ok(result)
             } else {
@@ -54,7 +54,7 @@ impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
     fn drop(&mut self) {
         unsafe {
             if self.ref_update(RefUpdate::Release) == 0 {
-                (*self.p).delete();
+                (*(self.p as *mut Block<D, T>)).delete();
             }
         }
     }
@@ -104,7 +104,7 @@ mod test {
     }
 
     impl BlockHeader for BH {
-        unsafe fn ref_update(&mut self, _: super::update::RefUpdate) -> isize {
+        unsafe fn ref_update(&self, _: super::update::RefUpdate) -> isize {
             panic!()
         }
     }

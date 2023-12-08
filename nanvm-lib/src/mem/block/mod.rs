@@ -2,11 +2,7 @@ pub mod header;
 
 use core::{alloc::Layout, marker::PhantomData};
 
-use super::{
-    field_layout::FieldLayout,
-    manager::{Dealloc, Manager},
-    object::Object,
-};
+use super::{field_layout::FieldLayout, manager::Dealloc, object::Object};
 
 #[repr(transparent)]
 pub struct Block<D: Dealloc, T: Object> {
@@ -71,7 +67,7 @@ mod test {
     struct BH();
 
     impl BlockHeader for BH {
-        unsafe fn ref_update(&mut self, _: RefUpdate) -> isize {
+        unsafe fn ref_update(&self, _: RefUpdate) -> isize {
             todo!()
         }
     }

@@ -7,7 +7,7 @@ use super::Block;
 
 pub trait BlockHeader: Default + Sized {
     // required
-    unsafe fn ref_update(&mut self, i: RefUpdate) -> isize;
+    unsafe fn ref_update(&self, i: RefUpdate) -> isize;
     //
     #[inline(always)]
     unsafe fn block<D: Dealloc, T: Object>(&mut self) -> &mut Block<D, T> {
@@ -17,7 +17,7 @@ pub trait BlockHeader: Default + Sized {
 
 #[cfg(test)]
 mod test {
-    use core::{alloc::Layout, marker::PhantomData};
+    use core::{alloc::Layout, cell::Cell, marker::PhantomData};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -33,13 +33,8 @@ mod test {
 
     use super::BlockHeader;
 
-    struct XBH(isize);
-
-    impl Default for XBH {
-        fn default() -> Self {
-            Self(0)
-        }
-    }
+    #[derive(Default)]
+    struct XBH(Cell<isize>);
 
     struct D();
 
@@ -48,17 +43,10 @@ mod test {
         unsafe fn dealloc(_: *mut u8, _: Layout) {}
     }
 
-    impl Manager for D {
-        type Dealloc = Self;
-        unsafe fn alloc(self, layout: Layout) -> *mut u8 {
-            todo!()
-        }
-    }
-
     impl BlockHeader for XBH {
-        unsafe fn ref_update(&mut self, i: RefUpdate) -> isize {
-            let result = self.0;
-            self.0 += i as isize;
+        unsafe fn ref_update(&self, i: RefUpdate) -> isize {
+            let result = self.0.get();
+            self.0.set(result + i as isize);
             result
         }
     }

@@ -43,7 +43,7 @@ struct NoHeader();
 
 impl BlockHeader for NoHeader {
     #[inline(always)]
-    unsafe fn ref_update(&mut self, _val: RefUpdate) -> isize {
+    unsafe fn ref_update(&self, _val: RefUpdate) -> isize {
         1
     }
 }
