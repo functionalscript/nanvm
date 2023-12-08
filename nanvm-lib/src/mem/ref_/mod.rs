@@ -1,9 +1,6 @@
 pub mod counter_update;
 
-use core::{
-    mem::{forget, size_of},
-    ops::Deref,
-};
+use core::{mem::forget, ops::Deref};
 
 use self::counter_update::RefCounterUpdate;
 
