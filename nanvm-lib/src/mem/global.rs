@@ -1,4 +1,4 @@
-use core::{alloc::Layout, sync::atomic::AtomicIsize};
+use core::{alloc::Layout, cell::Cell};
 use std::alloc::{alloc, dealloc};
 
 use super::manager::{Dealloc, Manager};
@@ -9,7 +9,7 @@ pub struct Global();
 pub const GLOBAL: Global = Global();
 
 impl Dealloc for Global {
-    type BlockHeader = AtomicIsize;
+    type BlockHeader = Cell<isize>;
     #[inline(always)]
     unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
         dealloc(ptr, layout)
