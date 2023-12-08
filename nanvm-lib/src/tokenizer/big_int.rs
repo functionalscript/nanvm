@@ -120,10 +120,10 @@ impl Mul for &BigInt {
         if self.is_zero() || other.is_zero() {
             return BigInt::ZERO;
         }
-        let mut value: Vec<_> = default();
         let lhs_max = self.value.len() - 1;
         let rhs_max = other.value.len() - 1;
         let total_max = self.value.len() + other.value.len() - 1;
+        let mut value = vec![0; total_max + 1];
         let mut i = 0;
         while i < total_max {
             let mut j = if i > rhs_max { i - rhs_max } else { 0 };
@@ -133,14 +133,16 @@ impl Mul for &BigInt {
                 d = d + self.value[j] * other.value[i - j];
                 j = j + 1;
             }
-            value.push(d);
+            value[i] = d;
             i = i + 1;
         }
         let sign = match self.sign == other.sign {
             true => Sign::Positive,
             false => Sign::Negative,
         };
-        BigInt { sign, value }
+        let mut result = BigInt { sign, value };
+        result.normalize();
+        result
     }
 }
 
