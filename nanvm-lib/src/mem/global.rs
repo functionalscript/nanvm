@@ -3,6 +3,7 @@ use std::alloc::{alloc, dealloc};
 
 use super::{atomic_counter::AtomicCounter, manager::Manager};
 
+#[derive(Debug)]
 pub struct Global();
 
 pub const GLOBAL: Global = Global();

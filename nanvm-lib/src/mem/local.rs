@@ -50,7 +50,7 @@ impl Manager for &Local {
     }
     unsafe fn dealloc(block_p: *mut u8, block_layout: Layout) {
         let (header_layout, layout) = Local::layout(block_layout);
-        let p = header_layout.from_adjancent_mut(&mut *block_p);
+        let p = header_layout.from_adjacent_mut(&mut *block_p);
         {
             let local = &**p;
             local.counter.fetch_sub(1, Ordering::Relaxed);

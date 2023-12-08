@@ -25,7 +25,9 @@
     // we need to pass ownership of `Ref<T>` to the caller.
     pub fn try_to_mut_ref(self) -> Result<MutRef<T>, Self> {
         if self.ref_count() == 0 {
-            Ok(...)
+            let ptr = self.ptr;
+            forget(self);
+            Ok(MutRef { ptr })
         } else {
             Err(self)
         }

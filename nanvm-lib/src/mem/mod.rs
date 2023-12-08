@@ -1,3 +1,4 @@
+mod arena;
 mod atomic_counter;
 mod block;
 mod field_layout;
