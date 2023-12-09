@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Mul, Neg, Sub},
+    ops::{Add, Div, Mul, Neg, Sub},
 };
 
 use crate::common::default::default;
@@ -144,11 +144,23 @@ impl Mul for &BigInt {
     }
 }
 
+impl Div for &BigInt {
+    type Output = BigInt;
+
+    fn div(self, other: Self) -> Self::Output {
+        if other.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
+        todo!()
+    }
+}
+
 fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
     let sum = vec[index] as u128 + add;
     vec[index] = sum as u64;
     let carry = sum >> 64;
-    if (carry > 0) {
+    if carry > 0 {
         vec = add_to_vec(vec, index + 1, carry);
     }
     vec
@@ -664,5 +676,23 @@ mod test {
                 value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
             },
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    #[wasm_bindgen_test]
+    fn test_div_by_zero() {
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [1].vec(),
+        };
+        let result = &a / &BigInt::ZERO;
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    #[wasm_bindgen_test]
+    fn test_div_zero_by_zero() {
+        let result = &BigInt::ZERO / &BigInt::ZERO;
     }
 }
