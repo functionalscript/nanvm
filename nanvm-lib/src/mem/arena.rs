@@ -36,10 +36,7 @@ impl<T: Buffer> Arena<T> {
     }
     pub fn new(buffer: T) -> Self {
         let current = unsafe { Cell::new(buffer.begin() as usize) };
-        Self {
-            buffer,
-            current,
-        }
+        Self { buffer, current }
     }
 }
 
@@ -77,7 +74,7 @@ impl<T: Buffer> Manager for &Arena<T> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{manager::Manager, arena::Buffer};
+    use crate::mem::{arena::Buffer, manager::Manager};
 
     use super::Arena;
 
@@ -101,9 +98,13 @@ mod test {
     fn test_1() {
         let mut range = [0u8; 1];
         let arena = Arena::new(&mut range[..]);
-        unsafe { assert_eq!(arena.buffer.end() as usize - arena.current.get(), 1); }
+        unsafe {
+            assert_eq!(arena.buffer.end() as usize - arena.current.get(), 1);
+        }
         let r = arena.fixed_new(42u8).to_ref();
-        unsafe { assert_eq!(arena.buffer.end() as usize, arena.current.get()); }
+        unsafe {
+            assert_eq!(arena.buffer.end() as usize, arena.current.get());
+        }
     }
 
     #[test]
