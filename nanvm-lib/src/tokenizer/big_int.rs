@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use crate::common::default::default;
+use crate::common::{array::ArrayEx, default::default};
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 struct BigInt {
@@ -147,12 +147,22 @@ impl Mul for &BigInt {
 impl Div for &BigInt {
     type Output = BigInt;
 
-    fn div(self, other: Self) -> Self::Output {
-        if other.is_zero() {
+    fn div(self, d: Self) -> Self::Output {
+        if d.is_zero() {
             panic!("attempt to divide by zero");
         }
 
-        todo!()
+        let (value, _) = divide(&self.value, &d.value);
+        match self.sign == d.sign {
+            true => BigInt {
+                sign: Sign::Positive,
+                value,
+            },
+            false => BigInt {
+                sign: Sign::Negative,
+                value,
+            },
+        }
     }
 }
 
@@ -164,6 +174,14 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
         vec = add_to_vec(vec, index + 1, carry);
     }
     vec
+}
+
+fn divide(n: &Vec<u64>, d: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
+    match cmp_values(n, d) {
+        Ordering::Less => (default(), n.clone()),
+        Ordering::Equal => ([1].vec(), default()),
+        _ => todo!(),
+    }
 }
 
 fn cmp_values(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Ordering {
@@ -225,7 +243,7 @@ fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
 
 #[cfg(test)]
 mod test {
-    use std::cmp::Ordering;
+    use std::{cmp::Ordering, default};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -694,5 +712,33 @@ mod test {
     #[wasm_bindgen_test]
     fn test_div_zero_by_zero() {
         let result = &BigInt::ZERO / &BigInt::ZERO;
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_div_simple() {
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [2].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [7].vec(),
+        };
+        let result = &a / &b;
+        assert_eq!(&result, &BigInt::ZERO);
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [7].vec(),
+        };
+        let result = &a / &a;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [1].vec()
+            }
+        );
     }
 }
