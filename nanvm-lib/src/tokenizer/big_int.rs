@@ -120,7 +120,7 @@ impl Mul for &BigInt {
         if self.is_zero() || other.is_zero() {
             return BigInt::ZERO;
         }
-        let value = mul_vecs(&self.value, &other.value);
+        let value = mul_vec(&self.value, &other.value);
         let sign = match self.sign == other.sign {
             true => Sign::Positive,
             false => Sign::Negative,
@@ -139,7 +139,7 @@ impl Div for &BigInt {
             panic!("attempt to divide by zero");
         }
 
-        let (value, _) = divide(&self.value, &d.value);
+        let (value, _) = div_vec(&self.value, &d.value);
         match self.sign == d.sign {
             true => BigInt {
                 sign: Sign::Positive,
@@ -153,7 +153,7 @@ impl Div for &BigInt {
     }
 }
 
-fn mul_vecs(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Vec<u64> {
+fn mul_vec(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Vec<u64> {
     let lhs_max = lhs.len() - 1;
     let rhs_max = rhs.len() - 1;
     let total_max = lhs.len() + rhs.len() - 1;
@@ -181,7 +181,7 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
     vec
 }
 
-fn divide(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
+fn div_vec(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
     match cmp_values(a, b) {
         Ordering::Less => (default(), a.clone()),
         Ordering::Equal => ([1].vec(), default()),
