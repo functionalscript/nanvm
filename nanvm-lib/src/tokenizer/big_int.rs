@@ -120,20 +120,7 @@ impl Mul for &BigInt {
         if self.is_zero() || other.is_zero() {
             return BigInt::ZERO;
         }
-        let lhs_max = self.value.len() - 1;
-        let rhs_max = other.value.len() - 1;
-        let total_max = self.value.len() + other.value.len() - 1;
-        let mut value = vec![0; total_max + 1];
-        let mut i: usize = 0;
-        while i < total_max {
-            let mut j = if i > rhs_max { i - rhs_max } else { 0 };
-            let max = if i < lhs_max { i } else { lhs_max };
-            while j <= max {
-                value = add_to_vec(value, i, self.value[j] as u128 * other.value[i - j] as u128);
-                j = j + 1;
-            }
-            i = i + 1;
-        }
+        let value = mul_vecs(&self.value, &other.value);
         let sign = match self.sign == other.sign {
             true => Sign::Positive,
             false => Sign::Negative,
@@ -166,6 +153,24 @@ impl Div for &BigInt {
     }
 }
 
+fn mul_vecs(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Vec<u64> {
+    let lhs_max = lhs.len() - 1;
+    let rhs_max = rhs.len() - 1;
+    let total_max = lhs.len() + rhs.len() - 1;
+    let mut value = vec![0; total_max + 1];
+    let mut i: usize = 0;
+    while i < total_max {
+        let mut j = if i > rhs_max { i - rhs_max } else { 0 };
+        let max = if i < lhs_max { i } else { lhs_max };
+        while j <= max {
+            value = add_to_vec(value, i, lhs[j] as u128 * rhs[i - j] as u128);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    value
+}
+
 fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
     let sum = vec[index] as u128 + add;
     vec[index] = sum as u64;
@@ -191,7 +196,7 @@ fn divide(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
                         let q = cur_high / b_high;
                         //todo: mul for big int vectors
                         //let m =
-                    },
+                    }
                     _ => {}
                 }
             }
