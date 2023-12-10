@@ -176,11 +176,26 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
     vec
 }
 
-fn divide(n: &Vec<u64>, d: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
-    match cmp_values(n, d) {
-        Ordering::Less => (default(), n.clone()),
+fn divide(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
+    match cmp_values(a, b) {
+        Ordering::Less => (default(), a.clone()),
         Ordering::Equal => ([1].vec(), default()),
-        _ => todo!(),
+        Ordering::Greater => {
+            let cur = a.clone();
+
+            loop {
+                let cur_high = cur[cur.len() - 1];
+                let b_high = b[b.len() - 1];
+                match b_high.cmp(&cur_high) {
+                    Ordering::Less => {
+                        let q = cur_high / b_high;
+                        //todo: mul for big int vectors
+                        //let m =
+                    },
+                    _ => {}
+                }
+            }
+        }
     }
 }
 
