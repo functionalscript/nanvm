@@ -186,15 +186,29 @@ fn div_vec(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
         Ordering::Less => (default(), a.clone()),
         Ordering::Equal => ([1].vec(), default()),
         Ordering::Greater => {
-            let cur = BigInt { sign: Sign::Positive, value: a.clone() };
+            let mut result = vec![0; a.len() - b.len() + 1];
+            let mut cur = BigInt {
+                sign: Sign::Positive,
+                value: a.clone(),
+            };
             loop {
-                let cur_high = cur.value[cur.value.len() - 1];
-                let b_high = b[b.len() - 1];
+                if cmp_values(&cur.value, b) == Ordering::Less {
+                    return (result, cur.value);
+                }
+                let cur_digit = cur.value.len() - 1;
+                let b_digit = b.len() - 1;
+                let cur_high = cur.value[cur_digit];
+                let b_high = b[b_digit];
                 match b_high.cmp(&cur_high) {
                     Ordering::Less => {
                         let q = cur_high / b_high;
                         let m = mul_vec(b, &[q].vec());
-                        //todo: substract vectors
+                        cur = cur
+                            - BigInt {
+                                sign: Sign::Positive,
+                                value: m,
+                            };
+                        result = add_to_vec(result, cur_digit - b_digit, q as u128);
                     }
                     _ => {}
                 }
