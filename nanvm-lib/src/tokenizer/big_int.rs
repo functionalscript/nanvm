@@ -186,16 +186,15 @@ fn div_vec(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
         Ordering::Less => (default(), a.clone()),
         Ordering::Equal => ([1].vec(), default()),
         Ordering::Greater => {
-            let cur = a.clone();
-
+            let cur = BigInt { sign: Sign::Positive, value: a.clone() };
             loop {
-                let cur_high = cur[cur.len() - 1];
+                let cur_high = cur.value[cur.value.len() - 1];
                 let b_high = b[b.len() - 1];
                 match b_high.cmp(&cur_high) {
                     Ordering::Less => {
                         let q = cur_high / b_high;
-                        //todo: mul for big int vectors
-                        //let m =
+                        let m = mul_vec(b, &[q].vec());
+                        //todo: substract vectors
                     }
                     _ => {}
                 }
@@ -245,6 +244,13 @@ fn add_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
 }
 
 fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
+    let mut value = substract_vec(lhs, rhs);
+    let mut result = BigInt { sign, value };
+    result.normalize();
+    result
+}
+
+fn substract_vec(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Vec<u64> {
     let mut value: Vec<_> = default();
     let mut borrow = 0;
     let iter = lhs
@@ -256,9 +262,7 @@ fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
         value.push(next as u64);
         borrow = next >> 64 & 1;
     }
-    let mut result = BigInt { sign, value };
-    result.normalize();
-    result
+    value
 }
 
 #[cfg(test)]
