@@ -216,18 +216,18 @@ fn div_vec(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
                     Ordering::Equal => todo!(),
                     Ordering::Greater => {
                         let rest_high_2 =
-                            (rest_high as u128) << 64 + rest.value[rest_high_digit - 1] as u128;
+                            ((rest_high as u128) << 64) + rest.value[rest_high_digit - 1] as u128;
                         let q_index = rest_high_digit - b_high_digit - 1;
                         let q = (rest_high_2 / b_high as u128) as u64;
-                        let mut q_vec: Vec<u64> = vec![0, q_index as u64 + 1];
-                        q_vec = add_to_vec(q_vec, q_index, q as u128);
+                        let mut q_vec: Vec<u64> = vec![0; q_index as usize + 1];
+                        q_vec[q_index] = q;
                         let mut m = BigInt {
                             sign: Sign::Positive,
-                            value: mul_vec(b, &[q].vec()),
+                            value: mul_vec(b, &q_vec),
                         };
                         m.normalize();
                         rest = rest - m;
-                        result = add_to_vec(result, rest_high_digit - b_high_digit - 1, q as u128);
+                        result = add_to_vec(result, q_index, q as u128);
                     }
                 }
             }
@@ -828,6 +828,23 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: [3, 4].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [4, 7].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [2].vec(),
+        };
+        let result = &a / &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [(1 << 63) + 2, 3].vec()
             }
         );
     }
