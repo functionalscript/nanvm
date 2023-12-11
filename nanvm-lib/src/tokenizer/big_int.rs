@@ -199,18 +199,20 @@ fn div_vec(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
                 let b_digit = b.len() - 1;
                 let cur_high = cur.value[cur_digit];
                 let b_high = b[b_digit];
+                println!("{} {} {}", cur.value[0], cur_digit, b_digit);
                 match b_high.cmp(&cur_high) {
                     Ordering::Less => {
                         let q = cur_high / b_high;
-                        let m = mul_vec(b, &[q].vec());
-                        cur = cur
-                            - BigInt {
-                                sign: Sign::Positive,
-                                value: m,
-                            };
+                        let mut m = BigInt {
+                            sign: Sign::Positive,
+                            value: mul_vec(b, &[q].vec()),
+                        };
+                        m.normalize();
+                        cur = cur - m;
                         result = add_to_vec(result, cur_digit - b_digit, q as u128);
                     }
-                    _ => {}
+                    Ordering::Equal => todo!(),
+                    Ordering::Greater => todo!(),
                 }
             }
         }
@@ -776,6 +778,23 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: [1].vec()
+            }
+        );
+
+        let a = BigInt {
+            sign: Sign::Positive,
+            value: [7].vec(),
+        };
+        let b = BigInt {
+            sign: Sign::Positive,
+            value: [2].vec(),
+        };
+        let result = &a / &b;
+        assert_eq!(
+            &result,
+            &BigInt {
+                sign: Sign::Positive,
+                value: [3].vec()
             }
         );
     }
