@@ -1,25 +1,12 @@
-use core::{alloc::Layout, cell::Cell, ops::Range};
+use core::{alloc::Layout, cell::Cell};
 
 use super::{
     block::header::BlockHeader,
+    buffer::Buffer,
     field_layout::align_to,
     manager::{Dealloc, Manager},
     ref_::counter_update::RefCounterUpdate,
 };
-
-trait Buffer {
-    fn items_mut(&mut self) -> &mut [u8];
-    unsafe fn range(&mut self) -> Range<*mut u8> {
-        self.items_mut().as_mut_ptr_range()
-    }
-}
-
-impl Buffer for &mut [u8] {
-    #[inline(always)]
-    fn items_mut(&mut self) -> &mut [u8] {
-        self
-    }
-}
 
 #[derive(Debug)]
 struct Arena<T: Buffer> {
