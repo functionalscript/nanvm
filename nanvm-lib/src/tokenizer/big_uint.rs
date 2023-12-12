@@ -209,8 +209,7 @@ impl Div for BigUint {
             panic!("attempt to divide by zero");
         }
 
-        let res: BigUint;
-        (res, _) = self.div_mod(b);
+        let (res, _) = self.div_mod(b);
         res
     }
 }
