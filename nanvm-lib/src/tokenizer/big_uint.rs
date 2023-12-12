@@ -53,7 +53,7 @@ impl BigUint {
                     let a_high = a.value[a_high_digit];
                     let b_high = b.value[b_high_digit];
                     match b_high.cmp(&a_high) {
-                        Ordering::Less => {
+                        Ordering::Less | Ordering::Equal => {
                             let q_index = a_high_digit - b_high_digit;
                             let q_digit = a_high / b_high;
                             let mut q = BigUint {
@@ -68,7 +68,6 @@ impl BigUint {
                             a = a - m;
                             result = &result + &q;
                         }
-                        Ordering::Equal => todo!(),
                         Ordering::Greater => {
                             let a_high_2 =
                                 ((a_high as u128) << 64) + a.value[a_high_digit - 1] as u128;
@@ -500,6 +499,18 @@ mod test {
             &result,
             &BigUint {
                 value: [1].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [1, 1].vec(),
+        };
+        let b = BigUint { value: [1].vec() };
+        let result = a / b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [1, 1].vec()
             }
         );
     }
