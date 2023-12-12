@@ -61,6 +61,10 @@ impl BigUint {
                             };
                             q.value[q_index] = q_digit;
                             let mut m = &b * &q;
+                            if a.cmp(&m) == Ordering::Less {
+                                q.value[q_index] = q_digit - 1;
+                                m = &b * &q;
+                            }
                             a = a - m;
                             result = &result + &q;
                         }
@@ -75,6 +79,10 @@ impl BigUint {
                             };
                             q.value[q_index] = q_digit;
                             let mut m = &b * &q;
+                            if a.cmp(&m) == Ordering::Less {
+                                q.value[q_index] = q_digit - 1;
+                                m = &b * &q;
+                            }
                             a = a - m;
                             result = &result + &q;
                         }
@@ -480,6 +488,18 @@ mod test {
             &result,
             &BigUint {
                 value: [(1 << 63) + 2, 3].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [0, 4].vec(),
+        };
+        let b = BigUint { value: [1, 2].vec() };
+        let result = a / b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [1].vec()
             }
         );
     }
