@@ -7,8 +7,8 @@ use std::{
 use crate::common::{array::ArrayEx, default::default};
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
-struct BigUint {
-    value: Vec<u64>,
+pub struct BigUint {
+    pub value: Vec<u64>,
 }
 
 impl BigUint {

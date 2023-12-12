@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::common::{array::ArrayEx, default::default};
+use crate::tokenizer::big_uint::BigUint;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 struct BigInt {
@@ -120,12 +121,19 @@ impl Mul for &BigInt {
         if self.is_zero() || other.is_zero() {
             return BigInt::ZERO;
         }
-        let value = mul_vec(&self.value, &other.value);
+        let bu = &BigUint {
+            value: self.value.clone(),
+        } * &BigUint {
+            value: other.value.clone(),
+        };
         let sign = match self.sign == other.sign {
             true => Sign::Positive,
             false => Sign::Negative,
         };
-        let mut result = BigInt { sign, value };
+        let mut result = BigInt {
+            sign,
+            value: bu.value,
+        };
         result.normalize();
         result
     }
@@ -139,36 +147,22 @@ impl Div for &BigInt {
             panic!("attempt to divide by zero");
         }
 
-        let (value, _) = div_vec(&self.value, &d.value);
+        let bu = BigUint {
+            value: self.value.clone(),
+        } / BigUint {
+            value: d.value.clone(),
+        };
         match self.sign == d.sign {
             true => BigInt {
                 sign: Sign::Positive,
-                value,
+                value: bu.value,
             },
             false => BigInt {
                 sign: Sign::Negative,
-                value,
+                value: bu.value,
             },
         }
     }
-}
-
-fn mul_vec(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Vec<u64> {
-    let lhs_max = lhs.len() - 1;
-    let rhs_max = rhs.len() - 1;
-    let total_max = lhs.len() + rhs.len() - 1;
-    let mut value = vec![0; total_max + 1];
-    let mut i: usize = 0;
-    while i < total_max {
-        let mut j = if i > rhs_max { i - rhs_max } else { 0 };
-        let max = if i < lhs_max { i } else { lhs_max };
-        while j <= max {
-            value = add_to_vec(value, i, lhs[j] as u128 * rhs[i - j] as u128);
-            j = j + 1;
-        }
-        i = i + 1;
-    }
-    value
 }
 
 fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
@@ -179,60 +173,6 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
         vec = add_to_vec(vec, index + 1, carry);
     }
     vec
-}
-
-fn div_vec(a: &Vec<u64>, b: &Vec<u64>) -> (Vec<u64>, Vec<u64>) {
-    match cmp_values(a, b) {
-        Ordering::Less => (default(), a.clone()),
-        Ordering::Equal => ([1].vec(), default()),
-        Ordering::Greater => {
-            let mut result = vec![0; a.len() - b.len() + 1];
-            let mut rest = BigInt {
-                sign: Sign::Positive,
-                value: a.clone(),
-            };
-            loop {
-                if cmp_values(&rest.value, b) == Ordering::Less {
-                    return (result, rest.value);
-                }
-                let rest_high_digit = rest.value.len() - 1;
-                let b_high_digit = b.len() - 1;
-                let rest_high = rest.value[rest_high_digit];
-                let b_high = b[b_high_digit];
-                match b_high.cmp(&rest_high) {
-                    Ordering::Less => {
-                        let q_index = rest_high_digit - b_high_digit;
-                        let q = rest_high / b_high;
-                        let mut q_vec: Vec<u64> = vec![0; q_index as usize + 1];
-                        q_vec[q_index] = q;
-                        let mut m = BigInt {
-                            sign: Sign::Positive,
-                            value: mul_vec(b, &q_vec),
-                        };
-                        m.normalize();
-                        rest = rest - m;
-                        result = add_to_vec(result, q_index, q as u128);
-                    }
-                    Ordering::Equal => todo!(),
-                    Ordering::Greater => {
-                        let rest_high_2 =
-                            ((rest_high as u128) << 64) + rest.value[rest_high_digit - 1] as u128;
-                        let q_index = rest_high_digit - b_high_digit - 1;
-                        let q = (rest_high_2 / b_high as u128) as u64;
-                        let mut q_vec: Vec<u64> = vec![0; q_index as usize + 1];
-                        q_vec[q_index] = q;
-                        let mut m = BigInt {
-                            sign: Sign::Positive,
-                            value: mul_vec(b, &q_vec),
-                        };
-                        m.normalize();
-                        rest = rest - m;
-                        result = add_to_vec(result, q_index, q as u128);
-                    }
-                }
-            }
-        }
-    }
 }
 
 fn cmp_values(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Ordering {
