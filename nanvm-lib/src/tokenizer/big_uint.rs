@@ -119,21 +119,26 @@ impl Sub for BigUint {
     type Output = BigUint;
 
     fn sub(self, other: Self) -> Self::Output {
-        todo!("if other < self return 0");
-
-        let mut value: Vec<_> = default();
-        let mut borrow = 0;
-        let iter = self
-            .value
-            .iter()
-            .copied()
-            .zip(other.value.iter().copied().chain(iter::repeat(0)));
-        for (a, b) in iter {
-            let next = a as i128 - b as i128 - borrow;
-            value.push(next as u64);
-            borrow = next >> 64 & 1;
+        match self.cmp(&other) {
+            Ordering::Less | Ordering::Equal => BigUint::ZERO,
+            Ordering::Greater => {
+                let mut value: Vec<_> = default();
+                let mut borrow = 0;
+                let iter = self
+                    .value
+                    .iter()
+                    .copied()
+                    .zip(other.value.iter().copied().chain(iter::repeat(0)));
+                for (a, b) in iter {
+                    let next = a as i128 - b as i128 - borrow;
+                    value.push(next as u64);
+                    borrow = next >> 64 & 1;
+                }
+                let mut res = BigUint { value };
+                res.normalize();
+                res
+            }
         }
-        BigUint { value }
     }
 }
 
@@ -218,4 +223,265 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
         vec = add_to_vec(vec, index + 1, carry);
     }
     vec
+}
+
+#[cfg(test)]
+mod test {
+    use std::{cmp::Ordering, default};
+
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::common::array::ArrayEx;
+
+    use super::BigUint;
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_ord() {
+        let a = BigUint { value: [1].vec() };
+        let b = BigUint { value: [1].vec() };
+        assert_eq!(a.cmp(&b), Ordering::Equal);
+
+        let a = BigUint { value: [1].vec() };
+        let b = BigUint { value: [2].vec() };
+        assert_eq!(a.cmp(&b), Ordering::Less);
+
+        let a = BigUint { value: [2].vec() };
+        let b = BigUint { value: [1].vec() };
+        assert_eq!(a.cmp(&b), Ordering::Greater);
+
+        let a = BigUint {
+            value: [1, 2].vec(),
+        };
+        let b = BigUint {
+            value: [2, 1].vec(),
+        };
+        assert_eq!(a.cmp(&b), Ordering::Greater);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_add() {
+        let a = BigUint { value: [1].vec() };
+        let b = BigUint { value: [2].vec() };
+        let result = &a + &b;
+        assert_eq!(&result, &BigUint { value: [3].vec() });
+
+        let a = BigUint { value: [1].vec() };
+        let b = BigUint {
+            value: [2, 4].vec(),
+        };
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [3, 4].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [1 << 63].vec(),
+        };
+        let b = BigUint {
+            value: [1 << 63].vec(),
+        };
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [0, 1].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_add_overflow() {
+        let a = BigUint {
+            value: [u64::MAX, 0, 1].vec(),
+        };
+        let b = BigUint {
+            value: [u64::MAX, u64::MAX].vec(),
+        };
+        let result = &a + &b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [u64::MAX - 1, 0, 2].vec()
+            }
+        );
+        let result = &b + &a;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [u64::MAX - 1, 0, 2].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_sub() {
+        let a = BigUint {
+            value: [1 << 63].vec(),
+        };
+        let b = BigUint {
+            value: [1 << 63].vec(),
+        };
+        let result = a - b;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [3].vec() };
+        let b = BigUint { value: [2].vec() };
+        let result = a.clone() - b.clone();
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+        let result = b - a;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint {
+            value: [0, 1].vec(),
+        };
+        let b = BigUint { value: [1].vec() };
+        let result = a - b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [u64::MAX].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_mul() {
+        let a = BigUint { value: [1].vec() };
+        let result = &a * &BigUint::ZERO;
+        assert_eq!(&result, &BigUint::ZERO);
+        let result = &BigUint::ZERO * &a;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [1].vec() };
+        let result = &a * &a;
+        assert_eq!(&result, &a);
+
+        let a = BigUint {
+            value: [1, 2, 3, 4].vec(),
+        };
+        let b = BigUint {
+            value: [5, 6, 7].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [5, 16, 34, 52, 45, 28].vec()
+            },
+        );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [5, 16, 34, 52, 45, 28].vec()
+            },
+        );
+
+        let a = BigUint {
+            value: [u64::MAX].vec(),
+        };
+        let b = BigUint {
+            value: [u64::MAX].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [1, u64::MAX - 1].vec()
+            },
+        );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [1, u64::MAX - 1].vec()
+            },
+        );
+
+        let a = BigUint {
+            value: [u64::MAX, u64::MAX, u64::MAX].vec(),
+        };
+        let b = BigUint {
+            value: [u64::MAX].vec(),
+        };
+        let result = &a * &b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+            },
+        );
+        let result = &b * &a;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+            },
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    #[wasm_bindgen_test]
+    fn test_div_by_zero() {
+        let a = BigUint { value: [1].vec() };
+        let result = a / BigUint::ZERO;
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    #[wasm_bindgen_test]
+    fn test_div_zero_by_zero() {
+        let result = BigUint::ZERO / BigUint::ZERO;
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_div_simple() {
+        let a = BigUint { value: [2].vec() };
+        let b = BigUint { value: [7].vec() };
+        let result = a / b;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [7].vec() };
+        let result = a.clone() / a;
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint { value: [7].vec() };
+        let b = BigUint { value: [2].vec() };
+        let result = a / b;
+        assert_eq!(&result, &BigUint { value: [3].vec() });
+
+        let a = BigUint {
+            value: [6, 8].vec(),
+        };
+        let b = BigUint { value: [2].vec() };
+        let result = a / b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [3, 4].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [4, 7].vec(),
+        };
+        let b = BigUint { value: [2].vec() };
+        let result = a / b;
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [(1 << 63) + 2, 3].vec()
+            }
+        );
+    }
 }
