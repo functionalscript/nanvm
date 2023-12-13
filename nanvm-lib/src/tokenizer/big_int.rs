@@ -1,10 +1,9 @@
 use std::{
     cmp::Ordering,
-    iter,
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use crate::common::{array::ArrayEx, default::default};
+use crate::common::array::ArrayEx;
 use crate::tokenizer::big_uint::BigUint;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
@@ -178,7 +177,7 @@ impl Div for &BigInt {
 
 #[cfg(test)]
 mod test {
-    use std::{cmp::Ordering, default};
+    use std::cmp::Ordering;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
