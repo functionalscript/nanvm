@@ -69,15 +69,20 @@ impl Add for &BigInt {
 
     fn add(self, other: Self) -> Self::Output {
         match self.sign == other.sign {
-            true => add_same_sign(self.sign, &self.value.value, &other.value.value),
-            false => match cmp_values(&self.value.value, &other.value.value) {
+            true => BigInt {
+                sign: self.sign,
+                value: &self.value + &other.value,
+            },
+            false => match self.value.cmp(&other.value) {
                 Ordering::Equal => BigInt::ZERO,
-                Ordering::Greater => {
-                    substract_same_sign(self.sign, &self.value.value, &other.value.value)
-                }
-                Ordering::Less => {
-                    substract_same_sign(other.sign, &other.value.value, &self.value.value)
-                }
+                Ordering::Greater => BigInt {
+                    sign: self.sign,
+                    value: &self.value - &other.value,
+                },
+                Ordering::Less => BigInt {
+                    sign: other.sign,
+                    value: &other.value - &self.value,
+                },
             },
         }
     }
@@ -131,7 +136,7 @@ impl Ord for BigInt {
             return self.sign.cmp(&other.sign);
         }
 
-        cmp_values(&self.value.value, &other.value.value)
+        self.value.cmp(&other.value)
     }
 }
 
@@ -169,84 +174,6 @@ impl Div for &BigInt {
         let value = &self.value / &d.value;
         BigInt { sign, value }
     }
-}
-
-fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
-    let sum = vec[index] as u128 + add;
-    vec[index] = sum as u64;
-    let carry = sum >> 64;
-    if carry > 0 {
-        vec = add_to_vec(vec, index + 1, carry);
-    }
-    vec
-}
-
-fn cmp_values(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Ordering {
-    let lhs_len = lhs.len();
-    let rhs_len = rhs.len();
-    if lhs_len != rhs_len {
-        return lhs_len.cmp(&rhs_len);
-    }
-
-    for (lhs_digit, rhs_digit) in lhs.iter().copied().rev().zip(rhs.iter().copied().rev()) {
-        if lhs_digit != rhs_digit {
-            return lhs_digit.cmp(&rhs_digit);
-        }
-    }
-
-    Ordering::Equal
-}
-
-fn add_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
-    let mut value: Vec<_> = default();
-    let mut carry = 0;
-    let iter = match rhs.len() > lhs.len() {
-        true => rhs
-            .iter()
-            .copied()
-            .zip(lhs.iter().copied().chain(iter::repeat(0))),
-        false => lhs
-            .iter()
-            .copied()
-            .zip(rhs.iter().copied().chain(iter::repeat(0))),
-    };
-    for (a, b) in iter {
-        let next = a as u128 + b as u128 + carry;
-        value.push(next as u64);
-        carry = next >> 64;
-    }
-    if carry != 0 {
-        value.push(carry as u64);
-    }
-    BigInt {
-        sign,
-        value: BigUint { value },
-    }
-}
-
-fn substract_same_sign(sign: Sign, lhs: &Vec<u64>, rhs: &Vec<u64>) -> BigInt {
-    let mut value = substract_vec(lhs, rhs);
-    let mut result = BigInt {
-        sign,
-        value: BigUint { value },
-    };
-    result.normalize();
-    result
-}
-
-fn substract_vec(lhs: &Vec<u64>, rhs: &Vec<u64>) -> Vec<u64> {
-    let mut value: Vec<_> = default();
-    let mut borrow = 0;
-    let iter = lhs
-        .iter()
-        .copied()
-        .zip(rhs.iter().copied().chain(iter::repeat(0)));
-    for (a, b) in iter {
-        let next = a as i128 - b as i128 - borrow;
-        value.push(next as u64);
-        borrow = next >> 64 & 1;
-    }
-    value
 }
 
 #[cfg(test)]

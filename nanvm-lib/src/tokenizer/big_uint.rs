@@ -65,7 +65,7 @@ impl BigUint {
                                 q.value[q_index] = q_digit - 1;
                                 m = b * &q;
                             }
-                            a = a - m;
+                            a = &a - &m;
                             result = &result + &q;
                         }
                         Ordering::Greater => {
@@ -82,7 +82,7 @@ impl BigUint {
                                 q.value[q_index] = q_digit - 1;
                                 m = b * &q;
                             }
-                            a = a - m;
+                            a = &a - &m;
                             result = &result + &q;
                         }
                     }
@@ -122,7 +122,7 @@ impl Add for &BigUint {
     }
 }
 
-impl Sub for BigUint {
+impl Sub for &BigUint {
     type Output = BigUint;
 
     fn sub(self, other: Self) -> Self::Output {
@@ -334,21 +334,21 @@ mod test {
         let b = BigUint {
             value: [1 << 63].vec(),
         };
-        let result = a - b;
+        let result = &a - &b;
         assert_eq!(&result, &BigUint::ZERO);
 
         let a = BigUint { value: [3].vec() };
         let b = BigUint { value: [2].vec() };
-        let result = a.clone() - b.clone();
+        let result = &a - &b;
         assert_eq!(&result, &BigUint { value: [1].vec() });
-        let result = b - a;
+        let result = &b - &a;
         assert_eq!(&result, &BigUint::ZERO);
 
         let a = BigUint {
             value: [0, 1].vec(),
         };
         let b = BigUint { value: [1].vec() };
-        let result = a - b;
+        let result = &a - &b;
         assert_eq!(
             &result,
             &BigUint {
