@@ -233,7 +233,7 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
 
 #[cfg(test)]
 mod test {
-    use std::{cmp::Ordering, default};
+    use std::cmp::Ordering;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
