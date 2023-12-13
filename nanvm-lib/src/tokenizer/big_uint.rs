@@ -12,9 +12,9 @@ pub struct BigUint {
 }
 
 impl BigUint {
-    const ZERO: BigUint = BigUint { value: Vec::new() };
+    pub const ZERO: BigUint = BigUint { value: Vec::new() };
 
-    fn normalize(&mut self) {
+    pub fn normalize(&mut self) {
         loop {
             match self.value.last() {
                 Some(&last) if last == 0 => {
@@ -25,15 +25,15 @@ impl BigUint {
         }
     }
 
-    fn is_zero(&self) -> bool {
+    pub fn is_zero(&self) -> bool {
         self.len() == 0
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.value.len()
     }
 
-    fn div_mod(self, b: Self) -> (BigUint, BigUint) {
+    fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
         if b.is_zero() {
             panic!("attempt to divide by zero");
         }
@@ -60,10 +60,10 @@ impl BigUint {
                                 value: vec![0; q_index as usize + 1],
                             };
                             q.value[q_index] = q_digit;
-                            let mut m = &b * &q;
+                            let mut m = b * &q;
                             if a.cmp(&m) == Ordering::Less {
                                 q.value[q_index] = q_digit - 1;
-                                m = &b * &q;
+                                m = b * &q;
                             }
                             a = a - m;
                             result = &result + &q;
@@ -77,10 +77,10 @@ impl BigUint {
                                 value: vec![0; q_index as usize + 1],
                             };
                             q.value[q_index] = q_digit;
-                            let mut m = &b * &q;
+                            let mut m = b * &q;
                             if a.cmp(&m) == Ordering::Less {
                                 q.value[q_index] = q_digit - 1;
-                                m = &b * &q;
+                                m = b * &q;
                             }
                             a = a - m;
                             result = &result + &q;
@@ -208,7 +208,7 @@ impl Mul for &BigUint {
     }
 }
 
-impl Div for BigUint {
+impl Div for &BigUint {
     type Output = BigUint;
 
     fn div(self, b: Self) -> Self::Output {
@@ -439,14 +439,14 @@ mod test {
     #[wasm_bindgen_test]
     fn test_div_by_zero() {
         let a = BigUint { value: [1].vec() };
-        let result = a / BigUint::ZERO;
+        let result = &a / &BigUint::ZERO;
     }
 
     #[test]
     #[should_panic(expected = "attempt to divide by zero")]
     #[wasm_bindgen_test]
     fn test_div_zero_by_zero() {
-        let result = BigUint::ZERO / BigUint::ZERO;
+        let result = &BigUint::ZERO / &BigUint::ZERO;
     }
 
     #[test]
@@ -454,23 +454,23 @@ mod test {
     fn test_div_simple() {
         let a = BigUint { value: [2].vec() };
         let b = BigUint { value: [7].vec() };
-        let result = a / b;
+        let result = &a / &b;
         assert_eq!(&result, &BigUint::ZERO);
 
         let a = BigUint { value: [7].vec() };
-        let result = a.clone() / a;
+        let result = &a / &a;
         assert_eq!(&result, &BigUint { value: [1].vec() });
 
         let a = BigUint { value: [7].vec() };
         let b = BigUint { value: [2].vec() };
-        let result = a / b;
+        let result = &a / &b;
         assert_eq!(&result, &BigUint { value: [3].vec() });
 
         let a = BigUint {
             value: [6, 8].vec(),
         };
         let b = BigUint { value: [2].vec() };
-        let result = a / b;
+        let result = &a / &b;
         assert_eq!(
             &result,
             &BigUint {
@@ -482,7 +482,7 @@ mod test {
             value: [4, 7].vec(),
         };
         let b = BigUint { value: [2].vec() };
-        let result = a / b;
+        let result = &a / &b;
         assert_eq!(
             &result,
             &BigUint {
@@ -493,20 +493,17 @@ mod test {
         let a = BigUint {
             value: [0, 4].vec(),
         };
-        let b = BigUint { value: [1, 2].vec() };
-        let result = a / b;
-        assert_eq!(
-            &result,
-            &BigUint {
-                value: [1].vec()
-            }
-        );
+        let b = BigUint {
+            value: [1, 2].vec(),
+        };
+        let result = &a / &b;
+        assert_eq!(&result, &BigUint { value: [1].vec() });
 
         let a = BigUint {
             value: [1, 1].vec(),
         };
         let b = BigUint { value: [1].vec() };
-        let result = a / b;
+        let result = &a / &b;
         assert_eq!(
             &result,
             &BigUint {
