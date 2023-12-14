@@ -14,12 +14,8 @@ struct Arena<'a> {
 }
 
 impl<'a> Arena<'a> {
-    #[inline(always)]
-    const fn layout(size: usize) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(size, 1) }
-    }
-    pub fn new(mut buffer: &'a mut [u8]) -> Self {
-        let range = unsafe { buffer.as_mut_ptr_range() };
+    pub fn new(buffer: &'a mut [u8]) -> Self {
+        let range = buffer.as_mut_ptr_range();
         Self {
             start: Cell::new(range.start),
             end: range.end,
@@ -51,11 +47,13 @@ impl<'a> Manager for &Arena<'a> {
             let result = self.start.get();
             result.add(result.align_offset(layout.align()))
         };
-        let start = result.add(layout.size());
-        if start > self.end {
-            panic!("out of memory");
+        {
+            let start = result.add(layout.size());
+            if start > self.end {
+                panic!("out of memory");
+            }
+            self.start.set(start);
         }
-        self.start.set(start);
         result as *mut u8
     }
 }
