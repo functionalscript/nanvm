@@ -13,31 +13,18 @@ use super::{
 };
 
 /// A reference to an object allocated by a memory manager.
-#[repr(transparent)]
-#[derive(Debug)]
-pub struct Ref<T: Object, D: Dealloc> {
-    ptr: *const Block<T, D>,
-}
+pub type Ref<T: Object, D: Dealloc> = VariantRef<*const Block<T, D>>;
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
     #[inline(always)]
-    pub unsafe fn new(ptr: *const Block<T, D>) -> Self {
-        Self { ptr }
-    }
-    #[inline(always)]
-    unsafe fn counter_update(&self, i: RefCounterUpdate) -> Option<*mut Block<T, D>> {
-        let ptr = self.ptr;
-        if (*ptr).header.ref_counter_update(i) == 0 {
-            Some(ptr as *mut _)
-        } else {
-            None
-        }
+    pub unsafe fn new(value: *const Block<T, D>) -> Self {
+        Self { value }
     }
     pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {
         unsafe {
-            if let Some(ptr) = self.counter_update(RefCounterUpdate::Read) {
+            if let Some(ptr) = self.value.ref_counter_update(RefCounterUpdate::Read) {
                 forget(self);
-                Ok(MutRef::new(ptr))
+                Ok(MutRef::new(ptr as _))
             } else {
                 Err(self)
             }
@@ -45,36 +32,9 @@ impl<T: Object, D: Dealloc> Ref<T, D> {
     }
 }
 
-impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        unsafe {
-            self.counter_update(RefCounterUpdate::AddRef);
-            Self { ptr: self.ptr }
-        }
-    }
-}
-
-impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(ptr) = self.counter_update(RefCounterUpdate::Release) {
-                (*ptr).delete();
-            }
-        }
-    }
-}
-
-impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
-    type Target = T;
-    #[inline(always)]
-    fn deref(&self) -> &T {
-        unsafe { (*self.ptr).object() }
-    }
-}
-
+#[derive(Debug)]
 #[repr(transparent)]
-struct VariantRef<T: Variant> {
+pub struct VariantRef<T: Variant> {
     value: T,
 }
 
@@ -96,7 +56,7 @@ impl<T: Variant> Drop for VariantRef<T> {
     }
 }
 
-impl<T: Object, D: Dealloc> Deref for VariantRef<*const Block<T, D>> {
+impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &T {
