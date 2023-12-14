@@ -14,6 +14,10 @@ pub struct BigUint {
 impl BigUint {
     pub const ZERO: BigUint = BigUint { value: Vec::new() };
 
+    pub fn one() -> BigUint {
+        BigUint { value: [1].vec() }
+    }
+
     pub fn normalize(&mut self) {
         loop {
             match self.value.last() {
@@ -25,6 +29,10 @@ impl BigUint {
         }
     }
 
+    pub fn is_one(&self) -> bool {
+        self.len() == 1 && self.value[0] == 1
+    }
+
     pub fn is_zero(&self) -> bool {
         self.len() == 0
     }
@@ -34,11 +42,22 @@ impl BigUint {
     }
 
     pub fn pow(&self, mut exp: u64) -> BigUint {
+        if self.is_one() {
+            return BigUint::one();
+        }
+
+        if self.is_zero() {
+            return if exp == 0 {
+                BigUint::one()
+            } else {
+                BigUint::ZERO
+            };
+        }
+
         let mut res = BigUint { value: [1].vec() };
         let mut b = self.clone();
         loop {
-            if exp == 0
-            {
+            if exp == 0 {
                 return res;
             }
             if exp & 1 > 0 {
@@ -539,6 +558,14 @@ mod test {
 
         let a = BigUint::ZERO;
         let result = a.pow(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow(100);
         assert_eq!(&result, &BigUint { value: [1].vec() });
     }
 }
