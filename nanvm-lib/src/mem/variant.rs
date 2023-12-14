@@ -5,7 +5,7 @@ use super::{
     ref_::counter_update::RefCounterUpdate,
 };
 
-trait Variant: Copy {
+pub trait Variant: Copy {
     type BlockHeader: BlockHeader;
     fn get_block_header(self) -> Option<*const Self::BlockHeader>;
     unsafe fn delete(self, block: *mut Self::BlockHeader);
@@ -29,28 +29,5 @@ impl<T: Object, D: Dealloc> Variant for *const Block<T, D> {
     }
     unsafe fn delete(self, block: *mut Self::BlockHeader) {
         (*(block as *mut Block<T, D>)).delete();
-    }
-}
-
-#[repr(transparent)]
-struct VariantRef<T: Variant> {
-    value: T,
-}
-
-impl<T: Variant> Clone for VariantRef<T> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        unsafe { self.value.ref_counter_update(RefCounterUpdate::AddRef) };
-        Self { value: self.value }
-    }
-}
-
-impl<T: Variant> Drop for VariantRef<T> {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(header) = self.value.ref_counter_update(RefCounterUpdate::Release) {
-                self.value.delete(header);
-            }
-        }
     }
 }
