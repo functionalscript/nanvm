@@ -13,7 +13,7 @@ impl<T: Object, D: Dealloc> Ref<T, D> {
         unsafe {
             if let Some(ptr) = self.internal().ref_counter_update(RefCounterUpdate::Read) {
                 forget(self);
-                Ok(MutRef::new(ptr as *mut Block<T, D>))
+                Ok(MutRef::new(ptr as _))
             } else {
                 Err(self)
             }

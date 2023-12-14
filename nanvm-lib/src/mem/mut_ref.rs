@@ -14,11 +14,11 @@ pub struct MutRef<T: Object, D: Dealloc>(*mut Block<T, D>);
 
 impl<T: Object, D: Dealloc> MutRef<T, D> {
     #[inline(always)]
-    pub unsafe fn new(v: *mut Block<T, D>) -> Self {
+    pub const unsafe fn new(v: *mut Block<T, D>) -> Self {
         Self(v)
     }
     #[inline(always)]
-    pub fn to_ref(self) -> Ref<T, D> {
+    pub const fn to_ref(self) -> Ref<T, D> {
         let result = unsafe { Ref::new(self.0) };
         forget(self);
         result

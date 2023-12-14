@@ -11,9 +11,7 @@ pub trait Variant: Copy {
     unsafe fn delete(self, block: *mut Self::BlockHeader);
     unsafe fn ref_counter_update(self, i: RefCounterUpdate) -> Option<*mut Self::BlockHeader> {
         match self.get_block_header() {
-            Some(header) if (*header).ref_counter_update(i) == 0 => {
-                Some(header as *const _ as *mut _)
-            }
+            Some(header) if (*header).ref_counter_update(i) == 0 => Some(header as *const _ as _),
             _ => None,
         }
     }
