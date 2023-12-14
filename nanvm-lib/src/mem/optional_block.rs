@@ -5,7 +5,7 @@ use super::{
     ref_counter_update::RefCounterUpdate,
 };
 
-pub trait OptionalBlockPtr: Copy {
+pub trait OptionalBlock: Copy {
     type BlockHeader: BlockHeader;
     fn try_get_block_header(self) -> Option<*const Self::BlockHeader>;
     unsafe fn delete(self, block_header: *mut Self::BlockHeader);
@@ -18,7 +18,7 @@ pub trait OptionalBlockPtr: Copy {
     }
 }
 
-impl<T: Object, D: Dealloc> OptionalBlockPtr for *const Block<T, D> {
+impl<T: Object, D: Dealloc> OptionalBlock for *const Block<T, D> {
     type BlockHeader = D::BlockHeader;
     fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
         unsafe { Some(&(*self).header) }

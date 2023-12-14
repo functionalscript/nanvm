@@ -1,12 +1,12 @@
-use super::{optional_block_ptr::OptionalBlockPtr, ref_counter_update::RefCounterUpdate};
+use super::{optional_block::OptionalBlock, ref_counter_update::RefCounterUpdate};
 
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct OptionalRef<T: OptionalBlockPtr> {
+pub struct OptionalRef<T: OptionalBlock> {
     value: T,
 }
 
-impl<T: OptionalBlockPtr> OptionalRef<T> {
+impl<T: OptionalBlock> OptionalRef<T> {
     #[inline(always)]
     pub const unsafe fn new(value: T) -> Self {
         Self { value }
@@ -17,7 +17,7 @@ impl<T: OptionalBlockPtr> OptionalRef<T> {
     }
 }
 
-impl<T: OptionalBlockPtr> Clone for OptionalRef<T> {
+impl<T: OptionalBlock> Clone for OptionalRef<T> {
     #[inline(always)]
     fn clone(&self) -> Self {
         unsafe { self.value.ref_counter_update(RefCounterUpdate::AddRef) };
@@ -25,7 +25,7 @@ impl<T: OptionalBlockPtr> Clone for OptionalRef<T> {
     }
 }
 
-impl<T: OptionalBlockPtr> Drop for OptionalRef<T> {
+impl<T: OptionalBlock> Drop for OptionalRef<T> {
     fn drop(&mut self) {
         unsafe {
             if let Some(header) = self.value.ref_counter_update(RefCounterUpdate::Release) {

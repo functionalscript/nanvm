@@ -9,7 +9,7 @@ pub mod manager;
 pub mod mut_ref;
 mod new_in_place;
 mod object;
-mod optional_block_ptr;
+mod optional_block;
 mod optional_ref;
 mod ref_;
 mod ref_counter_update;

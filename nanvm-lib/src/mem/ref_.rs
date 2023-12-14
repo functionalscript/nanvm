@@ -1,9 +1,8 @@
 use core::{mem::forget, ops::Deref};
 
 use super::{
-    block::Block, manager::Dealloc, mut_ref::MutRef, object::Object,
-    optional_block_ptr::OptionalBlockPtr, optional_ref::OptionalRef,
-    ref_counter_update::RefCounterUpdate,
+    block::Block, manager::Dealloc, mut_ref::MutRef, object::Object, optional_block::OptionalBlock,
+    optional_ref::OptionalRef, ref_counter_update::RefCounterUpdate,
 };
 
 /// A reference to an object allocated by a memory manager.
