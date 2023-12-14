@@ -65,7 +65,7 @@ impl<T: Buffer> Manager for &Arena<T> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{arena::Buffer, manager::Manager};
+    use crate::mem::manager::Manager;
 
     use super::Arena;
 
