@@ -18,6 +18,11 @@ pub fn dec_to_bin(dec: BigFloat) -> BigFloat {
         return BigFloat::ZERO;
     }
 
+    if dec.exp >= 0 {
+        //todo: implement pow for bigint
+        todo!()
+    }
+
     todo!()
 }
 
@@ -46,5 +51,11 @@ mod test {
             exp: -10,
         });
         assert_eq!(res, BigFloat::ZERO);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_integer() {
+
     }
 }
