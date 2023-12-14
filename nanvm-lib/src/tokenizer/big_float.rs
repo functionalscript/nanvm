@@ -55,7 +55,5 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_integer() {
-
-    }
+    fn test_integer() {}
 }

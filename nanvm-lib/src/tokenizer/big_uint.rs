@@ -33,6 +33,22 @@ impl BigUint {
         self.value.len()
     }
 
+    pub fn pow(&self, mut exp: u64) -> BigUint {
+        let mut res = BigUint { value: [1].vec() };
+        let mut b = self.clone();
+        loop {
+            if exp == 0
+            {
+                return res;
+            }
+            if exp & 1 > 0 {
+                res = &res * &b;
+            }
+            exp = exp >> 1;
+            b = &b * &b;
+        }
+    }
+
     fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
         if b.is_zero() {
             panic!("attempt to divide by zero");
@@ -500,5 +516,29 @@ mod test {
                 value: [1, 1].vec()
             }
         );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_pov() {
+        let a = BigUint { value: [100].vec() };
+        let result = a.pow(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint { value: [2].vec() };
+        let result = a.pow(7);
+        assert_eq!(&result, &BigUint { value: [128].vec() });
+
+        let a = BigUint { value: [5].vec() };
+        let result = a.pow(3);
+        assert_eq!(&result, &BigUint { value: [125].vec() });
+
+        let a = BigUint::ZERO;
+        let result = a.pow(3);
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint::ZERO;
+        let result = a.pow(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
     }
 }
