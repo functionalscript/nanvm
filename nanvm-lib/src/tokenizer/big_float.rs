@@ -1,19 +1,19 @@
 use super::big_int::BigInt;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
-pub struct BigFloat {
+pub struct BigFloat<const Base: u32> {
     significand: BigInt,
     exp: i64,
 }
 
-impl BigFloat {
-    pub const ZERO: BigFloat = BigFloat {
+impl <const Base: u32>  BigFloat<Base> {
+    pub const ZERO: BigFloat<Base> = BigFloat {
         significand: BigInt::ZERO,
         exp: 0,
     };
 }
 
-pub fn dec_to_bin(dec: BigFloat) -> BigFloat {
+pub fn dec_to_bin(dec: BigFloat<10>) -> BigFloat<2> {
     if dec.significand.is_zero() {
         return BigFloat::ZERO;
     }
