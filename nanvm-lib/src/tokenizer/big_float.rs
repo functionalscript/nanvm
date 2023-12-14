@@ -6,7 +6,7 @@ pub struct BigFloat<const Base: u32> {
     exp: i64,
 }
 
-impl <const Base: u32>  BigFloat<Base> {
+impl<const Base: u32> BigFloat<Base> {
     pub const ZERO: BigFloat<Base> = BigFloat {
         significand: BigInt::ZERO,
         exp: 0,
