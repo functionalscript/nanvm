@@ -8,7 +8,8 @@ use super::{
     block::{header::BlockHeader, Block},
     manager::Dealloc,
     mut_ref::MutRef,
-    object::Object, variant::Variant,
+    object::Object,
+    variant::Variant,
 };
 
 /// A reference to an object allocated by a memory manager.
@@ -92,6 +93,14 @@ impl<T: Variant> Drop for VariantRef<T> {
                 self.value.delete(header);
             }
         }
+    }
+}
+
+impl<T: Object, D: Dealloc> Deref for VariantRef<*const Block<T, D>> {
+    type Target = T;
+    #[inline(always)]
+    fn deref(&self) -> &T {
+        unsafe { (*self.value).object() }
     }
 }
 
