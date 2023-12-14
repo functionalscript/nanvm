@@ -6,6 +6,12 @@ pub struct BigFloat<const Base: u32> {
     exp: i64,
 }
 
+#[derive(Debug, PartialEq, Clone, Eq, Default)]
+pub struct Float80<const Base: u32> {
+    significand: i64,
+    exp: i16,
+}
+
 impl<const Base: u32> BigFloat<Base> {
     pub const ZERO: BigFloat<Base> = BigFloat {
         significand: BigInt::ZERO,
