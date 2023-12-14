@@ -5,25 +5,25 @@ use super::{
     ref_counter_update::RefCounterUpdate,
 };
 
-pub trait OptionalPtr: Copy {
+pub trait OptionalBlockPtr: Copy {
     type BlockHeader: BlockHeader;
-    fn get_block_header(self) -> Option<*const Self::BlockHeader>;
-    unsafe fn delete(self, block: *mut Self::BlockHeader);
+    fn try_get_block_header(self) -> Option<*const Self::BlockHeader>;
+    unsafe fn delete(self, block_header: *mut Self::BlockHeader);
     //
     unsafe fn ref_counter_update(self, i: RefCounterUpdate) -> Option<*mut Self::BlockHeader> {
-        match self.get_block_header() {
+        match self.try_get_block_header() {
             Some(header) if (*header).ref_counter_update(i) == 0 => Some(header as *const _ as _),
             _ => None,
         }
     }
 }
 
-impl<T: Object, D: Dealloc> OptionalPtr for *const Block<T, D> {
+impl<T: Object, D: Dealloc> OptionalBlockPtr for *const Block<T, D> {
     type BlockHeader = D::BlockHeader;
-    fn get_block_header(self) -> Option<*const Self::BlockHeader> {
+    fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
         unsafe { Some(&(*self).header) }
     }
-    unsafe fn delete(self, block: *mut Self::BlockHeader) {
-        (*(block as *mut Block<T, D>)).delete();
+    unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
+        (*(block_header as *mut Block<T, D>)).delete();
     }
 }
