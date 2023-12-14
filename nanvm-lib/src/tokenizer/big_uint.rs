@@ -41,7 +41,31 @@ impl BigUint {
         self.value.len()
     }
 
-    pub fn pow(&self, mut exp: u64) -> BigUint {
+    pub fn pow(&self, exp: &BigUint) -> BigUint {
+        if self.is_one() {
+            return BigUint::one();
+        }
+
+        if self.is_zero() {
+            return if exp.is_zero() {
+                BigUint::one()
+            } else {
+                BigUint::ZERO
+            };
+        }
+
+        if exp.is_zero() {
+            return BigUint::one();
+        }
+
+        if exp.len() != 1 {
+            panic!("Maximum BigUint size exceeded")
+        }
+
+        self.pow_u64(exp.value[0])
+    }
+
+    pub fn pow_u64(&self, mut exp: u64) -> BigUint {
         if self.is_one() {
             return BigUint::one();
         }
@@ -539,33 +563,79 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_pov() {
+    fn test_pow_u64() {
         let a = BigUint { value: [100].vec() };
-        let result = a.pow(0);
+        let result = a.pow_u64(0);
         assert_eq!(&result, &BigUint { value: [1].vec() });
 
         let a = BigUint { value: [2].vec() };
-        let result = a.pow(7);
+        let result = a.pow_u64(7);
         assert_eq!(&result, &BigUint { value: [128].vec() });
 
         let a = BigUint { value: [5].vec() };
-        let result = a.pow(3);
+        let result = a.pow_u64(3);
         assert_eq!(&result, &BigUint { value: [125].vec() });
 
         let a = BigUint::ZERO;
-        let result = a.pow(3);
+        let result = a.pow_u64(3);
         assert_eq!(&result, &BigUint::ZERO);
 
         let a = BigUint::ZERO;
-        let result = a.pow(0);
+        let result = a.pow_u64(0);
         assert_eq!(&result, &BigUint { value: [1].vec() });
 
         let a = BigUint::one();
-        let result = a.pow(0);
+        let result = a.pow_u64(0);
         assert_eq!(&result, &BigUint { value: [1].vec() });
 
         let a = BigUint::one();
-        let result = a.pow(100);
+        let result = a.pow_u64(100);
         assert_eq!(&result, &BigUint { value: [1].vec() });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_pow() {
+        let a = BigUint { value: [100].vec() };
+        let result = a.pow(&BigUint::ZERO);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint { value: [2].vec() };
+        let result = a.pow(&BigUint { value: [7].vec() });
+        assert_eq!(&result, &BigUint { value: [128].vec() });
+
+        let a = BigUint { value: [5].vec() };
+        let result = a.pow(&BigUint { value: [3].vec() });
+        assert_eq!(&result, &BigUint { value: [125].vec() });
+
+        let a = BigUint::ZERO;
+        let result = a.pow(&BigUint {
+            value: [100, 100].vec(),
+        });
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint::ZERO;
+        let result = a.pow(&BigUint::ZERO);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow(&BigUint::ZERO);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow(&BigUint {
+            value: [100, 100].vec(),
+        });
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+    }
+
+    #[test]
+    #[should_panic(expected = "Maximum BigUint size exceeded")]
+    #[wasm_bindgen_test]
+    fn test_pow_overflow() {
+        let a = BigUint { value: [5].vec() };
+        let result = a.pow(&BigUint {
+            value: [100, 100].vec(),
+        });
     }
 }
