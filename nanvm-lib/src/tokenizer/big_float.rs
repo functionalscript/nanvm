@@ -40,5 +40,11 @@ mod test {
             exp: 10,
         });
         assert_eq!(res, BigFloat::ZERO);
+
+        let res = dec_to_bin(BigFloat {
+            significand: BigInt::ZERO,
+            exp: -10,
+        });
+        assert_eq!(res, BigFloat::ZERO);
     }
 }
