@@ -11,7 +11,7 @@ use super::{
     field_layout::FieldLayout,
     global::{Global, GLOBAL},
     manager::{Dealloc, Manager},
-    ref_::counter_update::RefCounterUpdate,
+    ref_counter_update::RefCounterUpdate,
 };
 
 #[derive(Debug)]

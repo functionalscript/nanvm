@@ -1,64 +1,21 @@
-pub mod counter_update;
-
 use core::{mem::forget, ops::Deref};
 
-use self::counter_update::RefCounterUpdate;
-
 use super::{
-    block::{header::BlockHeader, Block},
-    manager::Dealloc,
-    mut_ref::MutRef,
-    object::Object,
+    block::Block, manager::Dealloc, mut_ref::MutRef, object::Object, optional_block::OptionalBlock,
+    optional_ref::OptionalRef, ref_counter_update::RefCounterUpdate,
 };
 
 /// A reference to an object allocated by a memory manager.
-#[repr(transparent)]
-#[derive(Debug)]
-pub struct Ref<T: Object, D: Dealloc> {
-    ptr: *const Block<T, D>,
-}
+pub type Ref<T, D> = OptionalRef<*const Block<T, D>>;
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
-    #[inline(always)]
-    pub unsafe fn new(ptr: *const Block<T, D>) -> Self {
-        Self { ptr }
-    }
-    #[inline(always)]
-    unsafe fn counter_update(&self, i: RefCounterUpdate) -> Option<*mut Block<T, D>> {
-        let ptr = self.ptr;
-        if (*ptr).header.ref_counter_update(i) == 0 {
-            Some(ptr as *mut _)
-        } else {
-            None
-        }
-    }
     pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {
         unsafe {
-            if let Some(ptr) = self.counter_update(RefCounterUpdate::Read) {
+            if let Some(ptr) = self.internal().ref_counter_update(RefCounterUpdate::Read) {
                 forget(self);
-                Ok(MutRef::new(ptr))
+                Ok(MutRef::new(ptr as _))
             } else {
                 Err(self)
-            }
-        }
-    }
-}
-
-impl<T: Object, D: Dealloc> Clone for Ref<T, D> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        unsafe {
-            self.counter_update(RefCounterUpdate::AddRef);
-            Self { ptr: self.ptr }
-        }
-    }
-}
-
-impl<T: Object, D: Dealloc> Drop for Ref<T, D> {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(ptr) = self.counter_update(RefCounterUpdate::Release) {
-                (*ptr).delete();
             }
         }
     }
@@ -68,7 +25,7 @@ impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &T {
-        unsafe { (*self.ptr).object() }
+        unsafe { (*self.internal()).object() }
     }
 }
 
@@ -82,7 +39,7 @@ mod test {
         block::{header::BlockHeader, Block},
         fixed::Fixed,
         manager::Dealloc,
-        ref_::counter_update::RefCounterUpdate,
+        ref_counter_update::RefCounterUpdate,
     };
 
     use super::Ref;
@@ -100,7 +57,7 @@ mod test {
     }
 
     impl BlockHeader for BH {
-        unsafe fn ref_counter_update(&self, _: super::counter_update::RefCounterUpdate) -> isize {
+        unsafe fn ref_counter_update(&self, _: RefCounterUpdate) -> isize {
             panic!()
         }
     }

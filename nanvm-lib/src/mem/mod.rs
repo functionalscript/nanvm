@@ -1,6 +1,5 @@
 mod arena;
 mod block;
-mod buffer;
 mod field_layout;
 mod fixed;
 mod flexible_array;
@@ -10,7 +9,10 @@ pub mod manager;
 pub mod mut_ref;
 mod new_in_place;
 mod object;
+mod optional_block;
+mod optional_ref;
 mod ref_;
+mod ref_counter_update;
 
 #[cfg(test)]
 mod test {
