@@ -52,40 +52,30 @@ impl BigUint {
                     let b_high_digit = b.len() - 1;
                     let a_high = a.value[a_high_digit];
                     let b_high = b.value[b_high_digit];
-                    match b_high.cmp(&a_high) {
+                    let (q_index, q_digit) = match b_high.cmp(&a_high) {
                         Ordering::Less | Ordering::Equal => {
-                            let q_index = a_high_digit - b_high_digit;
-                            let q_digit = a_high / b_high;
-                            let mut q = BigUint {
-                                value: vec![0; q_index as usize + 1],
-                            };
-                            q.value[q_index] = q_digit;
-                            let mut m = b * &q;
-                            if a.cmp(&m) == Ordering::Less {
-                                q.value[q_index] = q_digit - 1;
-                                m = b * &q;
-                            }
-                            a = &a - &m;
-                            result = &result + &q;
+                            (a_high_digit - b_high_digit, a_high / b_high)
                         }
                         Ordering::Greater => {
                             let a_high_2 =
                                 ((a_high as u128) << 64) + a.value[a_high_digit - 1] as u128;
-                            let q_index = a_high_digit - b_high_digit - 1;
-                            let q_digit = (a_high_2 / b_high as u128) as u64;
-                            let mut q = BigUint {
-                                value: vec![0; q_index as usize + 1],
-                            };
-                            q.value[q_index] = q_digit;
-                            let mut m = b * &q;
-                            if a.cmp(&m) == Ordering::Less {
-                                q.value[q_index] = q_digit - 1;
-                                m = b * &q;
-                            }
-                            a = &a - &m;
-                            result = &result + &q;
+                            (
+                                a_high_digit - b_high_digit - 1,
+                                (a_high_2 / b_high as u128) as u64,
+                            )
                         }
+                    };
+                    let mut q = BigUint {
+                        value: vec![0; q_index as usize + 1],
+                    };
+                    q.value[q_index] = q_digit;
+                    let mut m = b * &q;
+                    if a.cmp(&m) == Ordering::Less {
+                        q.value[q_index] = q_digit - 1;
+                        m = b * &q;
                     }
+                    a = &a - &m;
+                    result = &result + &q;
                 }
             }
         }
