@@ -2,7 +2,7 @@ use super::{
     block::{header::BlockHeader, Block},
     manager::Dealloc,
     object::Object,
-    ref_::counter_update::RefCounterUpdate,
+    ref_counter_update::RefCounterUpdate,
 };
 
 pub trait Variant: Copy {

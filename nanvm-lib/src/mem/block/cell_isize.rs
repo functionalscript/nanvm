@@ -1,6 +1,6 @@
 use core::cell::Cell;
 
-use crate::mem::ref_::counter_update::RefCounterUpdate;
+use crate::mem::ref_counter_update::RefCounterUpdate;
 
 use super::header::BlockHeader;
 
@@ -19,7 +19,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{block::header::BlockHeader, ref_::counter_update::RefCounterUpdate};
+    use crate::mem::{block::header::BlockHeader, ref_counter_update::RefCounterUpdate};
 
     #[test]
     #[wasm_bindgen_test]

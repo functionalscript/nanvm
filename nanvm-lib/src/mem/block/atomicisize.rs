@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicIsize, Ordering};
 
-use crate::mem::{block::header::BlockHeader, ref_::counter_update::RefCounterUpdate};
+use crate::mem::{block::header::BlockHeader, ref_counter_update::RefCounterUpdate};
 
 impl BlockHeader for AtomicIsize {
     #[inline(always)]
@@ -15,7 +15,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{block::header::BlockHeader, ref_::counter_update::RefCounterUpdate};
+    use crate::mem::{block::header::BlockHeader, ref_counter_update::RefCounterUpdate};
 
     #[test]
     #[wasm_bindgen_test]

@@ -1,56 +1,21 @@
-pub mod counter_update;
-
 use core::{mem::forget, ops::Deref};
 
-use self::counter_update::RefCounterUpdate;
-
 use super::{
-    block::{header::BlockHeader, Block},
-    manager::Dealloc,
-    mut_ref::MutRef,
-    object::Object,
-    variant::Variant,
+    block::Block, manager::Dealloc, mut_ref::MutRef, object::Object,
+    ref_counter_update::RefCounterUpdate, variant::Variant, variant_ref::VariantRef,
 };
 
 /// A reference to an object allocated by a memory manager.
-pub type Ref<T: Object, D: Dealloc> = VariantRef<*const Block<T, D>>;
+pub type Ref<T, D> = VariantRef<*const Block<T, D>>;
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
-    #[inline(always)]
-    pub unsafe fn new(value: *const Block<T, D>) -> Self {
-        Self { value }
-    }
     pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {
         unsafe {
-            if let Some(ptr) = self.value.ref_counter_update(RefCounterUpdate::Read) {
+            if let Some(ptr) = self.internal().ref_counter_update(RefCounterUpdate::Read) {
                 forget(self);
-                Ok(MutRef::new(ptr as _))
+                Ok(MutRef::new(ptr as *mut Block<T, D>))
             } else {
                 Err(self)
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-#[repr(transparent)]
-pub struct VariantRef<T: Variant> {
-    value: T,
-}
-
-impl<T: Variant> Clone for VariantRef<T> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        unsafe { self.value.ref_counter_update(RefCounterUpdate::AddRef) };
-        Self { value: self.value }
-    }
-}
-
-impl<T: Variant> Drop for VariantRef<T> {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(header) = self.value.ref_counter_update(RefCounterUpdate::Release) {
-                self.value.delete(header);
             }
         }
     }
@@ -60,7 +25,7 @@ impl<T: Object, D: Dealloc> Deref for Ref<T, D> {
     type Target = T;
     #[inline(always)]
     fn deref(&self) -> &T {
-        unsafe { (*self.value).object() }
+        unsafe { (*self.internal()).object() }
     }
 }
 
@@ -74,7 +39,7 @@ mod test {
         block::{header::BlockHeader, Block},
         fixed::Fixed,
         manager::Dealloc,
-        ref_::counter_update::RefCounterUpdate,
+        ref_counter_update::RefCounterUpdate,
     };
 
     use super::Ref;
@@ -92,7 +57,7 @@ mod test {
     }
 
     impl BlockHeader for BH {
-        unsafe fn ref_counter_update(&self, _: super::counter_update::RefCounterUpdate) -> isize {
+        unsafe fn ref_counter_update(&self, _: RefCounterUpdate) -> isize {
             panic!()
         }
     }

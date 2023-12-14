@@ -10,7 +10,9 @@ pub mod mut_ref;
 mod new_in_place;
 mod object;
 mod ref_;
+mod ref_counter_update;
 mod variant;
+mod variant_ref;
 
 #[cfg(test)]
 mod test {

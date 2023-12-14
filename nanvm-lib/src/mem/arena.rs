@@ -3,7 +3,7 @@ use core::{alloc::Layout, cell::Cell, marker::PhantomData};
 use super::{
     block::header::BlockHeader,
     manager::{Dealloc, Manager},
-    ref_::counter_update::RefCounterUpdate,
+    ref_counter_update::RefCounterUpdate,
 };
 
 #[derive(Debug)]

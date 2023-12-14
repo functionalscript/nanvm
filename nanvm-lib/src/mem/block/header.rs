@@ -1,6 +1,6 @@
 use crate::{
     common::ref_mut::RefMut,
-    mem::{manager::Dealloc, object::Object, ref_::counter_update::RefCounterUpdate},
+    mem::{manager::Dealloc, object::Object, ref_counter_update::RefCounterUpdate},
 };
 
 use super::Block;
@@ -23,9 +23,7 @@ mod test {
 
     use crate::{
         common::ref_mut::RefMut,
-        mem::{
-            block::Block, fixed::Fixed, manager::Dealloc, ref_::counter_update::RefCounterUpdate,
-        },
+        mem::{block::Block, fixed::Fixed, manager::Dealloc, ref_counter_update::RefCounterUpdate},
     };
 
     use super::BlockHeader;

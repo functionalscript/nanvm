@@ -43,7 +43,7 @@ mod test {
 
     use crate::mem::{
         block::Block, fixed::Fixed, manager::Dealloc, object::Object,
-        ref_::counter_update::RefCounterUpdate,
+        ref_counter_update::RefCounterUpdate,
     };
 
     use super::header::BlockHeader;
