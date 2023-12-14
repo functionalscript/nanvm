@@ -14,6 +14,10 @@ pub struct BigUint {
 impl BigUint {
     pub const ZERO: BigUint = BigUint { value: Vec::new() };
 
+    pub fn one() -> BigUint {
+        BigUint { value: [1].vec() }
+    }
+
     pub fn normalize(&mut self) {
         loop {
             match self.value.last() {
@@ -25,12 +29,55 @@ impl BigUint {
         }
     }
 
+    pub fn is_one(&self) -> bool {
+        self.len() == 1 && self.value[0] == 1
+    }
+
     pub fn is_zero(&self) -> bool {
         self.len() == 0
     }
 
     pub fn len(&self) -> usize {
         self.value.len()
+    }
+
+    pub fn pow(&self, exp: &BigUint) -> BigUint {
+        if self.is_one() {
+            return BigUint::one();
+        }
+
+        if self.is_zero() {
+            return if exp.is_zero() {
+                BigUint::one()
+            } else {
+                BigUint::ZERO
+            };
+        }
+
+        if exp.is_zero() {
+            return BigUint::one();
+        }
+
+        if exp.len() != 1 {
+            panic!("Maximum BigUint size exceeded")
+        }
+
+        self.pow_u64(exp.value[0])
+    }
+
+    fn pow_u64(&self, mut exp: u64) -> BigUint {
+        let mut res = BigUint::one();
+        let mut b = self.clone();
+        loop {
+            if exp == 0 {
+                return res;
+            }
+            if exp & 1 > 0 {
+                res = &res * &b;
+            }
+            exp = exp >> 1;
+            b = &b * &b;
+        }
     }
 
     fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
@@ -52,40 +99,30 @@ impl BigUint {
                     let b_high_digit = b.len() - 1;
                     let a_high = a.value[a_high_digit];
                     let b_high = b.value[b_high_digit];
-                    match b_high.cmp(&a_high) {
+                    let (q_index, q_digit) = match b_high.cmp(&a_high) {
                         Ordering::Less | Ordering::Equal => {
-                            let q_index = a_high_digit - b_high_digit;
-                            let q_digit = a_high / b_high;
-                            let mut q = BigUint {
-                                value: vec![0; q_index as usize + 1],
-                            };
-                            q.value[q_index] = q_digit;
-                            let mut m = b * &q;
-                            if a.cmp(&m) == Ordering::Less {
-                                q.value[q_index] = q_digit - 1;
-                                m = b * &q;
-                            }
-                            a = &a - &m;
-                            result = &result + &q;
+                            (a_high_digit - b_high_digit, a_high / b_high)
                         }
                         Ordering::Greater => {
                             let a_high_2 =
                                 ((a_high as u128) << 64) + a.value[a_high_digit - 1] as u128;
-                            let q_index = a_high_digit - b_high_digit - 1;
-                            let q_digit = (a_high_2 / b_high as u128) as u64;
-                            let mut q = BigUint {
-                                value: vec![0; q_index as usize + 1],
-                            };
-                            q.value[q_index] = q_digit;
-                            let mut m = b * &q;
-                            if a.cmp(&m) == Ordering::Less {
-                                q.value[q_index] = q_digit - 1;
-                                m = b * &q;
-                            }
-                            a = &a - &m;
-                            result = &result + &q;
+                            (
+                                a_high_digit - b_high_digit - 1,
+                                (a_high_2 / b_high as u128) as u64,
+                            )
                         }
+                    };
+                    let mut q = BigUint {
+                        value: vec![0; q_index as usize + 1],
+                    };
+                    q.value[q_index] = q_digit;
+                    let mut m = b * &q;
+                    if a.cmp(&m) == Ordering::Less {
+                        q.value[q_index] = q_digit - 1;
+                        m = b * &q;
                     }
+                    a = &a - &m;
+                    result = &result + &q;
                 }
             }
         }
@@ -510,5 +547,83 @@ mod test {
                 value: [1, 1].vec()
             }
         );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_pow_u64() {
+        let a = BigUint { value: [100].vec() };
+        let result = a.pow_u64(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint { value: [2].vec() };
+        let result = a.pow_u64(7);
+        assert_eq!(&result, &BigUint { value: [128].vec() });
+
+        let a = BigUint { value: [5].vec() };
+        let result = a.pow_u64(3);
+        assert_eq!(&result, &BigUint { value: [125].vec() });
+
+        let a = BigUint::ZERO;
+        let result = a.pow_u64(3);
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint::ZERO;
+        let result = a.pow_u64(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow_u64(0);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow_u64(100);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_pow() {
+        let a = BigUint { value: [100].vec() };
+        let result = a.pow(&BigUint::ZERO);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint { value: [2].vec() };
+        let result = a.pow(&BigUint { value: [7].vec() });
+        assert_eq!(&result, &BigUint { value: [128].vec() });
+
+        let a = BigUint { value: [5].vec() };
+        let result = a.pow(&BigUint { value: [3].vec() });
+        assert_eq!(&result, &BigUint { value: [125].vec() });
+
+        let a = BigUint::ZERO;
+        let result = a.pow(&BigUint {
+            value: [100, 100].vec(),
+        });
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint::ZERO;
+        let result = a.pow(&BigUint::ZERO);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow(&BigUint::ZERO);
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+
+        let a = BigUint::one();
+        let result = a.pow(&BigUint {
+            value: [100, 100].vec(),
+        });
+        assert_eq!(&result, &BigUint { value: [1].vec() });
+    }
+
+    #[test]
+    #[should_panic(expected = "Maximum BigUint size exceeded")]
+    #[wasm_bindgen_test]
+    fn test_pow_overflow() {
+        let a = BigUint { value: [5].vec() };
+        let result = a.pow(&BigUint {
+            value: [100, 100].vec(),
+        });
     }
 }
