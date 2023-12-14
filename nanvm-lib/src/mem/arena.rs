@@ -1,32 +1,29 @@
-use core::{alloc::Layout, cell::Cell};
+use core::{alloc::Layout, cell::Cell, marker::PhantomData};
 
 use super::{
     block::header::BlockHeader,
-    buffer::Buffer,
-    field_layout::align_to,
     manager::{Dealloc, Manager},
     ref_::counter_update::RefCounterUpdate,
 };
 
 #[derive(Debug)]
-struct Arena<T: Buffer> {
-    buffer: T,
-    current: Cell<usize>,
-    end: usize,
+struct Arena<'a> {
+    start: Cell<*mut u8>,
+    end: *mut u8,
+    _0: PhantomData<&'a mut [u8]>,
 }
 
-impl<T: Buffer> Arena<T> {
+impl<'a> Arena<'a> {
     #[inline(always)]
     const fn layout(size: usize) -> Layout {
         unsafe { Layout::from_size_align_unchecked(size, 1) }
     }
-    pub fn new(mut buffer: T) -> Self {
-        let range = unsafe { buffer.range() };
-        let current = Cell::new(range.start as usize);
+    pub fn new(mut buffer: &'a mut[u8]) -> Self {
+        let range = unsafe { buffer.as_mut_ptr_range() };
         Self {
-            buffer,
-            current,
-            end: range.end as usize,
+            start: Cell::new(range.start),
+            end: range.end,
+            _0: PhantomData,
         }
     }
 }
@@ -41,23 +38,25 @@ impl BlockHeader for NoHeader {
     }
 }
 
-impl<T: Buffer> Dealloc for &Arena<T> {
+impl<'a> Dealloc for &Arena<'a> {
     type BlockHeader = NoHeader;
     #[inline(always)]
     unsafe fn dealloc(_: *mut u8, _: Layout) {}
 }
 
-impl<T: Buffer> Manager for &Arena<T> {
+impl<'a> Manager for &Arena<'a> {
     type Dealloc = Self;
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
-        let align = layout.align();
-        let current = align_to(self.current.get() as usize, align);
-        let end = current + layout.size();
-        if end > self.end as usize {
+        let result = {
+            let result = self.start.get();
+            result.add(result.align_offset(layout.align()))
+        };
+        let start = result.add(layout.size());
+        if start > self.end {
             panic!("out of memory");
         }
-        self.current.set(end);
-        current as *mut u8
+        self.start.set(start);
+        result as *mut u8
     }
 }
 
@@ -74,12 +73,12 @@ mod test {
     fn test() {
         let mut range = [0u8; 1024];
         let arena = Arena::new(&mut range[..]);
-        assert_eq!(arena.end as usize - arena.current.get(), 1024);
+        assert_eq!(arena.end as usize - arena.start.get() as usize, 1024);
         let r = arena.fixed_new(42u8).to_ref();
         let r2 = r.try_to_mut_ref().unwrap_err();
-        assert_eq!(arena.end as usize - arena.current.get(), 1023);
+        assert_eq!(arena.end as usize - arena.start.get() as usize, 1023);
         let mr = arena.fixed_new(43);
-        assert_eq!(arena.end as usize - arena.current.get(), 1016);
+        assert_eq!(arena.end as usize - arena.start.get() as usize, 1016);
     }
 
     #[test]
@@ -87,9 +86,9 @@ mod test {
     fn test_1() {
         let mut range = [0u8; 1];
         let arena = Arena::new(&mut range[..]);
-        assert_eq!(arena.end as usize - arena.current.get(), 1);
+        assert_eq!(arena.end as usize - arena.start.get() as usize, 1);
         let r = arena.fixed_new(42u8).to_ref();
-        assert_eq!(arena.end as usize, arena.current.get());
+        assert_eq!(arena.end as usize, arena.start.get() as usize);
     }
 
     #[test]

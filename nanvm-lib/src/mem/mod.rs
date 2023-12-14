@@ -1,6 +1,5 @@
 mod arena;
 mod block;
-mod buffer;
 mod field_layout;
 mod fixed;
 mod flexible_array;
