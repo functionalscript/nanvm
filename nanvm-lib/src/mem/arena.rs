@@ -18,7 +18,7 @@ impl<'a> Arena<'a> {
     const fn layout(size: usize) -> Layout {
         unsafe { Layout::from_size_align_unchecked(size, 1) }
     }
-    pub fn new(mut buffer: &'a mut[u8]) -> Self {
+    pub fn new(mut buffer: &'a mut [u8]) -> Self {
         let range = unsafe { buffer.as_mut_ptr_range() };
         Self {
             start: Cell::new(range.start),
