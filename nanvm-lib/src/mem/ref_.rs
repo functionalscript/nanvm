@@ -1,12 +1,12 @@
 use core::{mem::forget, ops::Deref};
 
 use super::{
-    block::Block, manager::Dealloc, mut_ref::MutRef, object::Object,
-    ref_counter_update::RefCounterUpdate, variant::Variant, variant_ref::VariantRef,
+    block::Block, manager::Dealloc, mut_ref::MutRef, object::Object, optional_ptr::OptionalPtr,
+    optional_ref::OptionalRef, ref_counter_update::RefCounterUpdate,
 };
 
 /// A reference to an object allocated by a memory manager.
-pub type Ref<T, D> = VariantRef<*const Block<T, D>>;
+pub type Ref<T, D> = OptionalRef<*const Block<T, D>>;
 
 impl<T: Object, D: Dealloc> Ref<T, D> {
     pub fn try_to_mut_ref(self) -> Result<MutRef<T, D>, Self> {

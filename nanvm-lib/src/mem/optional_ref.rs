@@ -1,12 +1,12 @@
-use super::{ref_counter_update::RefCounterUpdate, variant::Variant};
+use super::{optional_ptr::OptionalPtr, ref_counter_update::RefCounterUpdate};
 
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct VariantRef<T: Variant> {
+pub struct OptionalRef<T: OptionalPtr> {
     value: T,
 }
 
-impl<T: Variant> VariantRef<T> {
+impl<T: OptionalPtr> OptionalRef<T> {
     #[inline(always)]
     pub const unsafe fn new(value: T) -> Self {
         Self { value }
@@ -17,7 +17,7 @@ impl<T: Variant> VariantRef<T> {
     }
 }
 
-impl<T: Variant> Clone for VariantRef<T> {
+impl<T: OptionalPtr> Clone for OptionalRef<T> {
     #[inline(always)]
     fn clone(&self) -> Self {
         unsafe { self.value.ref_counter_update(RefCounterUpdate::AddRef) };
@@ -25,7 +25,7 @@ impl<T: Variant> Clone for VariantRef<T> {
     }
 }
 
-impl<T: Variant> Drop for VariantRef<T> {
+impl<T: OptionalPtr> Drop for OptionalRef<T> {
     fn drop(&mut self) {
         unsafe {
             if let Some(header) = self.value.ref_counter_update(RefCounterUpdate::Release) {
