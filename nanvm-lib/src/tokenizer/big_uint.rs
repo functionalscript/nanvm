@@ -65,20 +65,8 @@ impl BigUint {
         self.pow_u64(exp.value[0])
     }
 
-    pub fn pow_u64(&self, mut exp: u64) -> BigUint {
-        if self.is_one() {
-            return BigUint::one();
-        }
-
-        if self.is_zero() {
-            return if exp == 0 {
-                BigUint::one()
-            } else {
-                BigUint::ZERO
-            };
-        }
-
-        let mut res = BigUint { value: [1].vec() };
+    fn pow_u64(&self, mut exp: u64) -> BigUint {
+        let mut res = BigUint::one();
         let mut b = self.clone();
         loop {
             if exp == 0 {
