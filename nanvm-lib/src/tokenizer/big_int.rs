@@ -7,7 +7,7 @@ use crate::common::array::ArrayEx;
 use crate::tokenizer::big_uint::BigUint;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
-struct BigInt {
+pub struct BigInt {
     sign: Sign,
     value: BigUint,
 }
@@ -25,7 +25,7 @@ impl Default for Sign {
 }
 
 impl BigInt {
-    const ZERO: BigInt = BigInt {
+    pub const ZERO: BigInt = BigInt {
         sign: Sign::Positive,
         value: BigUint::ZERO,
     };
