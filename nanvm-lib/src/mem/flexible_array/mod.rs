@@ -191,7 +191,7 @@ mod test {
                     DropCount(&i as *const AtomicUsize),
                 ],
             };
-            let v = unsafe { x.as_mut_ptr() as *mut FlexibleArray<DropCount> };
+            let v = unsafe { x.to_mut_ptr() as *mut FlexibleArray<DropCount> };
             unsafe {
                 assert_eq!((*v).header.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
@@ -258,7 +258,7 @@ mod test {
                 header: EmptyHeader(),
                 items,
             };
-            let y = unsafe { &mut *(x.as_mut_ptr() as *mut FlexibleArray<EmptyHeader>) };
+            let y = unsafe { &mut *(x.to_mut_ptr() as *mut FlexibleArray<EmptyHeader>) };
             assert_eq!(size_of::<StaticVariable<EmptyHeader, 3>>(), 24);
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);

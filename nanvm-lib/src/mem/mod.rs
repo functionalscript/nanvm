@@ -13,6 +13,7 @@ mod optional_block;
 mod optional_ref;
 mod ref_;
 mod ref_counter_update;
+mod block_header;
 
 #[cfg(test)]
 mod test {

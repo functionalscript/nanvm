@@ -1,7 +1,3 @@
-mod atomicisize;
-mod cell_isize;
-pub mod header;
-
 use core::{alloc::Layout, marker::PhantomData};
 
 use super::{field_layout::FieldLayout, manager::Dealloc, object::Object};
@@ -37,16 +33,16 @@ impl<T: Object, D: Dealloc> Block<T, D> {
 
 #[cfg(test)]
 mod test {
-    use core::alloc::Layout;
+    use core::{alloc::Layout, cell::Cell, marker::PhantomData};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{
+    use crate::{mem::{
         block::Block, fixed::Fixed, manager::Dealloc, object::Object,
         ref_counter_update::RefCounterUpdate,
-    };
+    }, common::ref_mut::RefMut};
 
-    use super::header::BlockHeader;
+    use super::super::block_header::BlockHeader;
 
     struct M();
 
@@ -79,5 +75,39 @@ mod test {
         let x = b.object_mut();
         assert_eq!(x.object_size(), 0);
         unsafe { b.delete() };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test() {
+        #[derive(Default)]
+        struct XBH(Cell<isize>);
+
+        struct D();
+
+        impl Dealloc for D {
+            type BlockHeader = XBH;
+            unsafe fn dealloc(_: *mut u8, _: Layout) {}
+        }
+
+        impl BlockHeader for XBH {
+            unsafe fn ref_counter_update(&self, i: RefCounterUpdate) -> isize {
+                let result = self.0.get();
+                self.0.set(result + i as isize);
+                result
+            }
+        }
+
+        let mut x = Block::<Fixed<()>, D> {
+            header: XBH::default(),
+            _0: PhantomData,
+        };
+        let p = unsafe { x.header.block::<Fixed<()>, D>() };
+        assert_eq!(p as *mut _, (&mut x) as _);
+        unsafe {
+            assert_eq!(x.header.ref_counter_update(RefCounterUpdate::Read), 0);
+            assert_eq!(x.header.ref_counter_update(RefCounterUpdate::AddRef), 0);
+            assert_eq!(x.header.ref_counter_update(RefCounterUpdate::Read), 1);
+        }
     }
 }

@@ -21,10 +21,10 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for Flexibl
     }
     unsafe fn new_in_place(self, p: *mut Self::Result) {
         let v = &mut *p;
-        v.header.as_mut_ptr().write(self.header);
+        v.header.to_mut_ptr().write(self.header);
         let mut src = self.items;
         for dst in v.items_mut() {
-            dst.as_mut_ptr().write(src.next().unwrap());
+            dst.to_mut_ptr().write(src.next().unwrap());
         }
     }
 }
@@ -76,15 +76,15 @@ mod test {
                     header: Header(0, null_mut()),
                     items: [0; 5],
                 };
-                let v = unsafe { (&mut mem).as_mut_ptr() as *mut _ };
+                let v = unsafe { (&mut mem).to_mut_ptr() as *mut _ };
                 unsafe { new.new_in_place(v) };
                 let r = unsafe { &mut *v };
                 assert_eq!(mem.header.len(), 5);
                 assert_eq!(r.header.len(), 5);
                 assert_eq!(mem.header.0, 5);
                 assert_eq!(r.header.0, 5);
-                assert_eq!(mem.header.1, unsafe { (&mut i).as_mut_ptr() });
-                assert_eq!(r.header.1, unsafe { (&mut i).as_mut_ptr() });
+                assert_eq!(mem.header.1, unsafe { (&mut i).to_mut_ptr() });
+                assert_eq!(r.header.1, unsafe { (&mut i).to_mut_ptr() });
                 assert_eq!(r.object_size(), size_of::<usize>() * 2 + 5);
                 assert_eq!(mem.items, [42, 43, 44, 45, 46]);
                 assert_eq!(r.items_mut(), &[42, 43, 44, 45, 46]);

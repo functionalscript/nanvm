@@ -18,7 +18,7 @@ impl<T: OptionalBase> OptionalRc<T> {
     }
     #[inline(always)]
     pub unsafe fn move_to_optional_base(mut self) -> T {
-        let result = self.0.as_mut_ptr().read();
+        let result = self.0.to_mut_ptr().read();
         forget(self);
         result
     }

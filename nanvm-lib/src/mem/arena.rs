@@ -1,7 +1,7 @@
 use core::{alloc::Layout, cell::Cell, marker::PhantomData};
 
 use super::{
-    block::header::BlockHeader,
+    block_header::BlockHeader,
     manager::{Dealloc, Manager},
     ref_counter_update::RefCounterUpdate,
 };

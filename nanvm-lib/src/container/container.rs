@@ -26,7 +26,7 @@ impl<T: Info> Container<T> {
             info,
         });
         for (dst, src) in (*p).get_items_mut().iter_mut().zip(items) {
-            dst.as_mut_ptr().write(src);
+            dst.to_mut_ptr().write(src);
             len -= 1;
         }
         assert_eq!(len, 0);

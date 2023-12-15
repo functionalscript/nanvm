@@ -1,5 +1,6 @@
 use super::{
-    block::{header::BlockHeader, Block},
+    block_header::BlockHeader,
+    block::Block,
     manager::Dealloc,
     object::Object,
     ref_counter_update::RefCounterUpdate,

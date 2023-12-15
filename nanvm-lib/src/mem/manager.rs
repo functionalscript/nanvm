@@ -3,7 +3,8 @@ use core::alloc::Layout;
 use crate::common::ref_mut::RefMut;
 
 use super::{
-    block::{header::BlockHeader, Block},
+    block_header::BlockHeader,
+    block::Block,
     fixed::Fixed,
     flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
     mut_ref::MutRef,
@@ -31,7 +32,7 @@ pub trait Manager: Sized {
                 let block = &mut *p;
                 block
                     .header
-                    .as_mut_ptr()
+                    .to_mut_ptr()
                     .write(<<Self as Manager>::Dealloc as Dealloc>::BlockHeader::default());
                 new_in_place.new_in_place(block.object_mut());
             }
