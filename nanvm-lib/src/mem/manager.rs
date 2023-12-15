@@ -3,8 +3,8 @@ use core::alloc::Layout;
 use crate::common::ref_mut::RefMut;
 
 use super::{
-    block_header::BlockHeader,
     block::Block,
+    block_header::BlockHeader,
     fixed::Fixed,
     flexible_array::{len::FlexibleArrayLen, new::FlexibleArrayNew, FlexibleArray},
     mut_ref::MutRef,

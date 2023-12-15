@@ -1,5 +1,6 @@
 mod arena;
 mod block;
+mod block_header;
 mod field_layout;
 mod fixed;
 mod flexible_array;
@@ -13,7 +14,6 @@ mod optional_block;
 mod optional_ref;
 mod ref_;
 mod ref_counter_update;
-mod block_header;
 
 #[cfg(test)]
 mod test {

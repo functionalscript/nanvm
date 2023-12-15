@@ -1,8 +1,4 @@
-use core::{
-    alloc::Layout,
-    cell::Cell,
-    sync::atomic::AtomicIsize,
-};
+use core::{alloc::Layout, cell::Cell, sync::atomic::AtomicIsize};
 
 use crate::common::default::default;
 
