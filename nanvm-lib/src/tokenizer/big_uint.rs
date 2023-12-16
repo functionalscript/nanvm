@@ -6,6 +6,8 @@ use std::{
 
 use crate::common::{array::ArrayEx, default::default};
 
+use super::{big_int::BigInt, big_int::Sign};
+
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 pub struct BigUint {
     pub value: Vec<u64>,
@@ -78,6 +80,10 @@ impl BigUint {
             exp = exp >> 1;
             b = &b * &b;
         }
+    }
+
+    pub fn to_big_int(self) -> BigInt {
+        BigInt::new(Sign::Positive, self)
     }
 
     fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {

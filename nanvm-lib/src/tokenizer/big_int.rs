@@ -13,7 +13,7 @@ pub struct BigInt {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
-enum Sign {
+pub enum Sign {
     Positive = 1,
     Negative = -1,
 }
@@ -41,6 +41,10 @@ impl BigInt {
         self.value.is_zero()
     }
 
+    pub fn new(sign: Sign, value: BigUint) -> BigInt {
+        BigInt { sign, value }
+    }
+
     pub fn from_u64(n: u64) -> Self {
         BigInt {
             sign: Sign::Positive,
@@ -60,10 +64,6 @@ impl BigInt {
                 value: [(n * sign as i64) as u64].vec(),
             },
         }
-    }
-
-    pub fn from_big_uint(b: BigUint) -> BigInt {
-        BigInt { sign: Sign::Positive, value: b }
     }
 }
 

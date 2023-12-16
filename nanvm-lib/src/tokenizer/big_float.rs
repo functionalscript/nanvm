@@ -22,7 +22,7 @@ pub fn dec_to_bin(dec: BigFloat<10>) -> BigFloat<2> {
 
     if dec.exp >= 0 {
         let five = BigUint { value: [5].vec()};
-        let new_sign = &dec.significand * &BigInt::from_big_uint(five.pow_u64(dec.exp as u64));
+        let new_sign = &dec.significand * &five.pow_u64(dec.exp as u64).to_big_int();
         todo!()
     }
 
