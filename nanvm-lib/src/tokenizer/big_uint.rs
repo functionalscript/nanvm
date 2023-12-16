@@ -65,7 +65,7 @@ impl BigUint {
         self.pow_u64(exp.value[0])
     }
 
-    fn pow_u64(&self, mut exp: u64) -> BigUint {
+    pub fn pow_u64(&self, mut exp: u64) -> BigUint {
         let mut res = BigUint::one();
         let mut b = self.clone();
         loop {
