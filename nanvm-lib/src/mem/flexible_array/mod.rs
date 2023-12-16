@@ -1,6 +1,6 @@
+pub mod constructor;
 pub mod header;
 pub mod len;
-pub mod new;
 
 use core::{
     mem::{align_of, size_of},
@@ -50,7 +50,7 @@ impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
     fn object_size(&self) -> usize {
         Self::flexible_size(self.header.len())
     }
-    unsafe fn object_drop_in_place(&mut self) {
+    unsafe fn object_drop(&mut self) {
         drop_in_place(self.items_mut());
         drop_in_place(self);
     }
@@ -191,7 +191,7 @@ mod test {
                     DropCount(&i as *const AtomicUsize),
                 ],
             };
-            let v = unsafe { x.as_mut_ptr() as *mut FlexibleArray<DropCount> };
+            let v = unsafe { x.to_mut_ptr() as *mut FlexibleArray<DropCount> };
             unsafe {
                 assert_eq!((*v).header.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
@@ -203,7 +203,7 @@ mod test {
                 assert_eq!(a[2].0, &i as *const AtomicUsize);
             }
             assert_eq!(i.load(Ordering::Relaxed), 0);
-            unsafe { (*v).object_drop_in_place() };
+            unsafe { (*v).object_drop() };
             assert_eq!(i.load(Ordering::Relaxed), 4);
             forget(x);
         }
@@ -258,7 +258,7 @@ mod test {
                 header: EmptyHeader(),
                 items,
             };
-            let y = unsafe { &mut *(x.as_mut_ptr() as *mut FlexibleArray<EmptyHeader>) };
+            let y = unsafe { &mut *(x.to_mut_ptr() as *mut FlexibleArray<EmptyHeader>) };
             assert_eq!(size_of::<StaticVariable<EmptyHeader, 3>>(), 24);
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);
@@ -267,7 +267,7 @@ mod test {
                 &[0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef]
             );
             assert_eq!(unsafe { I }, 0);
-            unsafe { y.object_drop_in_place() };
+            unsafe { y.object_drop() };
             assert_eq!(unsafe { I }, 1);
             forget(x)
         }

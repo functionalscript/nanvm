@@ -1,7 +1,5 @@
 use super::{
-    block::{header::BlockHeader, Block},
-    manager::Dealloc,
-    object::Object,
+    block::Block, block_header::BlockHeader, manager::Dealloc, object::Object,
     ref_counter_update::RefCounterUpdate,
 };
 

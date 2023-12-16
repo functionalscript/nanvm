@@ -1,13 +1,9 @@
-use core::{
-    alloc::Layout,
-    cell::Cell,
-    sync::atomic::{AtomicIsize, Ordering},
-};
+use core::{alloc::Layout, cell::Cell, sync::atomic::AtomicIsize};
 
 use crate::common::default::default;
 
 use super::{
-    block::header::BlockHeader,
+    block_header::BlockHeader,
     field_layout::FieldLayout,
     global::{Global, GLOBAL},
     manager::{Dealloc, Manager},

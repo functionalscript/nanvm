@@ -1,5 +1,6 @@
 pub trait RefMut {
-    unsafe fn as_mut_ptr(&mut self) -> *mut Self {
+    // a better name is `as_mut_ptr` but it's already used by `Slice`.
+    unsafe fn to_mut_ptr(&mut self) -> *mut Self {
         self as *mut Self
     }
     fn modify(&mut self, f: impl FnOnce(Self) -> Self)
@@ -7,7 +8,7 @@ pub trait RefMut {
         Self: Sized,
     {
         unsafe {
-            let p = self.as_mut_ptr();
+            let p = self.to_mut_ptr();
             p.write(f(p.read()));
         };
     }

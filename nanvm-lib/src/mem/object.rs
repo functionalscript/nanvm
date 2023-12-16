@@ -11,7 +11,7 @@ pub trait Object: Sized {
         size_of::<Self>()
     }
     #[inline(always)]
-    unsafe fn object_drop_in_place(&mut self) {
+    unsafe fn object_drop(&mut self) {
         drop_in_place(self)
     }
 }
@@ -38,7 +38,7 @@ mod test {
     fn test() {
         assert_eq!(A(5).object_size(), 4);
         let mut a = A(5);
-        unsafe { a.object_drop_in_place() };
+        unsafe { a.object_drop() };
         assert_eq!(a.0, 6);
     }
 }
