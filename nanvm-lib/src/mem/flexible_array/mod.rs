@@ -1,6 +1,6 @@
+pub mod constructor;
 pub mod header;
 pub mod len;
-pub mod constructor;
 
 use core::{
     mem::{align_of, size_of},

@@ -6,7 +6,10 @@ pub trait FlexibleArrayHeader: Sized {
     fn len(&self) -> usize;
     //
     #[inline(always)]
-    fn constructor<I: Iterator<Item = Self::Item>>(self, items: I) -> FlexibleArrayConstructor<Self, I> {
+    fn constructor<I: Iterator<Item = Self::Item>>(
+        self,
+        items: I,
+    ) -> FlexibleArrayConstructor<Self, I> {
         FlexibleArrayConstructor::new(self, items)
     }
 }
@@ -15,7 +18,7 @@ pub trait FlexibleArrayHeader: Sized {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::mem::{flexible_array::FlexibleArray, constructor::Constructor};
+    use crate::mem::{constructor::Constructor, flexible_array::FlexibleArray};
 
     use super::FlexibleArrayHeader;
 

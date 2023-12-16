@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use super::{header::FlexibleArrayHeader, constructor::FlexibleArrayConstructor};
+use super::{constructor::FlexibleArrayConstructor, header::FlexibleArrayHeader};
 
 #[repr(transparent)]
 pub struct FlexibleArrayLen<I> {
@@ -32,8 +32,10 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::mem::{
-        flexible_array::{len::FlexibleArrayLen, constructor::FlexibleArrayConstructor, FlexibleArray},
         constructor::Constructor,
+        flexible_array::{
+            constructor::FlexibleArrayConstructor, len::FlexibleArrayLen, FlexibleArray,
+        },
         object::Object,
     };
 

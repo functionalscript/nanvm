@@ -5,10 +5,10 @@ use crate::common::ref_mut::RefMut;
 use super::{
     block::Block,
     block_header::BlockHeader,
-    fixed::Fixed,
-    flexible_array::{len::FlexibleArrayLen, constructor::FlexibleArrayConstructor, FlexibleArray},
-    mut_ref::MutRef,
     constructor::Constructor,
+    fixed::Fixed,
+    flexible_array::{constructor::FlexibleArrayConstructor, len::FlexibleArrayLen, FlexibleArray},
+    mut_ref::MutRef,
 };
 
 pub trait Dealloc {

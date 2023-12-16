@@ -13,7 +13,9 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> FlexibleArrayConstruct
     }
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> Constructor for FlexibleArrayConstructor<H, I> {
+impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> Constructor
+    for FlexibleArrayConstructor<H, I>
+{
     type Result = FlexibleArray<H>;
     #[inline(always)]
     fn result_size(&self) -> usize {
@@ -38,7 +40,7 @@ mod test {
     use crate::{
         common::ref_mut::RefMut,
         mem::{
-            flexible_array::header::FlexibleArrayHeader, constructor::Constructor, object::Object,
+            constructor::Constructor, flexible_array::header::FlexibleArrayHeader, object::Object,
         },
     };
 
