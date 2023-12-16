@@ -61,6 +61,10 @@ impl BigInt {
             },
         }
     }
+
+    pub fn from_big_uint(b: BigUint) -> BigInt {
+        BigInt { sign: Sign::Positive, value: b }
+    }
 }
 
 impl Add for &BigInt {
