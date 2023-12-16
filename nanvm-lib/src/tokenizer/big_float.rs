@@ -1,15 +1,11 @@
+use crate::{common::array::ArrayEx, tokenizer::big_uint::BigUint};
+
 use super::big_int::BigInt;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 pub struct BigFloat<const Base: u32> {
     significand: BigInt,
     exp: i64,
-}
-
-#[derive(Debug, PartialEq, Clone, Eq, Default)]
-pub struct Float80<const Base: u32> {
-    significand: i64,
-    exp: i16,
 }
 
 impl<const Base: u32> BigFloat<Base> {
@@ -19,17 +15,20 @@ impl<const Base: u32> BigFloat<Base> {
     };
 }
 
-pub fn dec_to_bin(dec: BigFloat<10>) -> BigFloat<2> {
-    if dec.significand.is_zero() {
-        return BigFloat::ZERO;
-    }
+impl BigFloat<10> {
+    pub fn to_bin(self) -> BigFloat<2> {
+        if self.significand.is_zero() {
+            return BigFloat::ZERO;
+        }
 
-    if dec.exp >= 0 {
-        //todo: implement pow for bigint
+        if self.exp >= 0 {
+            let five = BigUint { value: [5].vec() };
+            let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
+            todo!()
+        }
+
         todo!()
     }
-
-    todo!()
 }
 
 #[cfg(test)]
@@ -38,24 +37,26 @@ mod test {
 
     use crate::tokenizer::big_int::BigInt;
 
-    use super::{dec_to_bin, BigFloat};
+    use super::BigFloat;
 
     #[test]
     #[wasm_bindgen_test]
     fn test_zero() {
-        let res = dec_to_bin(BigFloat::ZERO);
+        let res = BigFloat::ZERO.to_bin();
         assert_eq!(res, BigFloat::ZERO);
 
-        let res = dec_to_bin(BigFloat {
+        let res = BigFloat {
             significand: BigInt::ZERO,
             exp: 10,
-        });
+        }
+        .to_bin();
         assert_eq!(res, BigFloat::ZERO);
 
-        let res = dec_to_bin(BigFloat {
+        let res = BigFloat {
             significand: BigInt::ZERO,
             exp: -10,
-        });
+        }
+        .to_bin();
         assert_eq!(res, BigFloat::ZERO);
     }
 
