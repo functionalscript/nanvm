@@ -13,6 +13,23 @@ impl<const Base: u32> BigFloat<Base> {
         significand: BigInt::ZERO,
         exp: 0,
     };
+
+
+
+    fn increase_significand(mut self, min_significand: BigUint) {
+        if self.significand.is_zero() {
+            return;
+        }
+
+        loop {
+            if self.significand.value >= min_significand {
+                return;
+            }
+            //TODO: implement << for BigInt
+            //self.significand.value = &self.significand.value << 1;
+            self.exp = self.exp - 1;
+        }
+    }
 }
 
 impl BigFloat<10> {
