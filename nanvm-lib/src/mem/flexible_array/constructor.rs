@@ -1,25 +1,25 @@
-use crate::{common::ref_mut::RefMut, mem::new_in_place::NewInPlace};
+use crate::{common::ref_mut::RefMut, mem::constructor::Constructor};
 
 use super::{header::FlexibleArrayHeader, FlexibleArray};
 
-pub struct FlexibleArrayNew<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
+pub struct FlexibleArrayConstructor<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
     header: H,
     items: I,
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> FlexibleArrayNew<H, I> {
+impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> FlexibleArrayConstructor<H, I> {
     pub fn new(header: H, items: I) -> Self {
         Self { header, items }
     }
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> NewInPlace for FlexibleArrayNew<H, I> {
+impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> Constructor for FlexibleArrayConstructor<H, I> {
     type Result = FlexibleArray<H>;
     #[inline(always)]
     fn result_size(&self) -> usize {
         Self::Result::flexible_size(self.header.len())
     }
-    unsafe fn new_in_place(self, p: *mut Self::Result) {
+    unsafe fn construct(self, p: *mut Self::Result) {
         let v = &mut *p;
         v.header.to_mut_ptr().write(self.header);
         let mut src = self.items;
@@ -38,11 +38,11 @@ mod test {
     use crate::{
         common::ref_mut::RefMut,
         mem::{
-            flexible_array::header::FlexibleArrayHeader, new_in_place::NewInPlace, object::Object,
+            flexible_array::header::FlexibleArrayHeader, constructor::Constructor, object::Object,
         },
     };
 
-    use super::FlexibleArrayNew;
+    use super::FlexibleArrayConstructor;
 
     #[repr(C)]
     struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
@@ -67,7 +67,7 @@ mod test {
         }
         let mut i = 0;
         {
-            let new = FlexibleArrayNew {
+            let new = FlexibleArrayConstructor {
                 header: Header(5, &mut i),
                 items: [42, 43, 44, 45, 46, 47, 48].into_iter().take(t),
             };
@@ -77,7 +77,7 @@ mod test {
                     items: [0; 5],
                 };
                 let v = unsafe { (&mut mem).to_mut_ptr() as *mut _ };
-                unsafe { new.new_in_place(v) };
+                unsafe { new.construct(v) };
                 let r = unsafe { &mut *v };
                 assert_eq!(mem.header.len(), 5);
                 assert_eq!(r.header.len(), 5);
@@ -89,7 +89,7 @@ mod test {
                 assert_eq!(mem.items, [42, 43, 44, 45, 46]);
                 assert_eq!(r.items_mut(), &[42, 43, 44, 45, 46]);
                 assert_eq!(i, 0);
-                unsafe { (*v).object_drop_in_place() };
+                unsafe { (*v).object_drop() };
                 assert_eq!(i, 1);
             }
             assert_eq!(i, 2);

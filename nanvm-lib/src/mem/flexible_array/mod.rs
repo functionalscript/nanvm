@@ -1,6 +1,6 @@
 pub mod header;
 pub mod len;
-pub mod new;
+pub mod constructor;
 
 use core::{
     mem::{align_of, size_of},
@@ -50,7 +50,7 @@ impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
     fn object_size(&self) -> usize {
         Self::flexible_size(self.header.len())
     }
-    unsafe fn object_drop_in_place(&mut self) {
+    unsafe fn object_drop(&mut self) {
         drop_in_place(self.items_mut());
         drop_in_place(self);
     }
@@ -203,7 +203,7 @@ mod test {
                 assert_eq!(a[2].0, &i as *const AtomicUsize);
             }
             assert_eq!(i.load(Ordering::Relaxed), 0);
-            unsafe { (*v).object_drop_in_place() };
+            unsafe { (*v).object_drop() };
             assert_eq!(i.load(Ordering::Relaxed), 4);
             forget(x);
         }
@@ -267,7 +267,7 @@ mod test {
                 &[0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef]
             );
             assert_eq!(unsafe { I }, 0);
-            unsafe { y.object_drop_in_place() };
+            unsafe { y.object_drop() };
             assert_eq!(unsafe { I }, 1);
             forget(x)
         }

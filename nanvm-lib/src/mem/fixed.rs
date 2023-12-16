@@ -1,4 +1,4 @@
-use super::{new_in_place::NewInPlace, object::Object};
+use super::{constructor::Constructor, object::Object};
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -6,14 +6,14 @@ pub struct Fixed<T>(pub T);
 
 impl<T> Object for Fixed<T> {}
 
-impl<T> NewInPlace for Fixed<T> {
+impl<T> Constructor for Fixed<T> {
     type Result = Fixed<T>;
     #[inline(always)]
     fn result_size(&self) -> usize {
         Self::Result::object_size(self)
     }
     #[inline(always)]
-    unsafe fn new_in_place(self, p: *mut Self::Result) {
+    unsafe fn construct(self, p: *mut Self::Result) {
         p.write(self);
     }
 }
@@ -53,7 +53,7 @@ mod test {
         let a = AtomicIsize::new(5);
         {
             let mut x = X(&a);
-            unsafe { x.object_drop_in_place() };
+            unsafe { x.object_drop() };
             assert_eq!(a.load(Ordering::Relaxed), 6);
             forget(x);
         }
@@ -74,7 +74,7 @@ mod test {
         let a = AtomicIsize::new(5);
         {
             let mut x = Fixed(Y(&a));
-            unsafe { x.object_drop_in_place() };
+            unsafe { x.object_drop() };
             assert_eq!(a.load(Ordering::Relaxed), 6);
             forget(x);
         }
@@ -89,7 +89,7 @@ mod test {
             let x = Fixed(Y(&a as *const AtomicIsize));
             {
                 let mut y = Fixed(Y(null()));
-                unsafe { x.new_in_place(&mut y) };
+                unsafe { x.construct(&mut y) };
                 assert_eq!(a.load(Ordering::Relaxed), 5);
             }
             assert_eq!(a.load(Ordering::Relaxed), 6);

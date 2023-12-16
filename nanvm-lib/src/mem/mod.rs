@@ -8,7 +8,7 @@ mod global;
 mod local;
 pub mod manager;
 pub mod mut_ref;
-mod new_in_place;
+mod constructor;
 mod object;
 mod optional_block;
 mod optional_ref;

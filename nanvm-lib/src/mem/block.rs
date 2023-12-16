@@ -18,7 +18,7 @@ impl<T: Object, D: Dealloc> Block<T, D> {
     pub unsafe fn delete(&mut self) {
         let object = self.object_mut();
         let object_size = object.object_size();
-        object.object_drop_in_place();
+        object.object_drop();
         D::dealloc(self as *mut _ as *mut u8, Self::block_layout(object_size));
     }
     #[inline(always)]
