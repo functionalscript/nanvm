@@ -272,21 +272,23 @@ impl Shl for &BigUint {
             return self.clone();
         }
 
-        let mut value = rhs.value.clone();
-        let shift_mod = rhs.value[0] & (1 << 8);
+        let mut value = self.value.clone();
+        let shift_mod = rhs.value[0] & ((1 << 9) - 1);
         if shift_mod > 0 {
+            let len = value.len();
             value.push(0); //todo: check if it is neccessary?
-            let len = self.len();
-            for i in (0..=len - 2).rev() {
-                let mut digit = self.value[i] as u128;
+            for i in (0..=len - 1).rev() {
+                let mut digit = value[i] as u128;
                 digit = digit << shift_mod;
                 value[i + 1] = value[i + 1] | (digit >> 64) as u64;
                 value[i] = digit as u64;
             }
         }
 
+        let mut res = BigUint { value };
+        res.normalize();
         //todo: add zero digits
-        BigUint { value }
+        res
     }
 }
 
@@ -671,5 +673,23 @@ mod test {
 
         let result = &BigUint::ZERO << &a;
         assert_eq!(result, BigUint::ZERO);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shl() {
+        let a = BigUint { value: [1].vec() };
+        let result = &a << &a;
+        assert_eq!(result, BigUint { value: [2].vec() });
+
+        let a = BigUint { value: [5].vec() };
+        let b = BigUint { value: [63].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [1 << 63, 2].vec()
+            }
+        );
     }
 }
