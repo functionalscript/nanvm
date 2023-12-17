@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Sub, Shl},
 };
 
 use crate::common::{array::ArrayEx, default::default};
@@ -261,6 +261,32 @@ impl Div for &BigUint {
 
         let (res, _) = self.div_mod(b);
         res
+    }
+}
+
+impl Shl for BigUint {
+    type Output = BigUint;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        if self.is_zero() | rhs.is_zero() {
+            return self;
+        }
+
+        let mut value = rhs.value.clone();
+        let shift_mod = rhs.value[0] & (1 << 8);
+        if shift_mod > 0 {
+            value.push(0); //todo: check if it is neccessary?
+            let len = self.len();
+            for i in (0..=len-2).rev()  {
+                let mut digit = self.value[i] as u128;
+                digit = digit << shift_mod;
+                value[i + 1] = value[i + 1] | (digit >> 64) as u64;
+                value[i] = digit as u64;
+            }
+        }
+
+        //todo: add zero digits
+        BigUint { value }
     }
 }
 
