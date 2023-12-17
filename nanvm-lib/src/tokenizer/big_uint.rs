@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Div, Mul, Sub, Shl},
+    ops::{Add, Div, Mul, Shl, Sub},
 };
 
 use crate::common::{array::ArrayEx, default::default};
@@ -264,12 +264,12 @@ impl Div for &BigUint {
     }
 }
 
-impl Shl for BigUint {
+impl Shl for &BigUint {
     type Output = BigUint;
 
     fn shl(self, rhs: Self) -> Self::Output {
         if self.is_zero() | rhs.is_zero() {
-            return self;
+            return self.clone();
         }
 
         let mut value = rhs.value.clone();
@@ -277,7 +277,7 @@ impl Shl for BigUint {
         if shift_mod > 0 {
             value.push(0); //todo: check if it is neccessary?
             let len = self.len();
-            for i in (0..=len-2).rev()  {
+            for i in (0..=len - 2).rev() {
                 let mut digit = self.value[i] as u128;
                 digit = digit << shift_mod;
                 value[i + 1] = value[i + 1] | (digit >> 64) as u64;
@@ -657,5 +657,19 @@ mod test {
         let result = a.pow(&BigUint {
             value: [100, 100].vec(),
         });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shl_zero() {
+        let result = &BigUint::ZERO << &BigUint::ZERO;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [5].vec() };
+        let result = &a << &BigUint::ZERO;
+        assert_eq!(result, a);
+
+        let result = &BigUint::ZERO << &a;
+        assert_eq!(result, BigUint::ZERO);
     }
 }

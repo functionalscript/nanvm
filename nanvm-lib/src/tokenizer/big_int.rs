@@ -55,7 +55,10 @@ impl BigInt {
     pub fn abs(self) -> BigInt {
         match self.sign {
             Sign::Positive => self,
-            Sign::Negative => BigInt { sign: Sign::Positive, value: self.value }
+            Sign::Negative => BigInt {
+                sign: Sign::Positive,
+                value: self.value,
+            },
         }
     }
 

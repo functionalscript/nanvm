@@ -14,8 +14,6 @@ impl<const Base: u32> BigFloat<Base> {
         exp: 0,
     };
 
-
-
     fn increase_significand(mut self, min_significand: BigUint) {
         if self.significand.is_zero() {
             return;
