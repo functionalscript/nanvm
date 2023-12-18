@@ -8,8 +8,8 @@ use crate::tokenizer::big_uint::BigUint;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 pub struct BigInt {
-    sign: Sign,
-    value: BigUint,
+    pub sign: Sign,
+    pub value: BigUint,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
@@ -49,6 +49,16 @@ impl BigInt {
         BigInt {
             sign: Sign::Positive,
             value: BigUint { value: [n].vec() },
+        }
+    }
+
+    pub fn abs(self) -> BigInt {
+        match self.sign {
+            Sign::Positive => self,
+            Sign::Negative => BigInt {
+                sign: Sign::Positive,
+                value: self.value,
+            },
         }
     }
 

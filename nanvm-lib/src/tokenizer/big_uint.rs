@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Shl, Sub},
 };
 
 use crate::common::{array::ArrayEx, default::default};
@@ -260,6 +260,45 @@ impl Div for &BigUint {
         }
 
         let (res, _) = self.div_mod(b);
+        res
+    }
+}
+
+impl Shl for &BigUint {
+    type Output = BigUint;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        if self.is_zero() | rhs.is_zero() {
+            return self.clone();
+        }
+
+        if rhs.len() != 1 {
+            panic!("Maximum BigUint size exceeded")
+        }
+
+        let mut value = self.value.clone();
+        let shift_mod = rhs.value[0] & ((1 << 6) - 1);
+        if shift_mod > 0 {
+            let len = value.len();
+            value.push(0); //todo: check if it is neccessary?
+            for i in (0..=len - 1).rev() {
+                let mut digit = value[i] as u128;
+                digit = digit << shift_mod;
+                value[i + 1] = value[i + 1] | (digit >> 64) as u64;
+                value[i] = digit as u64;
+            }
+        }
+
+        let number_of_zeros = (rhs.value[0] / 64) as usize;
+        if number_of_zeros > 0 {
+            let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
+            zeros_vector.extend(value);
+            value = zeros_vector;
+        }
+
+        let mut res = BigUint { value };
+        res.normalize();
+        //todo: add zero digits
         res
     }
 }
@@ -631,5 +670,84 @@ mod test {
         let result = a.pow(&BigUint {
             value: [100, 100].vec(),
         });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shl_zero() {
+        let result = &BigUint::ZERO << &BigUint::ZERO;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [5].vec() };
+        let result = &a << &BigUint::ZERO;
+        assert_eq!(result, a);
+
+        let result = &BigUint::ZERO << &a;
+        assert_eq!(result, BigUint::ZERO);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shl() {
+        let a = BigUint { value: [1].vec() };
+        let result = &a << &a;
+        assert_eq!(result, BigUint { value: [2].vec() });
+
+        let a = BigUint { value: [5].vec() };
+        let b = BigUint { value: [63].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [1 << 63, 2].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [5, 9].vec(),
+        };
+        let b = BigUint { value: [63].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [1 << 63, (1 << 63) + 2, 4].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [5, 9].vec(),
+        };
+        let b = BigUint { value: [64].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [0, 5, 9].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [5, 9].vec(),
+        };
+        let b = BigUint { value: [65].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [0, 10, 18].vec()
+            }
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Maximum BigUint size exceeded")]
+    #[wasm_bindgen_test]
+    fn test_shl_overflow() {
+        let a = BigUint::one();
+        let b = BigUint {
+            value: [1, 1].vec(),
+        };
+        let result = &a << &b;
     }
 }
