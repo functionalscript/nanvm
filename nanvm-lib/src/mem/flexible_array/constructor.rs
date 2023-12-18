@@ -13,9 +13,7 @@ impl<H: FlexibleArrayHeader, I: Iterator> FlexibleArrayConstructor<H, I> {
     }
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator> Constructor
-    for FlexibleArrayConstructor<H, I>
-{
+impl<H: FlexibleArrayHeader, I: Iterator> Constructor for FlexibleArrayConstructor<H, I> {
     type Result = FlexibleArray<I::Item, H>;
     #[inline(always)]
     fn result_size(&self) -> usize {

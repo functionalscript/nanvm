@@ -1,10 +1,10 @@
 pub mod constructor;
 pub mod header;
 use core::{
+    marker::PhantomData,
     mem::{align_of, size_of},
     ptr::drop_in_place,
     slice::{from_raw_parts, from_raw_parts_mut},
-    marker::PhantomData,
 };
 
 use self::header::FlexibleArrayHeader;
@@ -18,8 +18,7 @@ pub struct FlexibleArray<I, T: FlexibleArrayHeader> {
 }
 
 impl<I, T: FlexibleArrayHeader> FlexibleArray<I, T> {
-    const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, I> =
-        FieldLayout::align_to(align_of::<I>());
+    const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, I> = FieldLayout::align_to(align_of::<I>());
     #[inline(always)]
     pub fn items(&self) -> &[I] {
         unsafe {
