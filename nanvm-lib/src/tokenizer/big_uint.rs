@@ -289,9 +289,9 @@ impl Shl for &BigUint {
             }
         }
 
-        let num_zeros = (rhs.value[0] / 64) as usize;
-        if num_zeros > 0 {
-            let mut zeros_vector: Vec<_> = vec![0; num_zeros];
+        let number_of_zeros = (rhs.value[0] / 64) as usize;
+        if number_of_zeros > 0 {
+            let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
             zeros_vector.extend(value);
             value = zeros_vector;
         }
