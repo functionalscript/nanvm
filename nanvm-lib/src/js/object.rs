@@ -3,7 +3,8 @@ use core::marker::PhantomData;
 use crate::{
     common::{allocator::Allocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
-    js::any::Any,
+    js::any::{Any, Any2},
+    mem::flexible_array::FlexibleArray,
 };
 
 use super::{bitset::OBJECT, extension_rc::ExtensionRc, string::StringRc};
@@ -28,3 +29,5 @@ pub type ObjectRc<A> = Rc<ObjectHeader<A>>;
 impl<A: Allocator> ExtensionRc for ObjectHeader<A> {
     const RC_SUBSET: BitSubset64 = OBJECT;
 }
+
+pub type Object2<D> = FlexibleArray<Any2<D>>;

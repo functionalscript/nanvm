@@ -38,3 +38,17 @@ pub const STRING: BitSubset64 = RC_SPLIT.0;
 // OBJECT: 1111_1111_1111_1.1.1
 
 pub const OBJECT: BitSubset64 = RC_SPLIT.1;
+
+#[cfg(test)]
+mod test {
+    use crate::js::{
+        bitset::{BOOL, EXTENSION, FALSE, TRUE},
+        number::test::NAN,
+    };
+
+    const _: () = assert!(BOOL.has(FALSE));
+    const _: () = assert!(BOOL.has(TRUE));
+    const _: () = assert!(!BOOL.has(0));
+    const _: () = assert!(!BOOL.has(NAN));
+    const _: () = assert!(BOOL.has(EXTENSION.mask));
+}

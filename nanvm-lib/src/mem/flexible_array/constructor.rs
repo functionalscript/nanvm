@@ -2,21 +2,19 @@ use crate::{common::ref_mut::RefMut, mem::constructor::Constructor};
 
 use super::{header::FlexibleArrayHeader, FlexibleArray};
 
-pub struct FlexibleArrayConstructor<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> {
+pub struct FlexibleArrayConstructor<H: FlexibleArrayHeader, I: Iterator> {
     header: H,
     items: I,
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> FlexibleArrayConstructor<H, I> {
+impl<H: FlexibleArrayHeader, I: Iterator> FlexibleArrayConstructor<H, I> {
     pub fn new(header: H, items: I) -> Self {
         Self { header, items }
     }
 }
 
-impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> Constructor
-    for FlexibleArrayConstructor<H, I>
-{
-    type Result = FlexibleArray<H>;
+impl<H: FlexibleArrayHeader, I: Iterator> Constructor for FlexibleArrayConstructor<H, I> {
+    type Result = FlexibleArray<I::Item, H>;
     #[inline(always)]
     fn result_size(&self) -> usize {
         Self::Result::flexible_size(self.header.len())
@@ -28,6 +26,13 @@ impl<H: FlexibleArrayHeader, I: Iterator<Item = H::Item>> Constructor
         for dst in v.items_mut() {
             dst.to_mut_ptr().write(src.next().unwrap());
         }
+    }
+}
+
+impl<I: ExactSizeIterator> From<I> for FlexibleArrayConstructor<usize, I> {
+    #[inline(always)]
+    fn from(items: I) -> Self {
+        items.len().constructor(items)
     }
 }
 
@@ -47,9 +52,9 @@ mod test {
     use super::FlexibleArrayConstructor;
 
     #[repr(C)]
-    struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
+    struct StaticVariable<T: FlexibleArrayHeader, I, const L: usize> {
         header: T,
-        items: [T::Item; L],
+        items: [I; L],
     }
 
     fn gen_test(t: usize) {
@@ -62,7 +67,6 @@ mod test {
             }
         }
         impl FlexibleArrayHeader for Header {
-            type Item = u8;
             fn len(&self) -> usize {
                 self.0 as usize
             }
@@ -71,10 +75,10 @@ mod test {
         {
             let new = FlexibleArrayConstructor {
                 header: Header(5, &mut i),
-                items: [42, 43, 44, 45, 46, 47, 48].into_iter().take(t),
+                items: [42u8, 43, 44, 45, 46, 47, 48].into_iter().take(t),
             };
             {
-                let mut mem = StaticVariable::<Header, 5> {
+                let mut mem = StaticVariable::<Header, u8, 5> {
                     header: Header(0, null_mut()),
                     items: [0; 5],
                 };

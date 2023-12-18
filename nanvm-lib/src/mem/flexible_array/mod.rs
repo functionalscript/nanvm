@@ -1,8 +1,7 @@
 pub mod constructor;
 pub mod header;
-pub mod len;
-
 use core::{
+    marker::PhantomData,
     mem::{align_of, size_of},
     ptr::drop_in_place,
     slice::{from_raw_parts, from_raw_parts_mut},
@@ -13,15 +12,15 @@ use self::header::FlexibleArrayHeader;
 use super::{field_layout::FieldLayout, object::Object};
 
 #[repr(transparent)]
-pub struct FlexibleArray<T: FlexibleArrayHeader> {
+pub struct FlexibleArray<I, T: FlexibleArrayHeader = usize> {
     pub header: T,
+    _0: PhantomData<I>,
 }
 
-impl<T: FlexibleArrayHeader> FlexibleArray<T> {
-    const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, T::Item> =
-        FieldLayout::align_to(align_of::<T::Item>());
+impl<I, T: FlexibleArrayHeader> FlexibleArray<I, T> {
+    const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, I> = FieldLayout::align_to(align_of::<I>());
     #[inline(always)]
-    pub fn items(&self) -> &[T::Item] {
+    pub fn items(&self) -> &[I] {
         unsafe {
             from_raw_parts(
                 Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent(&self.header),
@@ -30,7 +29,7 @@ impl<T: FlexibleArrayHeader> FlexibleArray<T> {
         }
     }
     #[inline(always)]
-    pub fn items_mut(&mut self) -> &mut [T::Item] {
+    pub fn items_mut(&mut self) -> &mut [I] {
         unsafe {
             from_raw_parts_mut(
                 Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent_mut(&mut self.header),
@@ -40,11 +39,11 @@ impl<T: FlexibleArrayHeader> FlexibleArray<T> {
     }
     #[inline(always)]
     pub const fn flexible_size(len: usize) -> usize {
-        Self::FLEXIBLE_HEADER_LAYOUT.size + len * size_of::<T::Item>()
+        Self::FLEXIBLE_HEADER_LAYOUT.size + len * size_of::<I>()
     }
 }
 
-impl<T: FlexibleArrayHeader> Object for FlexibleArray<T> {
+impl<T: FlexibleArrayHeader, I> Object for FlexibleArray<I, T> {
     const OBJECT_ALIGN: usize = Self::FLEXIBLE_HEADER_LAYOUT.align;
     #[inline(always)]
     fn object_size(&self) -> usize {
@@ -77,7 +76,7 @@ mod test {
     struct X<H, I>(H, PhantomData<I>);
 
     impl<H: Into<usize> + Copy, I> FlexibleArrayHeader for X<H, I> {
-        type Item = I;
+        // type Item = I;
         fn len(&self) -> usize {
             self.0.into()
         }
@@ -100,7 +99,7 @@ mod test {
             len: 5,
             items: [42, 43, 44, 45, 46],
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<u16, u8>>;
+        let v = ptr(&mut y) as *mut FlexibleArray<u8, X<u16, u8>>;
         unsafe {
             assert_eq!((*v).header.len(), 5);
             assert_eq!((*v).object_size(), 7);
@@ -116,7 +115,7 @@ mod test {
             len: 3,
             items: [42, 43, 44],
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<u16, u32>>;
+        let v = ptr(&mut y) as *mut FlexibleArray<u32, X<u16, u32>>;
         unsafe {
             assert_eq!((*v).header.len(), 3);
             assert_eq!((*v).object_size(), 16);
@@ -138,7 +137,7 @@ mod test {
             len: unsafe { N.try_into().unwrap_unchecked() },
             items,
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<H, I>>;
+        let v = ptr(&mut y) as *mut FlexibleArray<I, X<H, I>>;
         unsafe {
             assert_eq!((*v).header.len(), N);
             assert_eq!((*v).object_size(), size);
@@ -166,7 +165,7 @@ mod test {
     }
 
     impl FlexibleArrayHeader for DropCount {
-        type Item = DropCount;
+        // type Item = DropCount;
         fn len(&self) -> usize {
             3
         }
@@ -191,7 +190,7 @@ mod test {
                     DropCount(&i as *const AtomicUsize),
                 ],
             };
-            let v = unsafe { x.to_mut_ptr() as *mut FlexibleArray<DropCount> };
+            let v = unsafe { x.to_mut_ptr() as *mut FlexibleArray<DropCount, DropCount> };
             unsafe {
                 assert_eq!((*v).header.len(), 3);
                 assert_eq!((*v).object_size(), size_of::<DropCountX>());
@@ -211,29 +210,29 @@ mod test {
     }
 
     #[repr(C)]
-    struct StaticVariable<T: FlexibleArrayHeader, const L: usize> {
+    struct StaticVariable<T: FlexibleArrayHeader, I, const L: usize> {
         header: T,
-        items: [T::Item; L],
+        items: [I; L],
     }
 
     struct E();
 
     impl FlexibleArrayHeader for E {
-        type Item = u64;
+        // type Item = u64;
         fn len(&self) -> usize {
             3
         }
     }
 
-    const _: () = assert!(size_of::<StaticVariable<E, 3>>() == 24);
+    const _: () = assert!(size_of::<StaticVariable<E, u64, 3>>() == 24);
 
-    const _: () = assert!(FlexibleArray::<E>::OBJECT_ALIGN == 8);
-    const _: () = assert!(FlexibleArray::<E>::FLEXIBLE_HEADER_LAYOUT.align == 8);
+    const _: () = assert!(FlexibleArray::<u64, E>::OBJECT_ALIGN == 8);
+    const _: () = assert!(FlexibleArray::<u64, E>::FLEXIBLE_HEADER_LAYOUT.align == 8);
     const _: () = assert!(size_of::<E>() == 0);
     const FL: FieldLayout<E, u64> = FieldLayout::align_to(align_of::<u64>());
     const _: () = assert!(FL.align == 8);
     const _: () = assert!(FL.size == 0);
-    const _: () = assert!(FlexibleArray::<E>::FLEXIBLE_HEADER_LAYOUT.size == 0);
+    const _: () = assert!(FlexibleArray::<u64, E>::FLEXIBLE_HEADER_LAYOUT.size == 0);
 
     #[test]
     #[wasm_bindgen_test]
@@ -247,19 +246,19 @@ mod test {
             }
         }
         impl FlexibleArrayHeader for EmptyHeader {
-            type Item = u64;
+            // type Item = u64;
             fn len(&self) -> usize {
                 3
             }
         }
         let items: [u64; 3] = [0x1234567890abcdef, 0x1234567890abcdef, 0x1234567890abcdef];
         {
-            let mut x = StaticVariable::<EmptyHeader, 3> {
+            let mut x = StaticVariable::<EmptyHeader, u64, 3> {
                 header: EmptyHeader(),
                 items,
             };
-            let y = unsafe { &mut *(x.to_mut_ptr() as *mut FlexibleArray<EmptyHeader>) };
-            assert_eq!(size_of::<StaticVariable<EmptyHeader, 3>>(), 24);
+            let y = unsafe { &mut *(x.to_mut_ptr() as *mut FlexibleArray<u64, EmptyHeader>) };
+            assert_eq!(size_of::<StaticVariable<EmptyHeader, u64, 3>>(), 24);
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);
             assert_eq!(

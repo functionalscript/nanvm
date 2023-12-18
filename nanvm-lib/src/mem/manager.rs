@@ -7,7 +7,7 @@ use super::{
     block_header::BlockHeader,
     constructor::Constructor,
     fixed::Fixed,
-    flexible_array::{constructor::FlexibleArrayConstructor, len::FlexibleArrayLen, FlexibleArray},
+    flexible_array::{constructor::FlexibleArrayConstructor, FlexibleArray},
     mut_ref::MutRef,
 };
 
@@ -47,7 +47,7 @@ pub trait Manager: Sized {
     fn flexible_array_new<I>(
         self,
         items: impl ExactSizeIterator<Item = I>,
-    ) -> MutRef<FlexibleArray<FlexibleArrayLen<I>>, Self::Dealloc> {
+    ) -> MutRef<FlexibleArray<I, usize>, Self::Dealloc> {
         self.new(FlexibleArrayConstructor::from(items))
     }
 }

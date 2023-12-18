@@ -3,6 +3,7 @@ use core::result;
 use crate::{
     common::allocator::GlobalAllocator,
     container::{Container, OptionalRc},
+    mem::{manager::Dealloc, optional_ref::OptionalRef},
 };
 
 use super::{
@@ -77,6 +78,8 @@ impl Any {
     }
 }
 
+pub type Any2<D: Dealloc> = OptionalRef<AnyInternal<D>>;
+
 #[cfg(test)]
 mod test {
     use std::rc::Rc;
@@ -86,23 +89,13 @@ mod test {
     use crate::{
         common::allocator::GlobalAllocator,
         js::{
-            bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
-            object::{self, ObjectHeader, ObjectRc},
+            object::{self, ObjectHeader},
             string::{self, StringHeader},
         },
     };
 
-    use super::{
-        super::{bitset::TRUE, number::test::NAN},
-        *,
-    };
-
-    const _: () = assert!(BOOL.has(FALSE));
-    const _: () = assert!(BOOL.has(TRUE));
-    const _: () = assert!(!BOOL.has(0));
-    const _: () = assert!(!BOOL.has(NAN));
-    const _: () = assert!(BOOL.has(EXTENSION.mask));
+    use super::*;
 
     #[test]
     #[wasm_bindgen_test]
