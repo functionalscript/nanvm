@@ -36,16 +36,20 @@ impl BigFloat<10> {
             return BigFloat::ZERO;
         }
 
-        if self.exp >= 0 {
+        if self.exp == 0 {
+            return BigFloat {
+                significand: self.significand,
+                exp: 0,
+            };
+        }
+
+        if self.exp > 0 {
             let five = BigUint { value: [5].vec() };
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
             let mut result: BigFloat<2> = BigFloat {
                 significand: new_sign,
                 exp: self.exp,
             };
-            // result.increase_significand(BigUint {
-            //     value: [1 << 53].vec(),
-            // });
             return result;
         }
 
@@ -85,6 +89,19 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_integer() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: 0,
+        };
+        let res = a.to_bin();
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(100),
+                exp: 0,
+            }
+        );
+
         let a = BigFloat {
             significand: BigInt::from_i64(1),
             exp: 1,
