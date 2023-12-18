@@ -1,6 +1,6 @@
 mod arena;
 mod block;
-mod block_header;
+pub mod block_header;
 mod constructor;
 mod field_layout;
 mod fixed;

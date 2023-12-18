@@ -78,6 +78,8 @@ impl Any {
     }
 }
 
+pub type Any2<D: Dealloc> = OptionalRef<AnyInternal<D>>;
+
 #[cfg(test)]
 mod test {
     use std::rc::Rc;
