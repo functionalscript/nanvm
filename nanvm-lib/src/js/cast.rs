@@ -7,7 +7,7 @@ pub trait Cast: Sized {
     //
     #[inline(always)]
     fn move_to_any(self) -> Any {
-        unsafe { Any::from_optional_base(AnyInternal(self.move_to_any_internal())) }
+        unsafe { Any::from_optional_base(AnyInternal::new(self.move_to_any_internal())) }
     }
 }
 

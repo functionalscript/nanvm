@@ -1,6 +1,9 @@
+use core::marker::PhantomData;
+
 use crate::{
     common::allocator::GlobalAllocator,
     container::{Base, OptionalBase},
+    mem::{global::Global, manager::Dealloc},
 };
 
 use super::{
@@ -11,8 +14,21 @@ use super::{
 };
 
 #[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct AnyInternal(pub u64);
+#[derive(Copy)]
+pub struct AnyInternal<D: Dealloc = Global>(pub u64, PhantomData<D>);
+
+impl<D: Dealloc> Clone for AnyInternal<D> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        Self(self.0, PhantomData)
+    }
+}
+
+impl<D: Dealloc> AnyInternal<D> {
+    pub const fn new(v: u64) -> Self {
+        Self(v, PhantomData)
+    }
+}
 
 impl OptionalBase for AnyInternal {
     unsafe fn get_base(&self) -> Option<*mut Base> {

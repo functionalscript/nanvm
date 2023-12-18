@@ -3,6 +3,7 @@ use core::result;
 use crate::{
     common::allocator::GlobalAllocator,
     container::{Container, OptionalRc},
+    mem::{manager::Dealloc, optional_ref::OptionalRef},
 };
 
 use super::{
