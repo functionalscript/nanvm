@@ -6,7 +6,7 @@ use crate::{
     mem::flexible_array::FlexibleArray,
 };
 
-use super::{bitset::STRING, extension_rc::ExtensionRc};
+use super::{bitset::STRING, extension_rc::ExtensionRc, extension_ref::ExtensionRef};
 
 pub struct StringHeader<A>(PhantomData<A>);
 
@@ -30,3 +30,7 @@ impl<A: Allocator> ExtensionRc for StringHeader<A> {
 }
 
 pub type String2 = FlexibleArray<u16>;
+
+impl ExtensionRef for String2 {
+    const REF_SUBSET: BitSubset64 = STRING;
+}

@@ -4,10 +4,12 @@ use crate::{
     common::{allocator::Allocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
     js::any::{Any, Any2},
-    mem::flexible_array::FlexibleArray,
+    mem::{flexible_array::FlexibleArray, manager::Dealloc},
 };
 
-use super::{bitset::OBJECT, extension_rc::ExtensionRc, string::StringRc};
+use super::{
+    bitset::OBJECT, extension_rc::ExtensionRc, extension_ref::ExtensionRef, string::StringRc,
+};
 
 pub struct ObjectHeader<A>(PhantomData<A>);
 
@@ -31,3 +33,7 @@ impl<A: Allocator> ExtensionRc for ObjectHeader<A> {
 }
 
 pub type Object2<D> = FlexibleArray<Any2<D>>;
+
+impl<D: Dealloc> ExtensionRef for Object2<D> {
+    const REF_SUBSET: BitSubset64 = OBJECT;
+}
