@@ -691,5 +691,17 @@ mod test {
                 value: [1 << 63, 2].vec()
             }
         );
+
+        let a = BigUint {
+            value: [5, 9].vec(),
+        };
+        let b = BigUint { value: [63].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [1 << 63, (1 << 63) + 2, 4].vec()
+            }
+        );
     }
 }
