@@ -739,4 +739,15 @@ mod test {
             }
         );
     }
+
+    #[test]
+    #[should_panic(expected = "Maximum BigUint size exceeded")]
+    #[wasm_bindgen_test]
+    fn test_shl_overflow() {
+        let a = BigUint::one();
+        let b = BigUint {
+            value: [1, 1].vec(),
+        };
+        let result = &a << &b;
+    }
 }
