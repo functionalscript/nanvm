@@ -179,6 +179,17 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
+    fn test_bool2() {
+        type Any = Any2<Global>;
+        assert_eq!(true.move_to_any2::<Global>().try_move(), Ok(true));
+        assert_eq!(Any::from(false).try_move(), Ok(false));
+        //
+        assert_eq!(Any::from(15.0).try_move::<bool>(), Err(()));
+        assert_eq!(Any::from(Null()).try_move::<bool>(), Err(()));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn test_null() {
         assert!(Any::from(Null()).is::<Null>());
         //
