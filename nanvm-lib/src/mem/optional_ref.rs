@@ -20,6 +20,10 @@ impl<T: OptionalBlock> OptionalRef<T> {
         self.value
     }
     #[inline(always)]
+    pub fn is_ref(&self) -> bool {
+        self.value.is_ref()
+    }
+    #[inline(always)]
     pub unsafe fn move_to_internal(mut self) -> T {
         let result = self.value.to_mut_ptr().read();
         forget(self);

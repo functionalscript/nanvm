@@ -53,12 +53,16 @@ impl OptionalBase for AnyInternal {
 impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     type BlockHeader = D::BlockHeader;
     #[inline(always)]
-    fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
-        let v = self.0;
-        if !RC.has(v) {
-            return None;
+    fn is_ref(self) -> bool {
+        RC.has(self.0)
+    }
+    #[inline(always)]
+    unsafe fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
+        if self.is_ref() {
+            Some((self.0 & RC_SUBSET_SUPERPOSITION) as _)
+        } else {
+            None
         }
-        Some((v & RC_SUBSET_SUPERPOSITION) as _)
     }
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {

@@ -12,7 +12,7 @@ use super::{
     cast::Cast,
     extension_rc::ExtensionRc,
     null::Null,
-    string::StringRc,
+    string::{String2, StringRc},
     type_::Type,
 };
 
@@ -95,6 +95,26 @@ impl<D: Dealloc> Any2<D> {
         }
         Err(())
     }
+    //
+    /*
+    pub fn get_type(&self) -> Type {
+        if self.is_ref() {
+            if self.is::<String2>() {
+                Type::String
+            } else {
+                Type::Object
+            }
+        } else {
+            if self.is::<f64>() {
+                Type::Number
+            } else if self.is::<Null>() {
+                Type::Null
+            } else {
+                Type::Bool
+            }
+        }
+    }
+    */
 }
 
 impl<D: Dealloc, T: Cast> From<T> for Any2<D> {
@@ -116,7 +136,8 @@ mod test {
             null::Null,
             object::{self, ObjectHeader},
             string::{self, StringHeader},
-        }, mem::global::Global,
+        },
+        mem::global::Global,
     };
 
     use super::*;
@@ -214,6 +235,17 @@ mod test {
         assert_eq!(Any::from(true).get_type(), Type::Bool);
         assert_eq!(Null().move_to_any().get_type(), Type::Null);
     }
+
+    /*
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_type2() {
+        type Any = Any2<Global>;
+        assert_eq!(Any::from(15.0).get_type(), Type::Number);
+        assert_eq!(Any::from(true).get_type(), Type::Bool);
+        assert_eq!(Null().move_to_any().get_type(), Type::Null);
+    }
+    */
 
     #[test]
     #[wasm_bindgen_test]
