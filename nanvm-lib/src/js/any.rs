@@ -199,6 +199,16 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
+    fn test_null2() {
+        type Any = Any2<Global>;
+        assert!(Any::from(Null()).is::<Null>());
+        //
+        assert!(!Any::from(-15.7).is::<Null>());
+        assert!(!Any::from(false).is::<Null>());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn test_type() {
         assert_eq!(Any::from(15.0).get_type(), Type::Number);
         assert_eq!(Any::from(true).get_type(), Type::Bool);
