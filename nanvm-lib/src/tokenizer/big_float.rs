@@ -113,5 +113,18 @@ mod test {
                 exp: 1,
             }
         );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: 2,
+        };
+        let res = a.to_bin();
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(2500),
+                exp: 2,
+            }
+        );
     }
 }
