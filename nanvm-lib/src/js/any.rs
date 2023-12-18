@@ -152,7 +152,19 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_number2() {
-        assert_eq!(Any2::<Global>::from(1.0).try_move(), Ok(1.0));
+        type Any = Any2<Global>;
+        assert_eq!(Any::from(1.0).try_move(), Ok(1.0));
+        let x: Any = (-1.0).into();
+        assert_eq!(x.try_move(), Ok(-1.0));
+        assert_eq!(Any::from(f64::INFINITY).try_move(), Ok(f64::INFINITY));
+        assert_eq!(
+            Any::from(f64::NEG_INFINITY).try_move(),
+            Ok(f64::NEG_INFINITY)
+        );
+        assert!(Any::from(f64::NAN).try_move::<f64>().unwrap().is_nan());
+        //
+        assert_eq!(Any::from(true).try_move::<f64>(), Err(()));
+        assert_eq!(Any::from(Null()).try_move::<f64>(), Err(()));
     }
 
     #[test]
