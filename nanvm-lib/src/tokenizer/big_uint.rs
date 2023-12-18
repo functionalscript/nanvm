@@ -272,8 +272,12 @@ impl Shl for &BigUint {
             return self.clone();
         }
 
+        if rhs.len() != 1 {
+            panic!("Maximum BigUint size exceeded")
+        }
+
         let mut value = self.value.clone();
-        let shift_mod = rhs.value[0] & ((1 << 9) - 1);
+        let shift_mod = rhs.value[0] & ((1 << 6) - 1);
         if shift_mod > 0 {
             let len = value.len();
             value.push(0); //todo: check if it is neccessary?
@@ -283,6 +287,13 @@ impl Shl for &BigUint {
                 value[i + 1] = value[i + 1] | (digit >> 64) as u64;
                 value[i] = digit as u64;
             }
+        }
+
+        let num_zeros = (rhs.value[0] / 64) as usize;
+        if num_zeros > 0 {
+            let mut zeros_vector: Vec<_> = vec![0; num_zeros];
+            zeros_vector.extend(value);
+            value = zeros_vector;
         }
 
         let mut res = BigUint { value };
@@ -701,6 +712,30 @@ mod test {
             result,
             BigUint {
                 value: [1 << 63, (1 << 63) + 2, 4].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [5, 9].vec(),
+        };
+        let b = BigUint { value: [64].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [0, 5, 9].vec()
+            }
+        );
+
+        let a = BigUint {
+            value: [5, 9].vec(),
+        };
+        let b = BigUint { value: [65].vec() };
+        let result = &a << &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [0, 10, 18].vec()
             }
         );
     }
