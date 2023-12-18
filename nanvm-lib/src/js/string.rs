@@ -29,4 +29,4 @@ impl<A: Allocator> ExtensionRc for StringHeader<A> {
     const RC_SUBSET: BitSubset64 = STRING;
 }
 
-pub type String2 = FlexibleArray<FlexibleArrayLen<u16>>;
+pub type String2 = FlexibleArray<FlexibleArrayLen, u16>;
