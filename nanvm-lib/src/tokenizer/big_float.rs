@@ -14,7 +14,7 @@ impl<const Base: u32> BigFloat<Base> {
         exp: 0,
     };
 
-    fn increase_significand(mut self, min_significand: BigUint) {
+    fn increase_significand(&mut self, min_significand: BigUint) {
         if self.significand.is_zero() {
             return;
         }
@@ -24,7 +24,7 @@ impl<const Base: u32> BigFloat<Base> {
                 return;
             }
             //TODO: implement << for BigInt
-            //self.significand.value = &self.significand.value << 1;
+            self.significand.value = &self.significand.value << &BigUint::one();
             self.exp = self.exp - 1;
         }
     }
@@ -39,7 +39,14 @@ impl BigFloat<10> {
         if self.exp >= 0 {
             let five = BigUint { value: [5].vec() };
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
-            todo!()
+            let mut result: BigFloat<2> = BigFloat {
+                significand: new_sign,
+                exp: self.exp,
+            };
+            // result.increase_significand(BigUint {
+            //     value: [1 << 53].vec(),
+            // });
+            return result;
         }
 
         todo!()
@@ -77,5 +84,18 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_integer() {}
+    fn test_integer() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(1),
+            exp: 1,
+        };
+        let res = a.to_bin();
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(5),
+                exp: 1,
+            }
+        );
+    }
 }
