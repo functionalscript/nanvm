@@ -47,7 +47,7 @@ pub trait Manager: Sized {
     fn flexible_array_new<I>(
         self,
         items: impl ExactSizeIterator<Item = I>,
-    ) -> MutRef<FlexibleArray<usize, I>, Self::Dealloc> {
+    ) -> MutRef<FlexibleArray<I, usize>, Self::Dealloc> {
         self.new(FlexibleArrayConstructor::from(items))
     }
 }

@@ -42,7 +42,7 @@ mod test {
         let x = H();
         let y = x.constructor([1, 2, 3, 4, 5].iter().copied());
         let mut buffer = [0u8; 5];
-        unsafe { y.construct(buffer.as_mut_ptr() as *mut FlexibleArray<H, u8>) };
+        unsafe { y.construct(buffer.as_mut_ptr() as *mut FlexibleArray<u8, H>) };
         assert_eq!(buffer, [1, 2, 3, 4, 5]);
     }
 
@@ -74,7 +74,7 @@ mod test {
             assert_eq!(p, buffer[2] as *mut _);
             assert_eq!(p, buffer[3] as *mut _);
             assert_eq!(p, buffer[4] as *mut _);
-            let px = buffer.as_mut_ptr() as *mut FlexibleArray<usize, Item>;
+            let px = buffer.as_mut_ptr() as *mut FlexibleArray<Item, usize>;
             unsafe { (*px).object_drop() };
             assert_eq!(i, 4);
         }

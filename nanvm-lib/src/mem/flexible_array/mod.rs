@@ -1,6 +1,5 @@
 pub mod constructor;
 pub mod header;
-
 use core::{
     mem::{align_of, size_of},
     ptr::drop_in_place,
@@ -13,12 +12,12 @@ use self::header::FlexibleArrayHeader;
 use super::{field_layout::FieldLayout, object::Object};
 
 #[repr(transparent)]
-pub struct FlexibleArray<T: FlexibleArrayHeader, I> {
+pub struct FlexibleArray<I, T: FlexibleArrayHeader> {
     pub header: T,
     _0: PhantomData<I>,
 }
 
-impl<T: FlexibleArrayHeader, I> FlexibleArray<T, I> {
+impl<I, T: FlexibleArrayHeader> FlexibleArray<I, T> {
     const FLEXIBLE_HEADER_LAYOUT: FieldLayout<T, I> =
         FieldLayout::align_to(align_of::<I>());
     #[inline(always)]
@@ -45,7 +44,7 @@ impl<T: FlexibleArrayHeader, I> FlexibleArray<T, I> {
     }
 }
 
-impl<T: FlexibleArrayHeader, I> Object for FlexibleArray<T, I> {
+impl<T: FlexibleArrayHeader, I> Object for FlexibleArray<I, T> {
     const OBJECT_ALIGN: usize = Self::FLEXIBLE_HEADER_LAYOUT.align;
     #[inline(always)]
     fn object_size(&self) -> usize {
@@ -101,7 +100,7 @@ mod test {
             len: 5,
             items: [42, 43, 44, 45, 46],
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<u16, u8>, u8>;
+        let v = ptr(&mut y) as *mut FlexibleArray<u8, X<u16, u8>>;
         unsafe {
             assert_eq!((*v).header.len(), 5);
             assert_eq!((*v).object_size(), 7);
@@ -117,7 +116,7 @@ mod test {
             len: 3,
             items: [42, 43, 44],
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<u16, u32>, u32>;
+        let v = ptr(&mut y) as *mut FlexibleArray<u32, X<u16, u32>>;
         unsafe {
             assert_eq!((*v).header.len(), 3);
             assert_eq!((*v).object_size(), 16);
@@ -139,7 +138,7 @@ mod test {
             len: unsafe { N.try_into().unwrap_unchecked() },
             items,
         };
-        let v = ptr(&mut y) as *mut FlexibleArray<X<H, I>, I>;
+        let v = ptr(&mut y) as *mut FlexibleArray<I, X<H, I>>;
         unsafe {
             assert_eq!((*v).header.len(), N);
             assert_eq!((*v).object_size(), size);
@@ -228,13 +227,13 @@ mod test {
 
     const _: () = assert!(size_of::<StaticVariable<E, u64, 3>>() == 24);
 
-    const _: () = assert!(FlexibleArray::<E, u64>::OBJECT_ALIGN == 8);
-    const _: () = assert!(FlexibleArray::<E, u64>::FLEXIBLE_HEADER_LAYOUT.align == 8);
+    const _: () = assert!(FlexibleArray::<u64, E>::OBJECT_ALIGN == 8);
+    const _: () = assert!(FlexibleArray::<u64, E>::FLEXIBLE_HEADER_LAYOUT.align == 8);
     const _: () = assert!(size_of::<E>() == 0);
     const FL: FieldLayout<E, u64> = FieldLayout::align_to(align_of::<u64>());
     const _: () = assert!(FL.align == 8);
     const _: () = assert!(FL.size == 0);
-    const _: () = assert!(FlexibleArray::<E, u64>::FLEXIBLE_HEADER_LAYOUT.size == 0);
+    const _: () = assert!(FlexibleArray::<u64, E>::FLEXIBLE_HEADER_LAYOUT.size == 0);
 
     #[test]
     #[wasm_bindgen_test]
@@ -259,7 +258,7 @@ mod test {
                 header: EmptyHeader(),
                 items,
             };
-            let y = unsafe { &mut *(x.to_mut_ptr() as *mut FlexibleArray<EmptyHeader, u64>) };
+            let y = unsafe { &mut *(x.to_mut_ptr() as *mut FlexibleArray<u64, EmptyHeader>) };
             assert_eq!(size_of::<StaticVariable<EmptyHeader, u64, 3>>(), 24);
             assert_eq!(size_of::<EmptyHeader>(), 0);
             assert_eq!(y.object_size(), 24);
