@@ -15,12 +15,10 @@ pub trait Cast: Sized {
     fn move_to_any(self) -> Any {
         unsafe { Any::from_optional_base(AnyInternal::new(self.move_to_any_internal())) }
     }
-    /*
     #[inline(always)]
     fn move_to_any2<D: Dealloc>(self) -> Any2<D> {
-        // unsafe { Any2::from_optional_base(AnyInternal::new(self.move_to_any_internal())) }
+        unsafe { Any2::new(AnyInternal::new(self.move_to_any_internal())) }
     }
-    */
 }
 
 impl<T: Extension> Cast for T {

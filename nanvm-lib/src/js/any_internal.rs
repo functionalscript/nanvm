@@ -65,7 +65,7 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
         if STRING.has(self.0) {
             (*block_header).block::<String2, D>().delete();
         } else {
-            (*block_header).block::<Object2, D>().delete();
+            (*block_header).block::<Object2<D>, D>().delete();
         }
     }
 }
