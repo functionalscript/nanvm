@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use crate::{
     common::{allocator::Allocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
-    mem::flexible_array::{len::FlexibleArrayLen, FlexibleArray},
+    mem::flexible_array::FlexibleArray,
 };
 
 use super::{bitset::STRING, extension_rc::ExtensionRc};
@@ -29,4 +29,4 @@ impl<A: Allocator> ExtensionRc for StringHeader<A> {
     const RC_SUBSET: BitSubset64 = STRING;
 }
 
-pub type String2 = FlexibleArray<FlexibleArrayLen, u16>;
+pub type String2 = FlexibleArray<usize, u16>;

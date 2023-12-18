@@ -4,7 +4,7 @@ use crate::{
     common::{allocator::Allocator, bit_subset64::BitSubset64},
     container::{Container, Info, Rc},
     js::any::{Any, Any2},
-    mem::flexible_array::{len::FlexibleArrayLen, FlexibleArray},
+    mem::flexible_array::FlexibleArray,
 };
 
 use super::{bitset::OBJECT, extension_rc::ExtensionRc, string::StringRc};
@@ -30,4 +30,4 @@ impl<A: Allocator> ExtensionRc for ObjectHeader<A> {
     const RC_SUBSET: BitSubset64 = OBJECT;
 }
 
-pub type Object2<D> = FlexibleArray<FlexibleArrayLen, Any2<D>>;
+pub type Object2<D> = FlexibleArray<usize, Any2<D>>;

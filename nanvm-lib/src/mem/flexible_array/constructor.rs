@@ -31,6 +31,13 @@ impl<H: FlexibleArrayHeader, I: Iterator> Constructor
     }
 }
 
+impl<I: ExactSizeIterator> From<I> for FlexibleArrayConstructor<usize, I> {
+    #[inline(always)]
+    fn from(items: I) -> Self {
+        items.len().constructor(items)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use core::{mem::size_of, ptr::null_mut};
