@@ -30,7 +30,7 @@ impl<const Base: u32> BigFloat<Base> {
 }
 
 impl BigFloat<10> {
-    pub fn to_bin(self, digit_number: u64) -> BigFloat<2> {
+    pub fn to_bin(self) -> BigFloat<2> {
         if self.significand.is_zero() {
             return BigFloat::ZERO;
         }
