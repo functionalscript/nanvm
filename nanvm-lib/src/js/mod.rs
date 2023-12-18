@@ -5,6 +5,7 @@ mod bool;
 mod cast;
 mod extension;
 mod extension_rc;
+mod extension_ref;
 mod null;
 mod number;
 mod object;

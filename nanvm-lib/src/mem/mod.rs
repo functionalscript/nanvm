@@ -1,5 +1,5 @@
 mod arena;
-mod block;
+pub mod block;
 pub mod block_header;
 mod constructor;
 mod field_layout;
@@ -9,10 +9,10 @@ pub mod global;
 mod local;
 pub mod manager;
 pub mod mut_ref;
-mod object;
+pub mod object;
 pub mod optional_block;
 pub mod optional_ref;
-mod ref_;
+pub mod ref_;
 mod ref_counter_update;
 
 #[cfg(test)]
