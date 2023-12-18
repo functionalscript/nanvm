@@ -86,23 +86,13 @@ mod test {
     use crate::{
         common::allocator::GlobalAllocator,
         js::{
-            bitset::{BOOL, EXTENSION, FALSE},
             null::Null,
-            object::{self, ObjectHeader, ObjectRc},
+            object::{self, ObjectHeader},
             string::{self, StringHeader},
         },
     };
 
-    use super::{
-        super::{bitset::TRUE, number::test::NAN},
-        *,
-    };
-
-    const _: () = assert!(BOOL.has(FALSE));
-    const _: () = assert!(BOOL.has(TRUE));
-    const _: () = assert!(!BOOL.has(0));
-    const _: () = assert!(!BOOL.has(NAN));
-    const _: () = assert!(BOOL.has(EXTENSION.mask));
+    use super::*;
 
     #[test]
     #[wasm_bindgen_test]

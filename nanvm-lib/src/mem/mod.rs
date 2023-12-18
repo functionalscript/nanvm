@@ -4,14 +4,14 @@ mod block_header;
 mod constructor;
 mod field_layout;
 mod fixed;
-mod flexible_array;
+pub mod flexible_array;
 mod global;
 mod local;
 pub mod manager;
 pub mod mut_ref;
 mod object;
-mod optional_block;
-mod optional_ref;
+pub mod optional_block;
+pub mod optional_ref;
 mod ref_;
 mod ref_counter_update;
 
