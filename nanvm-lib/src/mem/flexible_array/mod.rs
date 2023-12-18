@@ -12,7 +12,7 @@ use self::header::FlexibleArrayHeader;
 use super::{field_layout::FieldLayout, object::Object};
 
 #[repr(transparent)]
-pub struct FlexibleArray<I, T: FlexibleArrayHeader> {
+pub struct FlexibleArray<I, T: FlexibleArrayHeader = usize> {
     pub header: T,
     _0: PhantomData<I>,
 }
