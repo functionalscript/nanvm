@@ -23,7 +23,6 @@ impl<const Base: u32> BigFloat<Base> {
             if self.significand.value >= min_significand {
                 return;
             }
-            //TODO: implement << for BigInt
             self.significand.value = &self.significand.value << &BigUint::one();
             self.exp = self.exp - 1;
         }
