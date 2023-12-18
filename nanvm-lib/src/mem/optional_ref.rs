@@ -1,3 +1,7 @@
+use core::mem::forget;
+
+use crate::common::ref_mut::RefMut;
+
 use super::{optional_block::OptionalBlock, ref_counter_update::RefCounterUpdate};
 
 #[derive(Debug)]
@@ -14,6 +18,12 @@ impl<T: OptionalBlock> OptionalRef<T> {
     #[inline(always)]
     pub const unsafe fn internal(&self) -> T {
         self.value
+    }
+    #[inline(always)]
+    pub unsafe fn move_to_internal(mut self) -> T {
+        let result = self.value.to_mut_ptr().read();
+        forget(self);
+        result
     }
 }
 

@@ -80,6 +80,30 @@ impl Any {
 
 pub type Any2<D: Dealloc> = OptionalRef<AnyInternal<D>>;
 
+impl<D: Dealloc> Any2<D> {
+    #[inline(always)]
+    unsafe fn u64(&self) -> u64 {
+        self.internal().0
+    }
+    #[inline(always)]
+    pub fn is<T: Cast>(&self) -> bool {
+        unsafe { T::is_type_of(self.u64()) }
+    }
+    pub fn try_move<T: Cast>(self) -> Result<T> {
+        if self.is::<T>() {
+            return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
+        }
+        Err(())
+    }
+}
+
+impl<D: Dealloc, T: Cast> From<T> for Any2<D> {
+    #[inline(always)]
+    fn from(t: T) -> Self {
+        t.move_to_any2()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::rc::Rc;
@@ -92,7 +116,7 @@ mod test {
             null::Null,
             object::{self, ObjectHeader},
             string::{self, StringHeader},
-        },
+        }, mem::global::Global,
     };
 
     use super::*;
@@ -123,6 +147,12 @@ mod test {
         //
         assert_eq!(Any::from(true).try_move::<f64>(), Err(()));
         assert_eq!(Any::from(Null()).try_move::<f64>(), Err(()));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_number2() {
+        assert_eq!(Any2::<Global>::from(1.0).try_move(), Ok(1.0));
     }
 
     #[test]
