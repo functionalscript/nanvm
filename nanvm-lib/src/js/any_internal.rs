@@ -11,8 +11,8 @@ use crate::{
 use super::{
     bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
     extension_rc::ExtensionRc,
-    object::{ObjectHeader, ObjectHeader2},
-    string::{StringHeader, StringHeader2},
+    object::ObjectHeader2,
+    string::StringHeader2,
 };
 
 #[repr(transparent)]
@@ -30,23 +30,6 @@ impl<D: Dealloc> Copy for AnyInternal<D> {}
 impl<D: Dealloc> AnyInternal<D> {
     pub const fn new(v: u64) -> Self {
         Self(v, PhantomData)
-    }
-}
-
-impl OptionalBase for AnyInternal {
-    unsafe fn get_base(&self) -> Option<*mut Base> {
-        let v = self.0;
-        if !RC.has(v) {
-            return None;
-        }
-        Some((v & RC_SUBSET_SUPERPOSITION) as *mut Base)
-    }
-    unsafe fn delete(&self, base: *mut Base) {
-        if STRING.has(self.0) {
-            StringHeader::<GlobalAllocator>::delete(base);
-        } else {
-            ObjectHeader::<GlobalAllocator>::delete(base);
-        }
     }
 }
 

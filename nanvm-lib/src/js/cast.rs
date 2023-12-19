@@ -1,7 +1,7 @@
 use crate::mem::manager::Dealloc;
 
 use super::{
-    any::{Any, Any2},
+    any::Any2,
     any_internal::AnyInternal,
     extension::Extension,
 };
@@ -11,10 +11,6 @@ pub trait Cast: Sized {
     unsafe fn move_to_any_internal(self) -> u64;
     unsafe fn from_any_internal(u: u64) -> Self;
     //
-    #[inline(always)]
-    fn move_to_any(self) -> Any {
-        unsafe { Any::from_optional_base(AnyInternal::new(self.move_to_any_internal())) }
-    }
     #[inline(always)]
     fn move_to_any2<D: Dealloc>(self) -> Any2<D> {
         unsafe { Any2::new(AnyInternal::new(self.move_to_any_internal())) }
