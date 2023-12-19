@@ -146,10 +146,7 @@ mod test {
             object::{self, ObjectHeader},
             string::{self, StringHeader},
         },
-        mem::{
-            global::Global,
-            manager::Manager,
-        },
+        mem::{global::Global, manager::Manager},
     };
 
     use super::*;
@@ -355,7 +352,9 @@ mod test {
         assert!(!Null().move_to_any().is::<ObjectRc>());
 
         // let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
-        let o = Global().flexible_array_new::<Any2<Global>>([].into_iter()).to_ref();
+        let o = Global()
+            .flexible_array_new::<Any2<Global>>([].into_iter())
+            .to_ref();
         assert!(Any::from(o.clone()).is::<ObjectRc>());
         let v = o.items();
         assert!(v.is_empty());
