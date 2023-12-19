@@ -293,22 +293,22 @@ mod test {
     #[wasm_bindgen_test]
     fn test_string2() {
         type Any = Any2<Global>;
-        type StringRc = Ref<string::StringHeader2, Global>;
+        type StringRef = Ref<string::StringHeader2, Global>;
         let sm = Global().flexible_array_new::<u16>([].into_iter());
         let s = sm.to_ref();
-        assert!(Any::from(s.clone()).is::<StringRc>());
+        assert!(Any::from(s.clone()).is::<StringRef>());
         let v = s.items();
         assert!(v.is_empty());
 
         //
-        assert!(!Any::from(15.0).is::<StringRc>());
-        assert!(!Any::from(true).is::<StringRc>());
-        assert!(!Null().move_to_any().is::<StringRc>());
+        assert!(!Any::from(15.0).is::<StringRef>());
+        assert!(!Any::from(true).is::<StringRef>());
+        assert!(!Null().move_to_any().is::<StringRef>());
 
         let s = Global()
             .flexible_array_new::<u16>([0x20, 0x21].into_iter())
             .to_ref();
-        assert!(Any::from(s.clone()).is::<StringRc>());
+        assert!(Any::from(s.clone()).is::<StringRef>());
         let v = s.items();
         assert_eq!(v, [0x20, 0x21]);
         let u = Any::from(s);
@@ -317,11 +317,9 @@ mod test {
             let items = s.object().items();
             assert_eq!(items, [0x20, 0x21]);
         }
-        /*
-        let s = u.try_move::<StringRc>().unwrap();
-        let items = s.get_items_mut();
+        let s = u.try_move::<StringRef>().unwrap();
+        let items = s.items();
         assert_eq!(items, [0x20, 0x21]);
-        */
     }
 
     #[test]
