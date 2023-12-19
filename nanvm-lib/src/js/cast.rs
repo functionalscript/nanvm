@@ -1,6 +1,6 @@
 use crate::mem::manager::Dealloc;
 
-use super::{any::Any2, any_internal::AnyInternal, extension::Extension};
+use super::{any::Any, any_internal::AnyInternal, extension::Extension};
 
 pub trait Cast: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
@@ -8,8 +8,8 @@ pub trait Cast: Sized {
     unsafe fn from_any_internal(u: u64) -> Self;
     //
     #[inline(always)]
-    fn move_to_any2<D: Dealloc>(self) -> Any2<D> {
-        unsafe { Any2::new(AnyInternal::new(self.move_to_any_internal())) }
+    fn move_to_any2<D: Dealloc>(self) -> Any<D> {
+        unsafe { Any::new(AnyInternal::new(self.move_to_any_internal())) }
     }
 }
 

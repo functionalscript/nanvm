@@ -6,8 +6,8 @@ use crate::mem::{
 
 use super::{
     bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
-    object::ObjectHeader2,
-    string::StringHeader2,
+    object::ObjectHeader,
+    string::StringHeader,
 };
 
 #[repr(transparent)]
@@ -45,9 +45,9 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         if STRING.has(self.0) {
-            (*block_header).block::<StringHeader2, D>().delete();
+            (*block_header).block::<StringHeader, D>().delete();
         } else {
-            (*block_header).block::<ObjectHeader2<D>, D>().delete();
+            (*block_header).block::<ObjectHeader<D>, D>().delete();
         }
     }
 }
