@@ -3,7 +3,7 @@ use core::result;
 use crate::{
     common::allocator::GlobalAllocator,
     container::{Container, OptionalRc},
-    mem::{manager::Dealloc, optional_ref::OptionalRef, ref_::Ref},
+    mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref},
 };
 
 use super::{
@@ -11,6 +11,7 @@ use super::{
     bitset::{RC, RC_SUBSET_SUPERPOSITION},
     cast::Cast,
     extension_rc::ExtensionRc,
+    extension_ref::ExtensionRef,
     null::Null,
     string::{StringHeader2, StringRc},
     type_::Type,
@@ -113,6 +114,16 @@ impl<D: Dealloc> Any2<D> {
             }
         }
     }
+    //
+    #[inline(always)]
+    pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>> {
+        let v = unsafe { self.u64() };
+        if T::REF_SUBSET.has(v) {
+            let p = (v & RC_SUBSET_SUPERPOSITION) as *const Block<T, D>;
+            return Ok(unsafe { &*p });
+        }
+        Err(())
+    }
 }
 
 impl<D: Dealloc, T: Cast> From<T> for Any2<D> {
@@ -136,7 +147,7 @@ mod test {
             string::{self, StringHeader},
         },
         mem::{
-            global::{self, Global, GLOBAL},
+            global::Global,
             manager::Manager,
         },
     };
@@ -301,12 +312,12 @@ mod test {
         let v = s.items();
         assert_eq!(v, [0x20, 0x21]);
         let u = Any::from(s);
-        /*
         {
-            let s = u.try_ref::<StringHeader<GlobalAllocator>>().unwrap();
-            let items = s.get_items_mut();
+            let s = u.try_ref::<StringHeader2>().unwrap();
+            let items = s.object().items();
             assert_eq!(items, [0x20, 0x21]);
         }
+        /*
         let s = u.try_move::<StringRc>().unwrap();
         let items = s.get_items_mut();
         assert_eq!(items, [0x20, 0x21]);
