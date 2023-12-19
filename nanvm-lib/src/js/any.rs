@@ -345,4 +345,33 @@ mod test {
             assert!(items.is_empty());
         }
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_object2() {
+        type Any = Any2<Global>;
+        type ObjectRc = Ref<object::ObjectHeader2<Global>, Global>;
+        // type ObjectRc = object::ObjectRc<GlobalAllocator>;
+        assert!(!Null().move_to_any().is::<ObjectRc>());
+
+        // let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
+        let o = Global().flexible_array_new::<Any2<Global>>([].into_iter()).to_ref();
+        assert!(Any::from(o.clone()).is::<ObjectRc>());
+        let v = o.items();
+        assert!(v.is_empty());
+        //
+        assert!(!15.0.move_to_any().is::<ObjectRc>());
+        assert!(!true.move_to_any().is::<ObjectRc>());
+
+        /*
+        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
+        let u = o.move_to_any();
+        assert_eq!(u.get_type(), Type::Object);
+        {
+            let o = u.try_move::<ObjectRc>().unwrap();
+            let items = o.get_items_mut();
+            assert!(items.is_empty());
+        }
+        */
+    }
 }
