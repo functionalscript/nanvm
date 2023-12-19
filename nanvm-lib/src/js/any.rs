@@ -348,10 +348,8 @@ mod test {
     fn test_object2() {
         type Any = Any2<Global>;
         type ObjectRc = Ref<object::ObjectHeader2<Global>, Global>;
-        // type ObjectRc = object::ObjectRc<GlobalAllocator>;
         assert!(!Null().move_to_any().is::<ObjectRc>());
 
-        // let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
         let o = Global()
             .flexible_array_new::<Any2<Global>>([].into_iter())
             .to_ref();
