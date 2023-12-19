@@ -234,7 +234,6 @@ mod test {
         assert_eq!(Null().move_to_any().get_type(), Type::Null);
     }
 
-    /*
     #[test]
     #[wasm_bindgen_test]
     fn test_type2() {
@@ -243,7 +242,6 @@ mod test {
         assert_eq!(Any::from(true).get_type(), Type::Bool);
         assert_eq!(Null().move_to_any().get_type(), Type::Null);
     }
-    */
 
     #[test]
     #[wasm_bindgen_test]
