@@ -29,7 +29,7 @@ impl<D: Dealloc> Any<D> {
     /// type StringRef = Ref<StringHeader, Global>;
     /// let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
     /// type AL = Any<&'static Local>;
-    /// assert!(AL::move_from(s.clone()).is::<StringRef>());
+    /// assert!(AL::move_from(s).is::<StringRef>());
     /// ```
     pub fn move_from<T: Cast<D>>(t: T) -> Self {
         t.move_to_any()
@@ -58,7 +58,20 @@ impl<D: Dealloc> Any<D> {
             }
         }
     }
-    //
+    /// `T` should have the same allocator as `Any`.
+    ///
+    /// ```compile_fail
+    /// use nanvm_lib::{
+    ///     js::{any::Any, string::StringHeader},
+    ///     mem::{global::Global, local::Local, manager::Manager, ref_::Ref},
+    /// };
+    /// type A = Any<Global>;
+    /// type StringRef = Ref<StringHeader, Global>;
+    /// let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
+    /// let a = A::move_from(s);
+    /// type StringRefL = Ref<StringHeader, &'static Local>;
+    /// let s = a.try_move::<StringRefL>().unwrap();
+    /// ```
     #[inline(always)]
     pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };
