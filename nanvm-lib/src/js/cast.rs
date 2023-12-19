@@ -1,10 +1,6 @@
 use crate::mem::manager::Dealloc;
 
-use super::{
-    any::Any2,
-    any_internal::AnyInternal,
-    extension::Extension,
-};
+use super::{any::Any2, any_internal::AnyInternal, extension::Extension};
 
 pub trait Cast: Sized {
     unsafe fn is_type_of(u: u64) -> bool;

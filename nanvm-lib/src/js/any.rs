@@ -1,15 +1,10 @@
 use core::result;
 
-use crate::
-    mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
+use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
 
 use super::{
-    any_internal::AnyInternal,
-    cast::Cast,
-    extension_ref::ExtensionRef,
-    null::Null,
-    string::StringHeader2,
-    type_::Type, bitset::RC_SUBSET_SUPERPOSITION,
+    any_internal::AnyInternal, bitset::RC_SUBSET_SUPERPOSITION, cast::Cast,
+    extension_ref::ExtensionRef, null::Null, string::StringHeader2, type_::Type,
 };
 
 // pub type Any = OptionalRc<AnyInternal>;

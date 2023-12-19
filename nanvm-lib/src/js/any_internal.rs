@@ -1,8 +1,7 @@
 use core::marker::PhantomData;
 
 use crate::{
-    common::allocator::GlobalAllocator,
-    container::{Base, OptionalBase},
+    container::OptionalBase,
     mem::{
         block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
     },
@@ -10,7 +9,6 @@ use crate::{
 
 use super::{
     bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
-    extension_rc::ExtensionRc,
     object::ObjectHeader2,
     string::StringHeader2,
 };

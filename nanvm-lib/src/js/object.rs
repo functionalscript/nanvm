@@ -7,9 +7,7 @@ use crate::{
     mem::{flexible_array::FlexibleArray, manager::Dealloc},
 };
 
-use super::{
-    bitset::OBJECT, extension_ref::ExtensionRef,
-};
+use super::{bitset::OBJECT, extension_ref::ExtensionRef};
 
 pub type ObjectHeader2<D> = FlexibleArray<Any2<D>>;
 
