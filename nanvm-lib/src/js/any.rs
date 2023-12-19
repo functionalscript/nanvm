@@ -135,7 +135,7 @@ mod test {
             object::{self, ObjectHeader},
             string::{self, StringHeader},
         },
-        mem::global::Global,
+        mem::{manager::Manager, global::{Global, GLOBAL, self}},
     };
 
     use super::*;
@@ -273,6 +273,44 @@ mod test {
         let s = u.try_move::<StringRc>().unwrap();
         let items = s.get_items_mut();
         assert_eq!(items, [0x20, 0x21]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_string2() {
+        type Any = Any2<Global>;
+        type StringRc = Ref<string::StringHeader2, Global>;
+        let global = GLOBAL;
+        // let s = StringRc::alloc(GlobalAllocator(), StringHeader::default(), [].into_iter());
+        let sm = global.flexible_array_new::<u16>([].into_iter());
+        let s = sm.to_ref();
+        assert!(Any::from(s.clone()).is::<Ref<StringHeader2, Global>>());
+        /*
+        let v = s.get_items_mut();
+        assert!(v.is_empty());
+        //
+        assert!(!Any::from(15.0).is::<StringRc>());
+        assert!(!Any::from(true).is::<StringRc>());
+        assert!(!Null().move_to_any().is::<StringRc>());
+
+        let s = StringRc::alloc(
+            GlobalAllocator(),
+            StringHeader::default(),
+            [0x20, 0x21].into_iter(),
+        );
+        assert!(Any::from(s.clone()).is::<StringRc>());
+        let v = s.get_items_mut();
+        assert_eq!(v, [0x20, 0x21]);
+        let u = Any::from(s);
+        {
+            let s = u.try_ref::<StringHeader<GlobalAllocator>>().unwrap();
+            let items = s.get_items_mut();
+            assert_eq!(items, [0x20, 0x21]);
+        }
+        let s = u.try_move::<StringRc>().unwrap();
+        let items = s.get_items_mut();
+        assert_eq!(items, [0x20, 0x21]);
+        */
     }
 
     #[test]
