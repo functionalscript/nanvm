@@ -1,5 +1,3 @@
-use core::result;
-
 use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
 
 use super::{
@@ -20,6 +18,17 @@ impl<D: Dealloc> Any<D> {
     pub fn is<T: Cast<D>>(&self) -> bool {
         unsafe { T::is_type_of(self.u64()) }
     }
+    /// ```
+    /// use nanvm_lib::{
+    ///     js::{any::Any, string::StringHeader},
+    ///     mem::{global::Global, local::Local, manager::Manager, ref_::Ref},
+    /// };
+    /// type A = Any<Global>;
+    /// type StringRef = Ref<StringHeader, Global>;
+    /// let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
+    /// type AL = Any<&'static Local>;
+    /// assert!(AL::move_from(s.clone()).is::<StringRef>());
+    /// ```
     pub fn move_from<T: Cast<D>>(t: T) -> Self {
         t.move_to_any()
     }
@@ -67,7 +76,7 @@ mod test {
 
     use crate::{
         js::{null::Null, object::ObjectHeader},
-        mem::{global::Global, manager::Manager},
+        mem::{global::Global, local::Local, manager::Manager},
     };
 
     use super::*;
@@ -162,6 +171,18 @@ mod test {
         let items = s.items();
         assert_eq!(items, [0x20, 0x21]);
     }
+
+    /*
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_string_fail() {
+        type A = Any<Global>;
+        type StringRef = Ref<StringHeader, Global>;
+        let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
+        type AL = Any<&'static Local>;
+        assert!(AL::move_from(s.clone()).is::<StringRef>());
+    }
+    */
 
     #[test]
     #[wasm_bindgen_test]

@@ -1,4 +1,4 @@
 mod common;
-mod js;
-mod mem;
+pub mod js;
+pub mod mem;
 pub mod tokenizer;

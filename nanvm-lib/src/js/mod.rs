@@ -1,4 +1,4 @@
-mod any;
+pub mod any;
 mod any_internal;
 mod bitset;
 mod bool;
@@ -8,5 +8,5 @@ mod extension_ref;
 mod null;
 mod number;
 mod object;
-mod string;
+pub mod string;
 mod type_;

@@ -6,7 +6,7 @@ mod field_layout;
 mod fixed;
 pub mod flexible_array;
 pub mod global;
-mod local;
+pub mod local;
 pub mod manager;
 pub mod mut_ref;
 pub mod object;

@@ -11,7 +11,7 @@ use super::{
 };
 
 #[derive(Debug)]
-struct Local {
+pub struct Local {
     counter: Cell<isize>,
     size: Cell<usize>,
 }
