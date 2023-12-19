@@ -1,10 +1,7 @@
 use core::marker::PhantomData;
 
-use crate::{
-    container::OptionalBase,
-    mem::{
-        block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
-    },
+use crate::mem::{
+    block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
 };
 
 use super::{
