@@ -362,15 +362,15 @@ mod test {
         assert!(!15.0.move_to_any().is::<ObjectRc>());
         assert!(!true.move_to_any().is::<ObjectRc>());
 
-        /*
-        let o = ObjectRc::alloc(GlobalAllocator(), ObjectHeader::default(), [].into_iter());
+        let o = Global()
+            .flexible_array_new::<Any2<Global>>([].into_iter())
+            .to_ref();
         let u = o.move_to_any();
         assert_eq!(u.get_type(), Type::Object);
         {
             let o = u.try_move::<ObjectRc>().unwrap();
-            let items = o.get_items_mut();
+            let items = o.items();
             assert!(items.is_empty());
         }
-        */
     }
 }
