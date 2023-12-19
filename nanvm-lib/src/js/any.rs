@@ -18,7 +18,9 @@ impl<D: Dealloc> Any<D> {
     pub fn is<T: Cast<D>>(&self) -> bool {
         unsafe { T::is_type_of(self.u64()) }
     }
-    /// ```
+    /// `T` should have the same allocator as `Any`.
+    ///
+    /// ```compile_fail
     /// use nanvm_lib::{
     ///     js::{any::Any, string::StringHeader},
     ///     mem::{global::Global, local::Local, manager::Manager, ref_::Ref},
