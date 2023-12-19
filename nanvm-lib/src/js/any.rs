@@ -7,7 +7,7 @@ use super::{
     extension_ref::ExtensionRef, null::Null, string::StringHeader, type_::Type,
 };
 
-type Result<T> = result::Result<T, ()>;
+// type Result<T> = result::Result<T, ()>;
 
 pub type Any<D: Dealloc> = OptionalRef<AnyInternal<D>>;
 
@@ -23,7 +23,7 @@ impl<D: Dealloc> Any<D> {
     pub fn move_from<T: Cast<D>>(t: T) -> Self {
         t.move_to_any()
     }
-    pub fn try_move<T: Cast<D>>(self) -> Result<T> {
+    pub fn try_move<T: Cast<D>>(self) -> Result<T, ()> {
         if self.is::<T>() {
             return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
         }
@@ -49,7 +49,7 @@ impl<D: Dealloc> Any<D> {
     }
     //
     #[inline(always)]
-    pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>> {
+    pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };
         if T::REF_SUBSET.has(v) {
             let p = (v & RC_SUBSET_SUPERPOSITION) as *const Block<T, D>;
@@ -59,15 +59,6 @@ impl<D: Dealloc> Any<D> {
     }
 }
 
-/*
-impl<D: Dealloc, T: Cast<D>> From<T> for Any<D> {
-    #[inline(always)]
-    fn from(t: T) -> Self {
-        t.move_to_any()
-    }
-}
-*/
-
 #[cfg(test)]
 mod test {
     use std::rc::Rc;
@@ -75,7 +66,6 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        common::allocator::GlobalAllocator,
         js::{null::Null, object::ObjectHeader},
         mem::{global::Global, manager::Manager},
     };
