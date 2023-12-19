@@ -2,18 +2,18 @@ use crate::mem::manager::Dealloc;
 
 use super::{any::Any, any_internal::AnyInternal, extension::Extension};
 
-pub trait Cast: Sized {
+pub trait Cast<D: Dealloc>: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
     unsafe fn move_to_any_internal(self) -> u64;
     unsafe fn from_any_internal(u: u64) -> Self;
     //
     #[inline(always)]
-    fn move_to_any2<D: Dealloc>(self) -> Any<D> {
+    fn move_to_any(self) -> Any<D> {
         unsafe { Any::new(AnyInternal::new(self.move_to_any_internal())) }
     }
 }
 
-impl<T: Extension> Cast for T {
+impl<D: Dealloc, T: Extension> Cast<D> for T {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::SUBSET.has(u)
