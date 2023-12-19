@@ -29,8 +29,8 @@ impl<A: Allocator> ExtensionRc for StringHeader<A> {
     const RC_SUBSET: BitSubset64 = STRING;
 }
 
-pub type String2 = FlexibleArray<u16>;
+pub type StringHeader2 = FlexibleArray<u16>;
 
-impl ExtensionRef for String2 {
+impl ExtensionRef for StringHeader2 {
     const REF_SUBSET: BitSubset64 = STRING;
 }

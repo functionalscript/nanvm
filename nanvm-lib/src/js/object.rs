@@ -32,8 +32,8 @@ impl<A: Allocator> ExtensionRc for ObjectHeader<A> {
     const RC_SUBSET: BitSubset64 = OBJECT;
 }
 
-pub type Object2<D> = FlexibleArray<Any2<D>>;
+pub type ObjectHeader2<D> = FlexibleArray<Any2<D>>;
 
-impl<D: Dealloc> ExtensionRef for Object2<D> {
+impl<D: Dealloc> ExtensionRef for ObjectHeader2<D> {
     const REF_SUBSET: BitSubset64 = OBJECT;
 }

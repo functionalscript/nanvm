@@ -11,8 +11,8 @@ use crate::{
 use super::{
     bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
     extension_rc::ExtensionRc,
-    object::{Object2, ObjectHeader},
-    string::{String2, StringHeader},
+    object::{ObjectHeader, ObjectHeader2},
+    string::{StringHeader, StringHeader2},
 };
 
 #[repr(transparent)]
@@ -67,9 +67,9 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         if STRING.has(self.0) {
-            (*block_header).block::<String2, D>().delete();
+            (*block_header).block::<StringHeader2, D>().delete();
         } else {
-            (*block_header).block::<Object2<D>, D>().delete();
+            (*block_header).block::<ObjectHeader2<D>, D>().delete();
         }
     }
 }

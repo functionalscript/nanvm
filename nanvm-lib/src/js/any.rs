@@ -3,7 +3,7 @@ use core::result;
 use crate::{
     common::allocator::GlobalAllocator,
     container::{Container, OptionalRc},
-    mem::{manager::Dealloc, optional_ref::OptionalRef},
+    mem::{manager::Dealloc, optional_ref::OptionalRef, ref_::Ref},
 };
 
 use super::{
@@ -12,7 +12,7 @@ use super::{
     cast::Cast,
     extension_rc::ExtensionRc,
     null::Null,
-    string::{String2, StringRc},
+    string::{StringHeader2, StringRc},
     type_::Type,
 };
 
@@ -96,10 +96,9 @@ impl<D: Dealloc> Any2<D> {
         Err(())
     }
     //
-    /*
     pub fn get_type(&self) -> Type {
         if self.is_ref() {
-            if self.is::<String2>() {
+            if self.is::<Ref<StringHeader2, D>>() {
                 Type::String
             } else {
                 Type::Object
@@ -114,7 +113,6 @@ impl<D: Dealloc> Any2<D> {
             }
         }
     }
-    */
 }
 
 impl<D: Dealloc, T: Cast> From<T> for Any2<D> {
