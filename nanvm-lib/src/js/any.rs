@@ -9,15 +9,6 @@ use super::{
 
 type Result<T> = result::Result<T, ()>;
 
-/*
-impl<T: Cast> From<T> for Any {
-    #[inline(always)]
-    fn from(t: T) -> Self {
-        t.move_to_any()
-    }
-}
-*/
-
 pub type Any<D: Dealloc> = OptionalRef<AnyInternal<D>>;
 
 impl<D: Dealloc> Any<D> {
