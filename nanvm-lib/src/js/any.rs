@@ -1,7 +1,7 @@
 use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
 
 use super::{
-    any_internal::AnyInternal, bitset::RC_SUBSET_SUPERPOSITION, cast::Cast,
+    any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION, cast::Cast,
     extension_ref::ExtensionRef, null::Null, string::StringHeader, type_::Type,
 };
 
@@ -79,7 +79,7 @@ impl<D: Dealloc> Any<D> {
     pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };
         if T::REF_SUBSET.has(v) {
-            let p = (v & RC_SUBSET_SUPERPOSITION) as *const Block<T, D>;
+            let p = (v & REF_SUBSET_SUPERPOSITION) as *const Block<T, D>;
             return Ok(unsafe { &*p });
         }
         Err(())

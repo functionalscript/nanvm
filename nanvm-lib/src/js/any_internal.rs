@@ -5,7 +5,7 @@ use crate::mem::{
 };
 
 use super::{
-    bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
+    bitset::{REF, REF_SUBSET_SUPERPOSITION, STRING},
     object::ObjectHeader,
     string::StringHeader,
 };
@@ -32,12 +32,12 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     type BlockHeader = D::BlockHeader;
     #[inline(always)]
     fn is_ref(self) -> bool {
-        RC.has(self.0)
+        REF.has(self.0)
     }
     #[inline(always)]
     unsafe fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
         if self.is_ref() {
-            Some((self.0 & RC_SUBSET_SUPERPOSITION) as _)
+            Some((self.0 & REF_SUBSET_SUPERPOSITION) as _)
         } else {
             None
         }
