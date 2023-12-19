@@ -20,16 +20,18 @@ impl<D: Dealloc> Any<D> {
     }
     /// `T` should have the same allocator as `Any`.
     ///
+    /// ```
+    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc>(s: Ref<StringHeader, A>) -> Any<A> {
+    ///     Any::move_from(s)
+    /// }
+    /// ```
+    ///
     /// ```compile_fail
-    /// use nanvm_lib::{
-    ///     js::{any::Any, string::StringHeader},
-    ///     mem::{global::Global, local::Local, manager::Manager, ref_::Ref},
-    /// };
-    /// type A = Any<Global>;
-    /// type StringRef = Ref<StringHeader, Global>;
-    /// let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
-    /// type AL = Any<&'static Local>;
-    /// assert!(AL::move_from(s).is::<StringRef>());
+    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc, B: Dealloc>(s: Ref<StringHeader, A>) -> Any<B> {
+    ///     Any::move_from(s)
+    /// }
     /// ```
     pub fn move_from<T: Cast<D>>(t: T) -> Self {
         t.move_to_any()
@@ -60,17 +62,18 @@ impl<D: Dealloc> Any<D> {
     }
     /// `T` should have the same allocator as `Any`.
     ///
+    /// ```
+    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc>(a: Any<A>) -> Ref<StringHeader, A> {
+    ///     a.try_move().unwrap()
+    /// }
+    /// ```
+    ///
     /// ```compile_fail
-    /// use nanvm_lib::{
-    ///     js::{any::Any, string::StringHeader},
-    ///     mem::{global::Global, local::Local, manager::Manager, ref_::Ref},
-    /// };
-    /// type A = Any<Global>;
-    /// type StringRef = Ref<StringHeader, Global>;
-    /// let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
-    /// let a = A::move_from(s);
-    /// type StringRefL = Ref<StringHeader, &'static Local>;
-    /// let s = a.try_move::<StringRefL>().unwrap();
+    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc, B: Dealloc>(a: Any<A>) -> Ref<StringHeader, B> {
+    ///     a.try_move().unwrap()
+    /// }
     /// ```
     #[inline(always)]
     pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>, ()> {

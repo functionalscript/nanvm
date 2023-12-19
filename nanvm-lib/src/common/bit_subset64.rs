@@ -85,6 +85,14 @@ impl BitSubset64 {
             BitSubset64::from_tag_and_mask(self.tag | sub_mask, mask),
         )
     }
+    #[inline(always)]
+    pub const fn get_value(self, set: u64) -> u64 {
+        self.superposition() & set
+    }
+    #[inline(always)]
+    pub const fn from_value(self, value: u64) -> u64 {
+        self.tag | value
+    }
 }
 
 #[cfg(test)]
