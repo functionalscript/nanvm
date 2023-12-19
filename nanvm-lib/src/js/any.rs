@@ -20,7 +20,7 @@ impl<D: Dealloc> Any<D> {
     pub fn is<T: Cast<D>>(&self) -> bool {
         unsafe { T::is_type_of(self.u64()) }
     }
-    pub fn from<T: Cast<D>>(t: T) -> Self {
+    pub fn move_from<T: Cast<D>>(t: T) -> Self {
         t.move_to_any()
     }
     pub fn try_move<T: Cast<D>>(self) -> Result<T> {
@@ -96,45 +96,48 @@ mod test {
     #[wasm_bindgen_test]
     fn test_number2() {
         type A = Any<Global>;
-        assert_eq!(A::from(1.0).try_move(), Ok(1.0));
-        let x: A = A::from(-1.0);
+        assert_eq!(A::move_from(1.0).try_move(), Ok(1.0));
+        let x: A = A::move_from(-1.0);
         assert_eq!(x.try_move(), Ok(-1.0));
-        assert_eq!(A::from(f64::INFINITY).try_move(), Ok(f64::INFINITY));
-        assert_eq!(A::from(f64::NEG_INFINITY).try_move(), Ok(f64::NEG_INFINITY));
-        assert!(A::from(f64::NAN).try_move::<f64>().unwrap().is_nan());
+        assert_eq!(A::move_from(f64::INFINITY).try_move(), Ok(f64::INFINITY));
+        assert_eq!(
+            A::move_from(f64::NEG_INFINITY).try_move(),
+            Ok(f64::NEG_INFINITY)
+        );
+        assert!(A::move_from(f64::NAN).try_move::<f64>().unwrap().is_nan());
         //
-        assert_eq!(A::from(true).try_move::<f64>(), Err(()));
-        assert_eq!(A::from(Null()).try_move::<f64>(), Err(()));
+        assert_eq!(A::move_from(true).try_move::<f64>(), Err(()));
+        assert_eq!(A::move_from(Null()).try_move::<f64>(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_bool2() {
         type A = Any<Global>;
-        assert_eq!(A::from(true).try_move(), Ok(true));
-        assert_eq!(A::from(false).try_move(), Ok(false));
+        assert_eq!(A::move_from(true).try_move(), Ok(true));
+        assert_eq!(A::move_from(false).try_move(), Ok(false));
         //
-        assert_eq!(A::from(15.0).try_move::<bool>(), Err(()));
-        assert_eq!(A::from(Null()).try_move::<bool>(), Err(()));
+        assert_eq!(A::move_from(15.0).try_move::<bool>(), Err(()));
+        assert_eq!(A::move_from(Null()).try_move::<bool>(), Err(()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_null2() {
         type A = Any<Global>;
-        assert!(A::from(Null()).is::<Null>());
+        assert!(A::move_from(Null()).is::<Null>());
         //
-        assert!(!A::from(-15.7).is::<Null>());
-        assert!(!A::from(false).is::<Null>());
+        assert!(!A::move_from(-15.7).is::<Null>());
+        assert!(!A::move_from(false).is::<Null>());
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_type2() {
         type A = Any<Global>;
-        assert_eq!(A::from(15.0).get_type(), Type::Number);
-        assert_eq!(A::from(true).get_type(), Type::Bool);
-        assert_eq!(A::from(Null()).get_type(), Type::Null);
+        assert_eq!(A::move_from(15.0).get_type(), Type::Number);
+        assert_eq!(A::move_from(true).get_type(), Type::Bool);
+        assert_eq!(A::move_from(Null()).get_type(), Type::Null);
     }
 
     #[test]
@@ -144,22 +147,22 @@ mod test {
         type StringRef = Ref<StringHeader, Global>;
         let sm = Global().flexible_array_new::<u16>([].into_iter());
         let s = sm.to_ref();
-        assert!(A::from(s.clone()).is::<StringRef>());
+        assert!(A::move_from(s.clone()).is::<StringRef>());
         let v = s.items();
         assert!(v.is_empty());
 
         //
-        assert!(!A::from(15.0).is::<StringRef>());
-        assert!(!A::from(true).is::<StringRef>());
-        assert!(!A::from(Null()).is::<StringRef>());
+        assert!(!A::move_from(15.0).is::<StringRef>());
+        assert!(!A::move_from(true).is::<StringRef>());
+        assert!(!A::move_from(Null()).is::<StringRef>());
 
         let s = Global()
             .flexible_array_new::<u16>([0x20, 0x21].into_iter())
             .to_ref();
-        assert!(A::from(s.clone()).is::<StringRef>());
+        assert!(A::move_from(s.clone()).is::<StringRef>());
         let v = s.items();
         assert_eq!(v, [0x20, 0x21]);
-        let u = A::from(s);
+        let u = A::move_from(s);
         {
             let s = u.try_ref::<StringHeader>().unwrap();
             let items = s.object().items();
@@ -175,18 +178,18 @@ mod test {
     fn test_object2() {
         type A = Any<Global>;
         type ObjectRc = Ref<ObjectHeader<Global>, Global>;
-        assert!(!A::from(Null()).is::<ObjectRc>());
+        assert!(!A::move_from(Null()).is::<ObjectRc>());
 
         let o = Global().flexible_array_new::<A>([].into_iter()).to_ref();
-        assert!(A::from(o.clone()).is::<ObjectRc>());
+        assert!(A::move_from(o.clone()).is::<ObjectRc>());
         let v = o.items();
         assert!(v.is_empty());
         //
-        assert!(!A::from(15.0).is::<ObjectRc>());
-        assert!(!A::from(true).is::<ObjectRc>());
+        assert!(!A::move_from(15.0).is::<ObjectRc>());
+        assert!(!A::move_from(true).is::<ObjectRc>());
 
         let o = Global().flexible_array_new::<A>([].into_iter()).to_ref();
-        let u = A::from(o);
+        let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Object);
         {
             let o = u.try_move::<ObjectRc>().unwrap();
