@@ -1,5 +1,5 @@
 use crate::{
-    common::bit_subset64::Cast,
+    common::cast::Cast,
     mem::{block::Block, manager::Dealloc, ref_::Ref},
 };
 

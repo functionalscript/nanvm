@@ -1,5 +1,7 @@
 use core::marker::PhantomData;
 
+use super::cast::Cast;
+
 /// A bit subset of `u64`.
 ///
 /// This structure represents a subset of bits within a 64-bit unsigned integer,
@@ -142,16 +144,6 @@ where
     #[inline(always)]
     pub fn get_value_typed(self, set: u64) -> T {
         (self.get_value(set)).cast()
-    }
-}
-
-pub trait Cast<T> {
-    fn cast(self) -> T;
-}
-
-impl Cast<u64> for u64 {
-    fn cast(self) -> u64 {
-        self
     }
 }
 

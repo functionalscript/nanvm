@@ -1,4 +1,4 @@
-use crate::common::bit_subset64::{BitSubset64, Cast};
+use crate::common::{bit_subset64::BitSubset64, cast::Cast};
 
 pub trait Extension: Sized + Cast<u64>
 where

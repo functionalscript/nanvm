@@ -1,4 +1,4 @@
-use crate::common::bit_subset64::{BitSubset64, Cast};
+use crate::common::{bit_subset64::BitSubset64, cast::Cast};
 
 use super::{bitset::NULL, extension::Extension};
 
