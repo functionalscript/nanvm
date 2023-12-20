@@ -50,6 +50,20 @@ where
 
 impl<T: Cast<u64>> Copy for BitSubset64<T> where u64: Cast<T> {}
 
+impl BitSubset64<u64> {
+    #[inline(always)]
+    pub const fn cast<U: Cast<u64>>(self) -> BitSubset64<U>
+    where
+        u64: Cast<U>,
+    {
+        BitSubset64 {
+            tag: self.tag,
+            mask: self.mask,
+            _0: PhantomData,
+        }
+    }
+}
+
 impl<T: Cast<u64>> BitSubset64<T>
 where
     u64: Cast<T>,

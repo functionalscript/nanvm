@@ -1,7 +1,8 @@
-use crate::common::bit_subset64::BitSubset64;
+use crate::common::bit_subset64::{BitSubset64, Cast};
 
-pub trait Extension {
-    const SUBSET: BitSubset64;
-    unsafe fn move_to_superposition(self) -> u64;
-    unsafe fn from_superposition(u: u64) -> Self;
+pub trait Extension: Sized + Cast<u64>
+where
+    u64: Cast<Self>,
+{
+    const SUBSET: BitSubset64<Self>;
 }

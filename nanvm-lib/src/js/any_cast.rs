@@ -1,4 +1,7 @@
-use crate::mem::{block::Block, manager::Dealloc, ref_::Ref};
+use crate::{
+    common::bit_subset64::Cast,
+    mem::{block::Block, manager::Dealloc, ref_::Ref},
+};
 
 use super::{
     any::Any, any_internal::AnyInternal, extension::Extension, extension_ref::ExtensionRef,
@@ -15,18 +18,21 @@ pub trait AnyCast<D: Dealloc>: Sized {
     }
 }
 
-impl<D: Dealloc, T: Extension> AnyCast<D> for T {
+impl<D: Dealloc, T: Extension + Cast<u64>> AnyCast<D> for T
+where
+    u64: Cast<T>,
+{
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::SUBSET.has(u)
     }
     #[inline(always)]
     unsafe fn move_to_any_internal(self) -> u64 {
-        T::SUBSET.from_value(T::move_to_superposition(self))
+        T::SUBSET.from_value_typed(self)
     }
     #[inline(always)]
     unsafe fn from_any_internal(set: u64) -> Self {
-        T::from_superposition(T::SUBSET.get_value(set))
+        T::SUBSET.get_value_typed(set)
     }
 }
 
