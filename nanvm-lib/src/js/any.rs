@@ -1,7 +1,7 @@
 use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
 
 use super::{
-    any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION, cast::Cast,
+    any_cast::AnyCast, any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION,
     extension_ref::ExtensionRef, null::Null, string::StringHeader, type_::Type,
 };
 
@@ -15,7 +15,7 @@ impl<D: Dealloc> Any<D> {
         self.internal().0
     }
     #[inline(always)]
-    pub fn is<T: Cast<D>>(&self) -> bool {
+    pub fn is<T: AnyCast<D>>(&self) -> bool {
         unsafe { T::is_type_of(self.u64()) }
     }
     /// `T` should have the same allocator as `Any`.
@@ -33,10 +33,10 @@ impl<D: Dealloc> Any<D> {
     ///     Any::move_from(s)
     /// }
     /// ```
-    pub fn move_from<T: Cast<D>>(t: T) -> Self {
+    pub fn move_from<T: AnyCast<D>>(t: T) -> Self {
         t.move_to_any()
     }
-    pub fn try_move<T: Cast<D>>(self) -> Result<T, ()> {
+    pub fn try_move<T: AnyCast<D>>(self) -> Result<T, ()> {
         if self.is::<T>() {
             return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
         }
@@ -94,7 +94,7 @@ mod test {
 
     use crate::{
         js::{null::Null, object::ObjectHeader},
-        mem::{global::Global, local::Local, manager::Manager},
+        mem::{global::Global, manager::Manager},
     };
 
     use super::*;
@@ -189,18 +189,6 @@ mod test {
         let items = s.items();
         assert_eq!(items, [0x20, 0x21]);
     }
-
-    /*
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_string_fail() {
-        type A = Any<Global>;
-        type StringRef = Ref<StringHeader, Global>;
-        let s = Global().flexible_array_new::<u16>([].into_iter()).to_ref();
-        type AL = Any<&'static Local>;
-        assert!(AL::move_from(s.clone()).is::<StringRef>());
-    }
-    */
 
     #[test]
     #[wasm_bindgen_test]

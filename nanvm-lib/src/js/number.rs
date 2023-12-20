@@ -1,8 +1,8 @@
 use crate::mem::manager::Dealloc;
 
-use super::{bitset::EXTENSION, cast::Cast};
+use super::{any_cast::AnyCast, bitset::EXTENSION};
 
-impl<D: Dealloc> Cast<D> for f64 {
+impl<D: Dealloc> AnyCast<D> for f64 {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         !EXTENSION.has(u)

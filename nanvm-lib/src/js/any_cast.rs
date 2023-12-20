@@ -4,7 +4,7 @@ use super::{
     any::Any, any_internal::AnyInternal, extension::Extension, extension_ref::ExtensionRef,
 };
 
-pub trait Cast<D: Dealloc>: Sized {
+pub trait AnyCast<D: Dealloc>: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
     unsafe fn move_to_any_internal(self) -> u64;
     unsafe fn from_any_internal(set: u64) -> Self;
@@ -15,7 +15,7 @@ pub trait Cast<D: Dealloc>: Sized {
     }
 }
 
-impl<D: Dealloc, T: Extension> Cast<D> for T {
+impl<D: Dealloc, T: Extension> AnyCast<D> for T {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::SUBSET.has(u)
@@ -30,7 +30,7 @@ impl<D: Dealloc, T: Extension> Cast<D> for T {
     }
 }
 
-impl<D: Dealloc, T: ExtensionRef> Cast<D> for Ref<T, D> {
+impl<D: Dealloc, T: ExtensionRef> AnyCast<D> for Ref<T, D> {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::REF_SUBSET.has(u)
