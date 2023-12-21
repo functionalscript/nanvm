@@ -6,7 +6,7 @@ use crate::{
 use super::{any::Any, any_internal::AnyInternal, ref_cast::RefCast, value_cast::ValueCast};
 
 pub trait AnyCast<D: Dealloc>: Sized {
-    unsafe fn is_type_of(any_internal: u64) -> bool;
+    unsafe fn has_same_type(any_internal: u64) -> bool;
     unsafe fn move_to_any_internal(self) -> u64;
     unsafe fn from_any_internal(any_internal: u64) -> Self;
     //
@@ -21,7 +21,7 @@ where
     u64: Cast<T>,
 {
     #[inline(always)]
-    unsafe fn is_type_of(any_internal: u64) -> bool {
+    unsafe fn has_same_type(any_internal: u64) -> bool {
         T::SUBSET.has(any_internal)
     }
     #[inline(always)]
@@ -36,7 +36,7 @@ where
 
 impl<D: Dealloc, T: RefCast<D>> AnyCast<D> for Ref<T, D> {
     #[inline(always)]
-    unsafe fn is_type_of(any_internal: u64) -> bool {
+    unsafe fn has_same_type(any_internal: u64) -> bool {
         T::REF_SUBSET.has(any_internal)
     }
     #[inline(always)]

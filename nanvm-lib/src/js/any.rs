@@ -16,7 +16,7 @@ impl<D: Dealloc> Any<D> {
     }
     #[inline(always)]
     pub fn is<T: AnyCast<D>>(&self) -> bool {
-        unsafe { T::is_type_of(self.u64()) }
+        unsafe { T::has_same_type(self.u64()) }
     }
     /// `T` should have the same allocator as `Any`.
     ///
