@@ -1,13 +1,9 @@
-pub trait ArrayEx {
-    type Item;
+use super::cast::Cast;
+
+impl<T, const N: usize> Cast<Vec<T>> for [T; N] {
     /// Move the array into a vector.
     /// Compare to `.to_vec()`, the function doesn't require `Clone` trait.
-    fn vec(self) -> Vec<Self::Item>;
-}
-
-impl<T: Sized, const N: usize> ArrayEx for [T; N] {
-    type Item = T;
-    fn vec(self) -> Vec<Self::Item> {
+    fn cast(self) -> Vec<T> {
         let mut result = Vec::with_capacity(N);
         for i in self {
             result.push(i);
