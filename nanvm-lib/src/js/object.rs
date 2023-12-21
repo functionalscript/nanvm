@@ -8,6 +8,6 @@ use super::{bitset::OBJECT, extension_ref::ExtensionRef};
 
 pub type ObjectHeader<D> = FlexibleArray<Any<D>>;
 
-impl<D: Dealloc> ExtensionRef for ObjectHeader<D> {
+impl<D: Dealloc> ExtensionRef<D> for ObjectHeader<D> {
     const REF_SUBSET: BitSubset64 = OBJECT;
 }

@@ -76,7 +76,7 @@ impl<D: Dealloc> Any<D> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn try_ref<T: ExtensionRef>(&self) -> Result<&Block<T, D>, ()> {
+    pub fn try_ref<T: ExtensionRef<D>>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };
         if T::REF_SUBSET.has(v) {
             let p = (v & REF_SUBSET_SUPERPOSITION) as *const Block<T, D>;

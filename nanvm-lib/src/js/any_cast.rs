@@ -36,7 +36,7 @@ where
     }
 }
 
-impl<D: Dealloc, T: ExtensionRef> AnyCast<D> for Ref<T, D> {
+impl<D: Dealloc, T: ExtensionRef<D>> AnyCast<D> for Ref<T, D> {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::REF_SUBSET.has(u)
