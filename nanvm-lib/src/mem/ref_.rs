@@ -65,7 +65,7 @@ mod test {
     fn test() {
         let mut buffer: [(); 0] = [];
         let x = buffer.as_mut_ptr() as *mut Block<Fixed<()>, M>;
-        let y = unsafe { Ref::new(x) };
+        let y = unsafe { Ref::from_internal(x) };
         forget(y);
     }
 
@@ -84,7 +84,7 @@ mod test {
         let p = unsafe { &mut (*x).header };
         assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);
         {
-            let y = unsafe { Ref::new(x) };
+            let y = unsafe { Ref::from_internal(x) };
             assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);
             {
                 let z = y.clone();

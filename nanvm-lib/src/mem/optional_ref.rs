@@ -12,7 +12,7 @@ pub struct OptionalRef<T: OptionalBlock> {
 
 impl<T: OptionalBlock> OptionalRef<T> {
     #[inline(always)]
-    pub const unsafe fn new(value: T) -> Self {
+    pub const unsafe fn from_internal(value: T) -> Self {
         Self { value }
     }
     #[inline(always)]

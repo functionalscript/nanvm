@@ -14,7 +14,7 @@ pub trait AnyCast<D: Dealloc>: Sized {
     //
     #[inline(always)]
     fn move_to_any(self) -> Any<D> {
-        unsafe { Any::new(AnyInternal::new(self.move_to_any_internal())) }
+        unsafe { Any::from_internal(AnyInternal::new(self.move_to_any_internal())) }
     }
 }
 
@@ -47,6 +47,6 @@ impl<D: Dealloc, T: ExtensionRef> AnyCast<D> for Ref<T, D> {
     }
     #[inline(always)]
     unsafe fn from_any_internal(set: u64) -> Self {
-        Self::new(T::REF_SUBSET.get_value(set) as *mut Block<T, D>)
+        Self::from_internal(T::REF_SUBSET.get_value(set) as *mut Block<T, D>)
     }
 }

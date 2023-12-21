@@ -19,7 +19,7 @@ impl<T: Object, D: Dealloc> MutRef<T, D> {
     }
     #[inline(always)]
     pub const fn to_ref(self) -> Ref<T, D> {
-        let result = unsafe { Ref::new(self.0) };
+        let result = unsafe { Ref::from_internal(self.0) };
         forget(self);
         result
     }
