@@ -16,7 +16,7 @@ pub trait AnyCast<D: Dealloc>: Sized {
     }
 }
 
-impl<D: Dealloc, T: ValueCast + Cast<u64>> AnyCast<D> for T
+impl<D: Dealloc, T: ValueCast> AnyCast<D> for T
 where
     u64: Cast<T>,
 {
