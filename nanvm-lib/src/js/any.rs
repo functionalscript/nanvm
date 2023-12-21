@@ -1,8 +1,8 @@
 use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
 
 use super::{
-    any_cast::AnyCast, any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION,
-    extension_ref::ExtensionRef, null::Null, string::StringHeader, type_::Type,
+    any_cast::AnyCast, any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION, null::Null,
+    ref_cast::RefCast, string::StringHeader, type_::Type,
 };
 
 // type Result<T> = result::Result<T, ()>;
@@ -76,7 +76,7 @@ impl<D: Dealloc> Any<D> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn try_ref<T: ExtensionRef<D>>(&self) -> Result<&Block<T, D>, ()> {
+    pub fn try_ref<T: RefCast<D>>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };
         if T::REF_SUBSET.has(v) {
             let p = (v & REF_SUBSET_SUPERPOSITION) as *const Block<T, D>;

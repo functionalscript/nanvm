@@ -1,8 +1,8 @@
 use crate::common::bit_subset64::BitSubset64;
 
-use super::{bitset::BOOL, extension::Extension};
+use super::{bitset::BOOL, value_cast::ValueCast};
 
-impl Extension for bool {
+impl ValueCast for bool {
     const SUBSET: BitSubset64<bool> = BOOL;
 }
 

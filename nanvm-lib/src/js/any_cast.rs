@@ -3,9 +3,7 @@ use crate::{
     mem::{block::Block, manager::Dealloc, ref_::Ref},
 };
 
-use super::{
-    any::Any, any_internal::AnyInternal, extension::Extension, extension_ref::ExtensionRef,
-};
+use super::{any::Any, any_internal::AnyInternal, ref_cast::RefCast, value_cast::ValueCast};
 
 pub trait AnyCast<D: Dealloc>: Sized {
     unsafe fn is_type_of(u: u64) -> bool;
@@ -18,7 +16,7 @@ pub trait AnyCast<D: Dealloc>: Sized {
     }
 }
 
-impl<D: Dealloc, T: Extension + Cast<u64>> AnyCast<D> for T
+impl<D: Dealloc, T: ValueCast + Cast<u64>> AnyCast<D> for T
 where
     u64: Cast<T>,
 {
@@ -36,7 +34,7 @@ where
     }
 }
 
-impl<D: Dealloc, T: ExtensionRef<D>> AnyCast<D> for Ref<T, D> {
+impl<D: Dealloc, T: RefCast<D>> AnyCast<D> for Ref<T, D> {
     #[inline(always)]
     unsafe fn is_type_of(u: u64) -> bool {
         T::REF_SUBSET.has(u)

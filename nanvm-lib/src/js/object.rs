@@ -4,10 +4,10 @@ use crate::{
     mem::{block::Block, flexible_array::FlexibleArray, manager::Dealloc},
 };
 
-use super::{bitset::OBJECT, extension_ref::ExtensionRef};
+use super::{bitset::OBJECT, ref_cast::RefCast};
 
 pub type ObjectHeader<D> = FlexibleArray<Any<D>>;
 
-impl<D: Dealloc> ExtensionRef<D> for ObjectHeader<D> {
+impl<D: Dealloc> RefCast<D> for ObjectHeader<D> {
     const REF_SUBSET: BitSubset64<*const Block<Self, D>> = OBJECT.cast();
 }

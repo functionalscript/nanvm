@@ -1,6 +1,6 @@
 use crate::common::{bit_subset64::BitSubset64, cast::Cast};
 
-use super::{bitset::NULL, extension::Extension};
+use super::{bitset::NULL, value_cast::ValueCast};
 
 pub struct Null();
 
@@ -18,6 +18,6 @@ impl Cast<Null> for u64 {
     }
 }
 
-impl Extension for Null {
+impl ValueCast for Null {
     const SUBSET: BitSubset64<Null> = NULL;
 }
