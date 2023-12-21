@@ -47,6 +47,6 @@ impl<D: Dealloc, T: ExtensionRef> AnyCast<D> for Ref<T, D> {
     }
     #[inline(always)]
     unsafe fn from_any_internal(set: u64) -> Self {
-        Self::from_internal(T::REF_SUBSET.get_value(set) as *mut Block<T, D>)
+        Self::from_internal(T::REF_SUBSET.get_value(set) as *mut _)
     }
 }
