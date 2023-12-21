@@ -43,10 +43,10 @@ impl<D: Dealloc, T: ExtensionRef<D>> AnyCast<D> for Ref<T, D> {
     }
     #[inline(always)]
     unsafe fn move_to_any_internal(self) -> u64 {
-        T::REF_SUBSET.from_value(self.move_to_internal() as u64)
+        T::REF_SUBSET.from_value_typed(self.move_to_internal())
     }
     #[inline(always)]
     unsafe fn from_any_internal(set: u64) -> Self {
-        Self::from_internal(T::REF_SUBSET.get_value(set) as *mut _)
+        Self::from_internal(T::REF_SUBSET.get_value_typed(set))
     }
 }

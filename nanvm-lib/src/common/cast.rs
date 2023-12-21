@@ -8,6 +8,8 @@ impl Cast<u64> for u64 {
     }
 }
 
+// pointer
+
 impl<T> Cast<*const T> for u64 {
     fn cast(self) -> *const T {
         self as *const T
@@ -19,6 +21,8 @@ impl<T> Cast<u64> for *const T {
         self as u64
     }
 }
+
+// bool
 
 impl Cast<u64> for bool {
     #[inline(always)]
