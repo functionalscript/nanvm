@@ -6,8 +6,8 @@ use crate::mem::{
 
 use super::{
     bitset::{REF, REF_SUBSET_SUPERPOSITION, STRING},
-    object::ObjectHeader,
-    string::StringHeader,
+    js_object::JsObject,
+    js_string::JsString,
 };
 
 #[repr(transparent)]
@@ -45,9 +45,9 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         if STRING.has(self.0) {
-            (*block_header).block::<StringHeader, D>().delete();
+            (*block_header).block::<JsString, D>().delete();
         } else {
-            (*block_header).block::<ObjectHeader<D>, D>().delete();
+            (*block_header).block::<JsObject<D>, D>().delete();
         }
     }
 }
