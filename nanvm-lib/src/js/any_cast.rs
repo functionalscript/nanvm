@@ -1,6 +1,6 @@
 use crate::{
     common::cast::Cast,
-    mem::{block::Block, manager::Dealloc, ref_::Ref},
+    mem::{manager::Dealloc, ref_::Ref},
 };
 
 use super::{any::Any, any_internal::AnyInternal, ref_cast::RefCast, value_cast::ValueCast};
