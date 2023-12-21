@@ -93,7 +93,11 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{js_object::JsObject, null::Null},
+        js::{
+            js_object::{JsObject, JsObjectRef},
+            js_string::JsStringRef,
+            null::Null,
+        },
         mem::{global::Global, manager::Manager},
     };
 
@@ -161,7 +165,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_string2() {
         type A = Any<Global>;
-        type StringRef = Ref<JsString, Global>;
+        type StringRef = JsStringRef<Global>;
         let sm = Global().flexible_array_new::<u16>([].into_iter());
         let s = sm.to_ref();
         assert!(A::move_from(s.clone()).is::<StringRef>());
@@ -194,22 +198,22 @@ mod test {
     #[wasm_bindgen_test]
     fn test_object2() {
         type A = Any<Global>;
-        type ObjectRc = Ref<JsObject<Global>, Global>;
-        assert!(!A::move_from(Null()).is::<ObjectRc>());
+        type ObjectRef = JsObjectRef<Global>;
+        assert!(!A::move_from(Null()).is::<ObjectRef>());
 
         let o = Global().flexible_array_new::<A>([].into_iter()).to_ref();
-        assert!(A::move_from(o.clone()).is::<ObjectRc>());
+        assert!(A::move_from(o.clone()).is::<ObjectRef>());
         let v = o.items();
         assert!(v.is_empty());
         //
-        assert!(!A::move_from(15.0).is::<ObjectRc>());
-        assert!(!A::move_from(true).is::<ObjectRc>());
+        assert!(!A::move_from(15.0).is::<ObjectRef>());
+        assert!(!A::move_from(true).is::<ObjectRef>());
 
         let o = Global().flexible_array_new::<A>([].into_iter()).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Object);
         {
-            let o = u.try_move::<ObjectRc>().unwrap();
+            let o = u.try_move::<ObjectRef>().unwrap();
             let items = o.items();
             assert!(items.is_empty());
         }
