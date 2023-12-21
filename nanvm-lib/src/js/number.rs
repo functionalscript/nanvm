@@ -1,8 +1,10 @@
-use super::{bitset::EXTENSION, cast::Cast};
+use crate::mem::manager::Dealloc;
 
-impl Cast for f64 {
+use super::{any_cast::AnyCast, bitset::EXTENSION};
+
+impl<D: Dealloc> AnyCast<D> for f64 {
     #[inline(always)]
-    unsafe fn is_type_of(u: u64) -> bool {
+    unsafe fn has_same_type(u: u64) -> bool {
         !EXTENSION.has(u)
     }
     #[inline(always)]

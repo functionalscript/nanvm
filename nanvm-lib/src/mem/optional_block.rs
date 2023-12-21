@@ -5,7 +5,8 @@ use super::{
 
 pub trait OptionalBlock: Copy {
     type BlockHeader: BlockHeader;
-    fn try_get_block_header(self) -> Option<*const Self::BlockHeader>;
+    fn is_ref(self) -> bool;
+    unsafe fn try_get_block_header(self) -> Option<*const Self::BlockHeader>;
     unsafe fn delete(self, block_header: *mut Self::BlockHeader);
     //
     unsafe fn ref_counter_update(self, i: RefCounterUpdate) -> Option<*mut Self::BlockHeader> {
@@ -18,9 +19,15 @@ pub trait OptionalBlock: Copy {
 
 impl<T: Object, D: Dealloc> OptionalBlock for *const Block<T, D> {
     type BlockHeader = D::BlockHeader;
-    fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
-        unsafe { Some(&(*self).header) }
+    #[inline(always)]
+    fn is_ref(self) -> bool {
+        true
     }
+    #[inline(always)]
+    unsafe fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
+        Some(&(*self).header)
+    }
+    #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         (*(block_header as *mut Block<T, D>)).delete();
     }

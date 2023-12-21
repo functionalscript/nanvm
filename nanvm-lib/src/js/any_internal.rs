@@ -1,18 +1,13 @@
 use core::marker::PhantomData;
 
-use crate::{
-    common::allocator::GlobalAllocator,
-    container::{Base, OptionalBase},
-    mem::{
-        block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
-    },
+use crate::mem::{
+    block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
 };
 
 use super::{
-    bitset::{RC, RC_SUBSET_SUPERPOSITION, STRING},
-    extension_rc::ExtensionRc,
-    object::{Object2, ObjectHeader},
-    string::{String2, StringHeader},
+    bitset::{REF, REF_SUBSET_SUPERPOSITION, STRING},
+    object::ObjectHeader,
+    string::StringHeader,
 };
 
 #[repr(transparent)]
@@ -33,39 +28,26 @@ impl<D: Dealloc> AnyInternal<D> {
     }
 }
 
-impl OptionalBase for AnyInternal {
-    unsafe fn get_base(&self) -> Option<*mut Base> {
-        let v = self.0;
-        if !RC.has(v) {
-            return None;
-        }
-        Some((v & RC_SUBSET_SUPERPOSITION) as *mut Base)
-    }
-    unsafe fn delete(&self, base: *mut Base) {
-        if STRING.has(self.0) {
-            StringHeader::<GlobalAllocator>::delete(base);
-        } else {
-            ObjectHeader::<GlobalAllocator>::delete(base);
-        }
-    }
-}
-
 impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     type BlockHeader = D::BlockHeader;
     #[inline(always)]
-    fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
-        let v = self.0;
-        if !RC.has(v) {
-            return None;
+    fn is_ref(self) -> bool {
+        REF.has(self.0)
+    }
+    #[inline(always)]
+    unsafe fn try_get_block_header(self) -> Option<*const Self::BlockHeader> {
+        if self.is_ref() {
+            Some((self.0 & REF_SUBSET_SUPERPOSITION) as _)
+        } else {
+            None
         }
-        Some((v & RC_SUBSET_SUPERPOSITION) as _)
     }
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         if STRING.has(self.0) {
-            (*block_header).block::<String2, D>().delete();
+            (*block_header).block::<StringHeader, D>().delete();
         } else {
-            (*block_header).block::<Object2<D>, D>().delete();
+            (*block_header).block::<ObjectHeader<D>, D>().delete();
         }
     }
 }

@@ -1,17 +1,23 @@
-use crate::common::bit_subset64::BitSubset64;
+use crate::common::{bit_subset64::BitSubset64, cast::Cast};
 
-use super::{bitset::NULL, extension::Extension};
+use super::{bitset::NULL, value_cast::ValueCast};
 
 pub struct Null();
 
-impl Extension for Null {
-    const SUBSET: BitSubset64 = NULL;
+impl Cast<u64> for Null {
     #[inline(always)]
-    unsafe fn move_to_superposition(self) -> u64 {
+    fn cast(self) -> u64 {
         0
     }
+}
+
+impl Cast<Null> for u64 {
     #[inline(always)]
-    unsafe fn from_superposition(_: u64) -> Self {
-        Self()
+    fn cast(self) -> Null {
+        Null()
     }
+}
+
+impl ValueCast for Null {
+    const SUBSET: BitSubset64<Null> = NULL;
 }

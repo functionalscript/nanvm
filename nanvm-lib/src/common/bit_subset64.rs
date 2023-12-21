@@ -1,3 +1,7 @@
+use core::marker::PhantomData;
+
+use super::cast::Cast;
+
 /// A bit subset of `u64`.
 ///
 /// This structure represents a subset of bits within a 64-bit unsigned integer,
@@ -18,8 +22,10 @@
 /// | tag          | 0 | 1 | 0 | items.reduce(and)  |
 /// | superposition| 0 | 0 | 1 | union ^ tag        |
 /// | mask         | 1 | 1 | 0 | !superposition     |
-#[derive(Clone, Copy)]
-pub struct BitSubset64 {
+pub struct BitSubset64<T: Cast<u64> = u64>
+where
+    u64: Cast<T>,
+{
     /// Represents the intersection of all items in the subset. A pattern of bits
     /// where a `1` in each position indicates that the corresponding bit is consistently `1`
     /// across all items, and a `0` indicates that it is not consistently `1`.
@@ -27,13 +33,51 @@ pub struct BitSubset64 {
     /// Identifies the bits that are constant (either `0` or `1`). A `1` in a position
     /// indicates a fixed bit (as per the `tag`), and a `0` indicates a superposition bit.
     pub mask: u64,
+    _0: PhantomData<T>,
 }
 
-impl BitSubset64 {
+impl<T: Cast<u64>> Clone for BitSubset64<T>
+where
+    u64: Cast<T>,
+{
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        Self {
+            tag: self.tag,
+            mask: self.mask,
+            _0: PhantomData,
+        }
+    }
+}
+
+impl<T: Cast<u64>> Copy for BitSubset64<T> where u64: Cast<T> {}
+
+impl BitSubset64<u64> {
+    #[inline(always)]
+    pub const fn cast<U: Cast<u64>>(self) -> BitSubset64<U>
+    where
+        u64: Cast<U>,
+    {
+        BitSubset64 {
+            tag: self.tag,
+            mask: self.mask,
+            _0: PhantomData,
+        }
+    }
+}
+
+impl<T: Cast<u64>> BitSubset64<T>
+where
+    u64: Cast<T>,
+{
     #[inline(always)]
     pub const fn from_tag_and_mask(tag: u64, mask: u64) -> Self {
         assert!(mask & tag == tag);
-        Self { tag, mask }
+        Self {
+            tag,
+            mask,
+            _0: PhantomData,
+        }
     }
     #[inline(always)]
     pub const fn from_tag_and_superposition(tag: u64, sup: u64) -> Self {
@@ -60,20 +104,20 @@ impl BitSubset64 {
         !self.mask
     }
     #[inline(always)]
-    pub const fn or_unchecked(self, b: BitSubset64) -> BitSubset64 {
-        BitSubset64::from_tag_and_union(self.tag & b.tag, self.union() | b.union())
+    pub const fn or_unchecked(self, b: Self) -> Self {
+        Self::from_tag_and_union(self.tag & b.tag, self.union() | b.union())
     }
     #[inline(always)]
-    pub const fn or(self, b: BitSubset64) -> BitSubset64 {
+    pub const fn or(self, b: Self) -> Self {
         assert!(self.superposition() == b.superposition());
         self.or_unchecked(b)
     }
     #[inline(always)]
-    pub const fn and(self, b: BitSubset64) -> BitSubset64 {
-        BitSubset64::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
+    pub const fn and(self, b: Self) -> Self {
+        Self::from_tag_and_union(self.tag | b.tag, self.union() & b.union())
     }
     #[inline(always)]
-    pub const fn split(self, sub_mask: u64) -> (BitSubset64, BitSubset64) {
+    pub const fn split(self, sub_mask: u64) -> (Self, Self) {
         // we need at least one bit to distinguish the two subsets.
         assert!(sub_mask != 0);
         // the bit shouldn't be a part of the original set mask.
@@ -81,9 +125,25 @@ impl BitSubset64 {
         let mask = self.mask | sub_mask;
         // the subsets should have different tags.
         (
-            BitSubset64::from_tag_and_mask(self.tag, mask),
-            BitSubset64::from_tag_and_mask(self.tag | sub_mask, mask),
+            Self::from_tag_and_mask(self.tag, mask),
+            Self::from_tag_and_mask(self.tag | sub_mask, mask),
         )
+    }
+    #[inline(always)]
+    pub const fn get_value(self, set: u64) -> u64 {
+        self.superposition() & set
+    }
+    #[inline(always)]
+    pub const fn from_value(self, value: u64) -> u64 {
+        self.tag | value
+    }
+    #[inline(always)]
+    pub fn from_value_typed(self, value: T) -> u64 {
+        self.from_value(value.cast())
+    }
+    #[inline(always)]
+    pub fn get_value_typed(self, set: u64) -> T {
+        (self.get_value(set)).cast()
     }
 }
 
