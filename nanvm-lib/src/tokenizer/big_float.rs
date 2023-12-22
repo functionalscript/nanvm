@@ -3,13 +3,13 @@ use crate::{common::cast::Cast, tokenizer::big_uint::BigUint};
 use super::big_int::BigInt;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
-pub struct BigFloat<const Base: u32> {
+pub struct BigFloat<const BASE: u32> {
     significand: BigInt,
     exp: i64,
 }
 
-impl<const Base: u32> BigFloat<Base> {
-    pub const ZERO: BigFloat<Base> = BigFloat {
+impl<const BASE: u32> BigFloat<BASE> {
+    pub const ZERO: BigFloat<BASE> = BigFloat {
         significand: BigInt::ZERO,
         exp: 0,
     };
