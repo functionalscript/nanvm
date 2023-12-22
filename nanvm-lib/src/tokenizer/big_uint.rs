@@ -521,14 +521,14 @@ mod test {
     #[wasm_bindgen_test]
     fn test_div_by_zero() {
         let a = BigUint { value: [1].cast() };
-        let result = &a / &BigUint::ZERO;
+        let _result = &a / &BigUint::ZERO;
     }
 
     #[test]
     #[should_panic(expected = "attempt to divide by zero")]
     #[wasm_bindgen_test]
     fn test_div_zero_by_zero() {
-        let result = &BigUint::ZERO / &BigUint::ZERO;
+        let _result = &BigUint::ZERO / &BigUint::ZERO;
     }
 
     #[test]
@@ -691,7 +691,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_pow_overflow() {
         let a = BigUint { value: [5].cast() };
-        let result = a.pow(&BigUint {
+        let _result = a.pow(&BigUint {
             value: [100, 100].cast(),
         });
     }
@@ -772,6 +772,6 @@ mod test {
         let b = BigUint {
             value: [1, 1].cast(),
         };
-        let result = &a << &b;
+        let _result = &a << &b;
     }
 }

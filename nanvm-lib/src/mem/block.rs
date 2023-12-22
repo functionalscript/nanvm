@@ -37,12 +37,9 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{
-        common::ref_mut::RefMut,
-        mem::{
-            block::Block, fixed::Fixed, manager::Dealloc, object::Object,
-            ref_counter_update::RefCounterUpdate,
-        },
+    use crate::mem::{
+        block::Block, fixed::Fixed, manager::Dealloc, object::Object,
+        ref_counter_update::RefCounterUpdate,
     };
 
     use super::super::block_header::BlockHeader;

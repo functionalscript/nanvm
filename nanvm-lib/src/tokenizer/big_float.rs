@@ -45,7 +45,7 @@ impl BigFloat<10> {
         if self.exp > 0 {
             let five = BigUint { value: [5].cast() };
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
-            let mut result: BigFloat<2> = BigFloat {
+            let result: BigFloat<2> = BigFloat {
                 significand: new_sign,
                 exp: self.exp,
             };

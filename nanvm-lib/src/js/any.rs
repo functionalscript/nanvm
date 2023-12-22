@@ -7,7 +7,7 @@ use super::{
 
 // type Result<T> = result::Result<T, ()>;
 
-pub type Any<D: Dealloc> = OptionalRef<AnyInternal<D>>;
+pub type Any<D> = OptionalRef<AnyInternal<D>>;
 
 impl<D: Dealloc> Any<D> {
     #[inline(always)]
@@ -93,11 +93,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{
-            js_object::{JsObject, JsObjectRef},
-            js_string::JsStringRef,
-            null::Null,
-        },
+        js::{js_object::JsObjectRef, js_string::JsStringRef, null::Null},
         mem::{global::Global, manager::Manager},
     };
 

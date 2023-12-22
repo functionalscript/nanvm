@@ -543,14 +543,14 @@ mod test {
     #[wasm_bindgen_test]
     fn test_div_by_zero() {
         let a = BigInt::from_u64(1);
-        let result = &a / &BigInt::ZERO;
+        let _result = &a / &BigInt::ZERO;
     }
 
     #[test]
     #[should_panic(expected = "attempt to divide by zero")]
     #[wasm_bindgen_test]
     fn test_div_zero_by_zero() {
-        let result = &BigInt::ZERO / &BigInt::ZERO;
+        let _result = &BigInt::ZERO / &BigInt::ZERO;
     }
 
     #[test]
