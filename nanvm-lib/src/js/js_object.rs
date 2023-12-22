@@ -6,7 +6,7 @@ use crate::{
 
 use super::{bitset::OBJECT, js_string::JsStringRef, ref_cast::RefCast};
 
-pub type JsObject<D> = FlexibleArray<Any<D>>;
+pub type JsObject<D> = FlexibleArray<(JsStringRef<D>, Any<D>)>;
 
 pub type JsObjectRef<D> = Ref<JsObject<D>, D>;
 
