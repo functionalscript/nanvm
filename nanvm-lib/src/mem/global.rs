@@ -35,7 +35,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_i32() {
-        let x = GLOBAL.fixed_new(Fixed(0));
+        let _x = GLOBAL.fixed_new(Fixed(0));
     }
 
     struct X<'a>(&'a mut i32);

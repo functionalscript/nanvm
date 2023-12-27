@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Div, Mul, Shl, Shr, Sub},
 };
 
-use crate::common::{array::ArrayEx, default::default};
+use crate::common::{cast::Cast, default::default};
 
 use super::{big_int::BigInt, big_int::Sign};
 
@@ -17,7 +17,7 @@ impl BigUint {
     pub const ZERO: BigUint = BigUint { value: Vec::new() };
 
     pub fn one() -> BigUint {
-        BigUint { value: [1].vec() }
+        BigUint { value: [1].cast() }
     }
 
     pub fn normalize(&mut self) {
@@ -93,7 +93,7 @@ impl BigUint {
 
         match self.cmp(&b) {
             Ordering::Less => (default(), self.clone()),
-            Ordering::Equal => (BigUint { value: [1].vec() }, default()),
+            Ordering::Equal => (BigUint { value: [1].cast() }, default()),
             Ordering::Greater => {
                 let mut a = self.clone();
                 let mut result = BigUint::ZERO;
@@ -354,30 +354,30 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::common::array::ArrayEx;
+    use crate::common::cast::Cast;
 
     use super::BigUint;
 
     #[test]
     #[wasm_bindgen_test]
     fn test_ord() {
-        let a = BigUint { value: [1].vec() };
-        let b = BigUint { value: [1].vec() };
+        let a = BigUint { value: [1].cast() };
+        let b = BigUint { value: [1].cast() };
         assert_eq!(a.cmp(&b), Ordering::Equal);
 
-        let a = BigUint { value: [1].vec() };
-        let b = BigUint { value: [2].vec() };
+        let a = BigUint { value: [1].cast() };
+        let b = BigUint { value: [2].cast() };
         assert_eq!(a.cmp(&b), Ordering::Less);
 
-        let a = BigUint { value: [2].vec() };
-        let b = BigUint { value: [1].vec() };
+        let a = BigUint { value: [2].cast() };
+        let b = BigUint { value: [1].cast() };
         assert_eq!(a.cmp(&b), Ordering::Greater);
 
         let a = BigUint {
-            value: [1, 2].vec(),
+            value: [1, 2].cast(),
         };
         let b = BigUint {
-            value: [2, 1].vec(),
+            value: [2, 1].cast(),
         };
         assert_eq!(a.cmp(&b), Ordering::Greater);
     }
@@ -385,34 +385,34 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_add() {
-        let a = BigUint { value: [1].vec() };
-        let b = BigUint { value: [2].vec() };
+        let a = BigUint { value: [1].cast() };
+        let b = BigUint { value: [2].cast() };
         let result = &a + &b;
-        assert_eq!(&result, &BigUint { value: [3].vec() });
+        assert_eq!(&result, &BigUint { value: [3].cast() });
 
-        let a = BigUint { value: [1].vec() };
+        let a = BigUint { value: [1].cast() };
         let b = BigUint {
-            value: [2, 4].vec(),
+            value: [2, 4].cast(),
         };
         let result = &a + &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [3, 4].vec()
+                value: [3, 4].cast()
             }
         );
 
         let a = BigUint {
-            value: [1 << 63].vec(),
+            value: [1 << 63].cast(),
         };
         let b = BigUint {
-            value: [1 << 63].vec(),
+            value: [1 << 63].cast(),
         };
         let result = &a + &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [0, 1].vec()
+                value: [0, 1].cast()
             }
         );
     }
@@ -421,23 +421,23 @@ mod test {
     #[wasm_bindgen_test]
     fn test_add_overflow() {
         let a = BigUint {
-            value: [u64::MAX, 0, 1].vec(),
+            value: [u64::MAX, 0, 1].cast(),
         };
         let b = BigUint {
-            value: [u64::MAX, u64::MAX].vec(),
+            value: [u64::MAX, u64::MAX].cast(),
         };
         let result = &a + &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [u64::MAX - 1, 0, 2].vec()
+                value: [u64::MAX - 1, 0, 2].cast()
             }
         );
         let result = &b + &a;
         assert_eq!(
             &result,
             &BigUint {
-                value: [u64::MAX - 1, 0, 2].vec()
+                value: [u64::MAX - 1, 0, 2].cast()
             }
         );
     }
@@ -446,30 +446,30 @@ mod test {
     #[wasm_bindgen_test]
     fn test_sub() {
         let a = BigUint {
-            value: [1 << 63].vec(),
+            value: [1 << 63].cast(),
         };
         let b = BigUint {
-            value: [1 << 63].vec(),
+            value: [1 << 63].cast(),
         };
         let result = &a - &b;
         assert_eq!(&result, &BigUint::ZERO);
 
-        let a = BigUint { value: [3].vec() };
-        let b = BigUint { value: [2].vec() };
+        let a = BigUint { value: [3].cast() };
+        let b = BigUint { value: [2].cast() };
         let result = &a - &b;
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
         let result = &b - &a;
         assert_eq!(&result, &BigUint::ZERO);
 
         let a = BigUint {
-            value: [0, 1].vec(),
+            value: [0, 1].cast(),
         };
-        let b = BigUint { value: [1].vec() };
+        let b = BigUint { value: [1].cast() };
         let result = &a - &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [u64::MAX].vec()
+                value: [u64::MAX].cast()
             }
         );
     }
@@ -477,76 +477,76 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_mul() {
-        let a = BigUint { value: [1].vec() };
+        let a = BigUint { value: [1].cast() };
         let result = &a * &BigUint::ZERO;
         assert_eq!(&result, &BigUint::ZERO);
         let result = &BigUint::ZERO * &a;
         assert_eq!(&result, &BigUint::ZERO);
 
-        let a = BigUint { value: [1].vec() };
+        let a = BigUint { value: [1].cast() };
         let result = &a * &a;
         assert_eq!(&result, &a);
 
         let a = BigUint {
-            value: [1, 2, 3, 4].vec(),
+            value: [1, 2, 3, 4].cast(),
         };
         let b = BigUint {
-            value: [5, 6, 7].vec(),
+            value: [5, 6, 7].cast(),
         };
         let result = &a * &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [5, 16, 34, 52, 45, 28].vec()
+                value: [5, 16, 34, 52, 45, 28].cast()
             },
         );
         let result = &b * &a;
         assert_eq!(
             &result,
             &BigUint {
-                value: [5, 16, 34, 52, 45, 28].vec()
+                value: [5, 16, 34, 52, 45, 28].cast()
             },
         );
 
         let a = BigUint {
-            value: [u64::MAX].vec(),
+            value: [u64::MAX].cast(),
         };
         let b = BigUint {
-            value: [u64::MAX].vec(),
+            value: [u64::MAX].cast(),
         };
         let result = &a * &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [1, u64::MAX - 1].vec()
+                value: [1, u64::MAX - 1].cast()
             },
         );
         let result = &b * &a;
         assert_eq!(
             &result,
             &BigUint {
-                value: [1, u64::MAX - 1].vec()
+                value: [1, u64::MAX - 1].cast()
             },
         );
 
         let a = BigUint {
-            value: [u64::MAX, u64::MAX, u64::MAX].vec(),
+            value: [u64::MAX, u64::MAX, u64::MAX].cast(),
         };
         let b = BigUint {
-            value: [u64::MAX].vec(),
+            value: [u64::MAX].cast(),
         };
         let result = &a * &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].cast()
             },
         );
         let result = &b * &a;
         assert_eq!(
             &result,
             &BigUint {
-                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+                value: [1, u64::MAX, u64::MAX, u64::MAX - 1].cast()
             },
         );
     }
@@ -555,76 +555,76 @@ mod test {
     #[should_panic(expected = "attempt to divide by zero")]
     #[wasm_bindgen_test]
     fn test_div_by_zero() {
-        let a = BigUint { value: [1].vec() };
-        let result = &a / &BigUint::ZERO;
+        let a = BigUint { value: [1].cast() };
+        let _result = &a / &BigUint::ZERO;
     }
 
     #[test]
     #[should_panic(expected = "attempt to divide by zero")]
     #[wasm_bindgen_test]
     fn test_div_zero_by_zero() {
-        let result = &BigUint::ZERO / &BigUint::ZERO;
+        let _result = &BigUint::ZERO / &BigUint::ZERO;
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_div_simple() {
-        let a = BigUint { value: [2].vec() };
-        let b = BigUint { value: [7].vec() };
+        let a = BigUint { value: [2].cast() };
+        let b = BigUint { value: [7].cast() };
         let result = &a / &b;
         assert_eq!(&result, &BigUint::ZERO);
 
-        let a = BigUint { value: [7].vec() };
+        let a = BigUint { value: [7].cast() };
         let result = &a / &a;
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
-        let a = BigUint { value: [7].vec() };
-        let b = BigUint { value: [2].vec() };
+        let a = BigUint { value: [7].cast() };
+        let b = BigUint { value: [2].cast() };
         let result = &a / &b;
-        assert_eq!(&result, &BigUint { value: [3].vec() });
+        assert_eq!(&result, &BigUint { value: [3].cast() });
 
         let a = BigUint {
-            value: [6, 8].vec(),
+            value: [6, 8].cast(),
         };
-        let b = BigUint { value: [2].vec() };
+        let b = BigUint { value: [2].cast() };
         let result = &a / &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [3, 4].vec()
+                value: [3, 4].cast()
             }
         );
 
         let a = BigUint {
-            value: [4, 7].vec(),
+            value: [4, 7].cast(),
         };
-        let b = BigUint { value: [2].vec() };
+        let b = BigUint { value: [2].cast() };
         let result = &a / &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [(1 << 63) + 2, 3].vec()
+                value: [(1 << 63) + 2, 3].cast()
             }
         );
 
         let a = BigUint {
-            value: [0, 4].vec(),
+            value: [0, 4].cast(),
         };
         let b = BigUint {
-            value: [1, 2].vec(),
+            value: [1, 2].cast(),
         };
         let result = &a / &b;
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
         let a = BigUint {
-            value: [1, 1].vec(),
+            value: [1, 1].cast(),
         };
-        let b = BigUint { value: [1].vec() };
+        let b = BigUint { value: [1].cast() };
         let result = &a / &b;
         assert_eq!(
             &result,
             &BigUint {
-                value: [1, 1].vec()
+                value: [1, 1].cast()
             }
         );
     }
@@ -632,17 +632,29 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_pow_u64() {
-        let a = BigUint { value: [100].vec() };
+        let a = BigUint {
+            value: [100].cast(),
+        };
         let result = a.pow_u64(0);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
-        let a = BigUint { value: [2].vec() };
+        let a = BigUint { value: [2].cast() };
         let result = a.pow_u64(7);
-        assert_eq!(&result, &BigUint { value: [128].vec() });
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [128].cast()
+            }
+        );
 
-        let a = BigUint { value: [5].vec() };
+        let a = BigUint { value: [5].cast() };
         let result = a.pow_u64(3);
-        assert_eq!(&result, &BigUint { value: [125].vec() });
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [125].cast()
+            }
+        );
 
         let a = BigUint::ZERO;
         let result = a.pow_u64(3);
@@ -650,60 +662,72 @@ mod test {
 
         let a = BigUint::ZERO;
         let result = a.pow_u64(0);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
         let a = BigUint::one();
         let result = a.pow_u64(0);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
         let a = BigUint::one();
         let result = a.pow_u64(100);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn test_pow() {
-        let a = BigUint { value: [100].vec() };
+        let a = BigUint {
+            value: [100].cast(),
+        };
         let result = a.pow(&BigUint::ZERO);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
-        let a = BigUint { value: [2].vec() };
-        let result = a.pow(&BigUint { value: [7].vec() });
-        assert_eq!(&result, &BigUint { value: [128].vec() });
+        let a = BigUint { value: [2].cast() };
+        let result = a.pow(&BigUint { value: [7].cast() });
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [128].cast()
+            }
+        );
 
-        let a = BigUint { value: [5].vec() };
-        let result = a.pow(&BigUint { value: [3].vec() });
-        assert_eq!(&result, &BigUint { value: [125].vec() });
+        let a = BigUint { value: [5].cast() };
+        let result = a.pow(&BigUint { value: [3].cast() });
+        assert_eq!(
+            &result,
+            &BigUint {
+                value: [125].cast()
+            }
+        );
 
         let a = BigUint::ZERO;
         let result = a.pow(&BigUint {
-            value: [100, 100].vec(),
+            value: [100, 100].cast(),
         });
         assert_eq!(&result, &BigUint::ZERO);
 
         let a = BigUint::ZERO;
         let result = a.pow(&BigUint::ZERO);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
         let a = BigUint::one();
         let result = a.pow(&BigUint::ZERO);
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
 
         let a = BigUint::one();
         let result = a.pow(&BigUint {
-            value: [100, 100].vec(),
+            value: [100, 100].cast(),
         });
-        assert_eq!(&result, &BigUint { value: [1].vec() });
+        assert_eq!(&result, &BigUint { value: [1].cast() });
     }
 
     #[test]
     #[should_panic(expected = "Maximum BigUint size exceeded")]
     #[wasm_bindgen_test]
     fn test_pow_overflow() {
-        let a = BigUint { value: [5].vec() };
-        let result = a.pow(&BigUint {
-            value: [100, 100].vec(),
+        let a = BigUint { value: [5].cast() };
+        let _result = a.pow(&BigUint {
+            value: [100, 100].cast(),
         });
     }
 
@@ -713,7 +737,7 @@ mod test {
         let result = &BigUint::ZERO << &BigUint::ZERO;
         assert_eq!(&result, &BigUint::ZERO);
 
-        let a = BigUint { value: [5].vec() };
+        let a = BigUint { value: [5].cast() };
         let result = &a << &BigUint::ZERO;
         assert_eq!(result, a);
 
@@ -724,53 +748,53 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_shl() {
-        let a = BigUint { value: [1].vec() };
+        let a = BigUint { value: [1].cast() };
         let result = &a << &a;
-        assert_eq!(result, BigUint { value: [2].vec() });
+        assert_eq!(result, BigUint { value: [2].cast() });
 
-        let a = BigUint { value: [5].vec() };
-        let b = BigUint { value: [63].vec() };
+        let a = BigUint { value: [5].cast() };
+        let b = BigUint { value: [63].cast() };
         let result = &a << &b;
         assert_eq!(
             result,
             BigUint {
-                value: [1 << 63, 2].vec()
+                value: [1 << 63, 2].cast()
             }
         );
 
         let a = BigUint {
-            value: [5, 9].vec(),
+            value: [5, 9].cast(),
         };
-        let b = BigUint { value: [63].vec() };
+        let b = BigUint { value: [63].cast() };
         let result = &a << &b;
         assert_eq!(
             result,
             BigUint {
-                value: [1 << 63, (1 << 63) + 2, 4].vec()
+                value: [1 << 63, (1 << 63) + 2, 4].cast()
             }
         );
 
         let a = BigUint {
-            value: [5, 9].vec(),
+            value: [5, 9].cast(),
         };
-        let b = BigUint { value: [64].vec() };
+        let b = BigUint { value: [64].cast() };
         let result = &a << &b;
         assert_eq!(
             result,
             BigUint {
-                value: [0, 5, 9].vec()
+                value: [0, 5, 9].cast()
             }
         );
 
         let a = BigUint {
-            value: [5, 9].vec(),
+            value: [5, 9].cast(),
         };
-        let b = BigUint { value: [65].vec() };
+        let b = BigUint { value: [65].cast() };
         let result = &a << &b;
         assert_eq!(
             result,
             BigUint {
-                value: [0, 10, 18].vec()
+                value: [0, 10, 18].cast()
             }
         );
     }
@@ -781,9 +805,9 @@ mod test {
     fn test_shl_overflow() {
         let a = BigUint::one();
         let b = BigUint {
-            value: [1, 1].vec(),
+            value: [1, 1].cast(),
         };
-        let result = &a << &b;
+        let _result = &a << &b;
     }
 
     #[test]
@@ -792,7 +816,7 @@ mod test {
         let result = &BigUint::ZERO >> &BigUint::ZERO;
         assert_eq!(&result, &BigUint::ZERO);
 
-        let a = BigUint { value: [5].vec() };
+        let a = BigUint { value: [5].cast() };
         let result = &a >> &BigUint::ZERO;
         assert_eq!(result, a);
 
@@ -804,30 +828,32 @@ mod test {
     #[wasm_bindgen_test]
     fn test_shr() {
         let a = BigUint {
-            value: [1, 1, 1, 1].vec(),
+            value: [1, 1, 1, 1].cast(),
         };
-        let b = BigUint { value: [256].vec() };
+        let b = BigUint {
+            value: [256].cast(),
+        };
         let result = &a >> &b;
         assert_eq!(result, BigUint::ZERO);
 
-        let a = BigUint { value: [1].vec() };
+        let a = BigUint { value: [1].cast() };
         let result = &a >> &a;
         assert_eq!(result, BigUint::ZERO);
 
-        let a = BigUint { value: [2].vec() };
-        let b = BigUint { value: [1].vec() };
+        let a = BigUint { value: [2].cast() };
+        let b = BigUint { value: [1].cast() };
         let result = &a >> &b;
-        assert_eq!(result, BigUint { value: [1].vec() });
+        assert_eq!(result, BigUint { value: [1].cast() });
 
         let a = BigUint {
-            value: [1, 5, 9].vec(),
+            value: [1, 5, 9].cast(),
         };
-        let b = BigUint { value: [65].vec() };
+        let b = BigUint { value: [65].cast() };
         let result = &a >> &b;
         assert_eq!(
             result,
             BigUint {
-                value: [(1 << 63) + 2, 4].vec()
+                value: [(1 << 63) + 2, 4].cast()
             }
         );
     }

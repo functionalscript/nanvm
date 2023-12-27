@@ -160,11 +160,11 @@ mod test {
     const _: () = assert!(A.has(0b010));
     const _: () = assert!(A.has(0b011));
 
-    const AS: (BitSubset64, BitSubset64) = A.split(1);
-    const _: () = assert!(AS.0.tag == 0b010);
-    const _: () = assert!(AS.0.superposition() == 0);
-    const _: () = assert!(AS.1.tag == 0b011);
-    const _: () = assert!(AS.1.superposition() == 0);
+    const _AS: (BitSubset64, BitSubset64) = A.split(1);
+    const _: () = assert!(_AS.0.tag == 0b010);
+    const _: () = assert!(_AS.0.superposition() == 0);
+    const _: () = assert!(_AS.1.tag == 0b011);
+    const _: () = assert!(_AS.1.superposition() == 0);
 
     #[test]
     #[wasm_bindgen_test]

@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use crate::common::array::ArrayEx;
+use crate::common::cast::Cast;
 use crate::tokenizer::big_uint::BigUint;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
@@ -48,7 +48,7 @@ impl BigInt {
     pub fn from_u64(n: u64) -> Self {
         BigInt {
             sign: Sign::Positive,
-            value: BigUint { value: [n].vec() },
+            value: BigUint { value: [n].cast() },
         }
     }
 
@@ -71,7 +71,7 @@ impl BigInt {
         BigInt {
             sign,
             value: BigUint {
-                value: [(n * sign as i64) as u64].vec(),
+                value: [(n * sign as i64) as u64].cast(),
             },
         }
     }
@@ -195,7 +195,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{common::array::ArrayEx, tokenizer::big_uint::BigUint};
+    use crate::{common::cast::Cast, tokenizer::big_uint::BigUint};
 
     use super::{BigInt, Sign};
 
@@ -217,13 +217,13 @@ mod test {
         let a = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [1, 2].vec(),
+                value: [1, 2].cast(),
             },
         };
         let b = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [2, 1].vec(),
+                value: [2, 1].cast(),
             },
         };
         assert_eq!(a.cmp(&b), Ordering::Greater);
@@ -246,7 +246,7 @@ mod test {
         let b = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [2, 4].vec(),
+                value: [2, 4].cast(),
             },
         };
         let result = &a + &b;
@@ -255,7 +255,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [3, 4].vec()
+                    value: [3, 4].cast()
                 }
             }
         );
@@ -268,7 +268,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [0, 1].vec()
+                    value: [0, 1].cast()
                 }
             }
         );
@@ -281,7 +281,7 @@ mod test {
         let b = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [1 << 63].vec(),
+                value: [1 << 63].cast(),
             },
         };
         let result = &a + &b;
@@ -297,7 +297,7 @@ mod test {
         let a = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [0, 1].vec(),
+                value: [0, 1].cast(),
             },
         };
         let b = BigInt::from_i64(-1);
@@ -311,13 +311,13 @@ mod test {
         let a = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [u64::MAX, 0, 1].vec(),
+                value: [u64::MAX, 0, 1].cast(),
             },
         };
         let b = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [u64::MAX, u64::MAX].vec(),
+                value: [u64::MAX, u64::MAX].cast(),
             },
         };
         let result = &a + &b;
@@ -326,7 +326,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [u64::MAX - 1, 0, 2].vec()
+                    value: [u64::MAX - 1, 0, 2].cast()
                 }
             }
         );
@@ -336,7 +336,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [u64::MAX - 1, 0, 2].vec()
+                    value: [u64::MAX - 1, 0, 2].cast()
                 }
             }
         );
@@ -360,7 +360,7 @@ mod test {
         let a = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [0, 1].vec(),
+                value: [0, 1].cast(),
             },
         };
         let b = BigInt::from_u64(1);
@@ -385,7 +385,7 @@ mod test {
         let b = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [2, 4].vec(),
+                value: [2, 4].cast(),
             },
         };
         let result = a - b;
@@ -394,7 +394,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [3, 4].vec()
+                    value: [3, 4].cast()
                 }
             }
         );
@@ -403,7 +403,7 @@ mod test {
         let b = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [1 << 63].vec(),
+                value: [1 << 63].cast(),
             },
         };
         let result = a - b;
@@ -412,7 +412,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [0, 1].vec()
+                    value: [0, 1].cast()
                 }
             }
         );
@@ -441,13 +441,13 @@ mod test {
         let a = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [1, 2, 3, 4].vec(),
+                value: [1, 2, 3, 4].cast(),
             },
         };
         let b = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [5, 6, 7].vec(),
+                value: [5, 6, 7].cast(),
             },
         };
         let result = &a * &b;
@@ -456,7 +456,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [5, 16, 34, 52, 45, 28].vec()
+                    value: [5, 16, 34, 52, 45, 28].cast()
                 }
             },
         );
@@ -466,7 +466,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [5, 16, 34, 52, 45, 28].vec()
+                    value: [5, 16, 34, 52, 45, 28].cast()
                 }
             },
         );
@@ -474,13 +474,13 @@ mod test {
         let a = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [u64::MAX].vec(),
+                value: [u64::MAX].cast(),
             },
         };
         let b = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [u64::MAX].vec(),
+                value: [u64::MAX].cast(),
             },
         };
         let result = &a * &b;
@@ -489,7 +489,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [1, u64::MAX - 1].vec()
+                    value: [1, u64::MAX - 1].cast()
                 }
             },
         );
@@ -499,7 +499,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [1, u64::MAX - 1].vec()
+                    value: [1, u64::MAX - 1].cast()
                 }
             },
         );
@@ -507,13 +507,13 @@ mod test {
         let a = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [u64::MAX, u64::MAX, u64::MAX].vec(),
+                value: [u64::MAX, u64::MAX, u64::MAX].cast(),
             },
         };
         let b = BigInt {
             sign: Sign::Negative,
             value: BigUint {
-                value: [u64::MAX].vec(),
+                value: [u64::MAX].cast(),
             },
         };
         let result = &a * &b;
@@ -522,7 +522,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+                    value: [1, u64::MAX, u64::MAX, u64::MAX - 1].cast()
                 }
             },
         );
@@ -532,7 +532,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [1, u64::MAX, u64::MAX, u64::MAX - 1].vec()
+                    value: [1, u64::MAX, u64::MAX, u64::MAX - 1].cast()
                 }
             },
         );
@@ -543,14 +543,14 @@ mod test {
     #[wasm_bindgen_test]
     fn test_div_by_zero() {
         let a = BigInt::from_u64(1);
-        let result = &a / &BigInt::ZERO;
+        let _result = &a / &BigInt::ZERO;
     }
 
     #[test]
     #[should_panic(expected = "attempt to divide by zero")]
     #[wasm_bindgen_test]
     fn test_div_zero_by_zero() {
-        let result = &BigInt::ZERO / &BigInt::ZERO;
+        let _result = &BigInt::ZERO / &BigInt::ZERO;
     }
 
     #[test]
@@ -573,7 +573,7 @@ mod test {
         let a = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [6, 8].vec(),
+                value: [6, 8].cast(),
             },
         };
         let b = BigInt::from_u64(2);
@@ -583,7 +583,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [3, 4].vec()
+                    value: [3, 4].cast()
                 }
             }
         );
@@ -591,7 +591,7 @@ mod test {
         let a = BigInt {
             sign: Sign::Positive,
             value: BigUint {
-                value: [4, 7].vec(),
+                value: [4, 7].cast(),
             },
         };
         let b = BigInt::from_u64(2);
@@ -601,7 +601,7 @@ mod test {
             &BigInt {
                 sign: Sign::Positive,
                 value: BigUint {
-                    value: [(1 << 63) + 2, 3].vec()
+                    value: [(1 << 63) + 2, 3].cast()
                 }
             }
         );

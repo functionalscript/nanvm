@@ -87,7 +87,7 @@ mod test {
             let y = unsafe { Ref::from_internal(x) };
             assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);
             {
-                let z = y.clone();
+                let _z = y.clone();
                 assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 1);
             }
             assert_eq!(unsafe { p.ref_counter_update(RefCounterUpdate::Read) }, 0);

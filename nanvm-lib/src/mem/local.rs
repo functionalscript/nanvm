@@ -116,7 +116,7 @@ mod test {
                 // drop(r4);
                 assert_eq!(r5.header.len(), 3);
                 assert_eq!(r5.items(), &[1, 2, 3]);
-                let r6 = &*r4;
+                let _r6 = &*r4;
                 assert_eq!(r5.header.len(), 3);
                 assert_eq!(r5.items(), &[1, 2, 3]);
             }

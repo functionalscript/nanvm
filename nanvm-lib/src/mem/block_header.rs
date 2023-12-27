@@ -39,18 +39,13 @@ impl BlockHeader for Cell<isize> {
 #[cfg(test)]
 mod test {
     use core::{
-        alloc::Layout,
         cell::Cell,
-        marker::PhantomData,
         sync::atomic::{AtomicIsize, Ordering},
     };
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{
-        common::ref_mut::RefMut,
-        mem::{block::Block, fixed::Fixed, manager::Dealloc, ref_counter_update::RefCounterUpdate},
-    };
+    use crate::mem::ref_counter_update::RefCounterUpdate;
 
     use super::BlockHeader;
 
