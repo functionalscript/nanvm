@@ -311,7 +311,29 @@ impl Shr for &BigUint {
             return self.clone();
         }
 
-        todo!()
+        let number_to_remove = (rhs.value[0] / 64) as usize;
+        if number_to_remove >= self.len() {
+            return BigUint::ZERO;
+        }
+
+        let mut value = self.value.clone();
+        value = value.split_off(number_to_remove);
+        let shift_mod = rhs.value[0] & ((1 << 6) - 1);
+        if shift_mod > 0 {
+            let len = value.len();
+            let mask = 1 << shift_mod - 1;
+            for i in 0..=len - 1 {
+                if (i > 0) {
+                    value[i - 1] = value[i - 1] | (value[i] & mask) << 64 - shift_mod;
+                }
+                value[i] = value[i] >> shift_mod;
+            }
+        }
+
+        let mut res = BigUint { value };
+        res.normalize();
+        //todo: add zero digits
+        res
     }
 }
 
@@ -775,5 +797,37 @@ mod test {
 
         let result = &BigUint::ZERO >> &a;
         assert_eq!(result, BigUint::ZERO);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shr() {
+        let a = BigUint {
+            value: [1, 1, 1, 1].vec(),
+        };
+        let b = BigUint { value: [256].vec() };
+        let result = &a >> &b;
+        assert_eq!(result, BigUint::ZERO);
+
+        let a = BigUint { value: [1].vec() };
+        let result = &a >> &a;
+        assert_eq!(result, BigUint::ZERO);
+
+        let a = BigUint { value: [2].vec() };
+        let b = BigUint { value: [1].vec() };
+        let result = &a >> &b;
+        assert_eq!(result, BigUint { value: [1].vec() });
+
+        let a = BigUint {
+            value: [1, 5, 9].vec(),
+        };
+        let b = BigUint { value: [65].vec() };
+        let result = &a >> &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [(1 << 63) + 2, 4].vec()
+            }
+        );
     }
 }
