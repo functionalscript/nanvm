@@ -298,7 +298,6 @@ impl Shl for &BigUint {
 
         let mut res = BigUint { value };
         res.normalize();
-        //todo: add zero digits
         res
     }
 }
@@ -332,7 +331,6 @@ impl Shr for &BigUint {
 
         let mut res = BigUint { value };
         res.normalize();
-        //todo: add zero digits
         res
     }
 }
