@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Div, Mul, Shl, Sub},
+    ops::{Add, Div, Mul, Shl, Shr, Sub},
 };
 
 use crate::common::{array::ArrayEx, default::default};
@@ -298,7 +298,42 @@ impl Shl for &BigUint {
 
         let mut res = BigUint { value };
         res.normalize();
-        //todo: add zero digits
+        res
+    }
+}
+
+impl Shr for &BigUint {
+    type Output = BigUint;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        if self.is_zero() | rhs.is_zero() {
+            return self.clone();
+        }
+
+        let number_to_remove = (rhs.value[0] / 64) as usize;
+        if number_to_remove >= self.len() {
+            return BigUint::ZERO;
+        }
+
+        let mut value = self.value.clone();
+        value = value.split_off(number_to_remove);
+        let shift_mod = rhs.value[0] & ((1 << 6) - 1);
+        if shift_mod > 0 {
+            let len = value.len();
+            let mask = 1 << shift_mod - 1;
+            let mut i = 0;
+            loop {
+                value[i] = value[i] >> shift_mod;
+                i += 1;
+                if i == len {
+                    break;
+                }
+                value[i - 1] = value[i - 1] | (value[i] & mask) << 64 - shift_mod;
+            }
+        }
+
+        let mut res = BigUint { value };
+        res.normalize();
         res
     }
 }
@@ -749,5 +784,51 @@ mod test {
             value: [1, 1].vec(),
         };
         let result = &a << &b;
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shr_zero() {
+        let result = &BigUint::ZERO >> &BigUint::ZERO;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [5].vec() };
+        let result = &a >> &BigUint::ZERO;
+        assert_eq!(result, a);
+
+        let result = &BigUint::ZERO >> &a;
+        assert_eq!(result, BigUint::ZERO);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shr() {
+        let a = BigUint {
+            value: [1, 1, 1, 1].vec(),
+        };
+        let b = BigUint { value: [256].vec() };
+        let result = &a >> &b;
+        assert_eq!(result, BigUint::ZERO);
+
+        let a = BigUint { value: [1].vec() };
+        let result = &a >> &a;
+        assert_eq!(result, BigUint::ZERO);
+
+        let a = BigUint { value: [2].vec() };
+        let b = BigUint { value: [1].vec() };
+        let result = &a >> &b;
+        assert_eq!(result, BigUint { value: [1].vec() });
+
+        let a = BigUint {
+            value: [1, 5, 9].vec(),
+        };
+        let b = BigUint { value: [65].vec() };
+        let result = &a >> &b;
+        assert_eq!(
+            result,
+            BigUint {
+                value: [(1 << 63) + 2, 4].vec()
+            }
+        );
     }
 }
