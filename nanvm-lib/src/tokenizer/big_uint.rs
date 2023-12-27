@@ -830,7 +830,9 @@ mod test {
         let a = BigUint {
             value: [1, 1, 1, 1].cast(),
         };
-        let b = BigUint { value: [256].cast() };
+        let b = BigUint {
+            value: [256].cast(),
+        };
         let result = &a >> &b;
         assert_eq!(result, BigUint::ZERO);
 
