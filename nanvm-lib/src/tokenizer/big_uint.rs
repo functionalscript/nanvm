@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, Div, Mul, Shl, Sub},
+    ops::{Add, Div, Mul, Shl, Shr, Sub},
 };
 
 use crate::common::{array::ArrayEx, default::default};
@@ -300,6 +300,18 @@ impl Shl for &BigUint {
         res.normalize();
         //todo: add zero digits
         res
+    }
+}
+
+impl Shr for &BigUint {
+    type Output = BigUint;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        if self.is_zero() | rhs.is_zero() {
+            return self.clone();
+        }
+
+        todo!()
     }
 }
 
@@ -749,5 +761,19 @@ mod test {
             value: [1, 1].vec(),
         };
         let result = &a << &b;
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_shr_zero() {
+        let result = &BigUint::ZERO >> &BigUint::ZERO;
+        assert_eq!(&result, &BigUint::ZERO);
+
+        let a = BigUint { value: [5].vec() };
+        let result = &a >> &BigUint::ZERO;
+        assert_eq!(result, a);
+
+        let result = &BigUint::ZERO >> &a;
+        assert_eq!(result, BigUint::ZERO);
     }
 }
