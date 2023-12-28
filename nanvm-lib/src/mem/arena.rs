@@ -45,16 +45,16 @@ impl<'a> Manager for &Arena<'a> {
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
         let result = {
             let result = self.start.get();
-            result.add(result.align_offset(layout.align()))
+            result.byte_add(result.align_offset(layout.align()))
         };
         {
-            let start = result.add(layout.size());
+            let start = result.byte_add(layout.size());
             if start > self.end {
                 panic!("out of memory");
             }
             self.start.set(start);
         }
-        result as *mut u8
+        result
     }
 }
 
