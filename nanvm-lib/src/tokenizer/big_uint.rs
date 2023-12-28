@@ -86,7 +86,7 @@ impl BigUint {
         BigInt::new(Sign::Positive, self)
     }
 
-    fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
+    pub fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
         if b.is_zero() {
             panic!("attempt to divide by zero");
         }
@@ -626,6 +626,26 @@ mod test {
             &BigUint {
                 value: [1, 1].vec()
             }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_div_mod() {
+        let a = BigUint { value: [7].vec() };
+        let b = BigUint { value: [2].vec() };
+        let result = a.div_mod(&b);
+        assert_eq!(
+            result,
+            (BigUint { value: [3].vec() }, BigUint { value: [1].vec() })
+        );
+
+        let a = BigUint { value: [7, 5].vec() };
+        let b = BigUint { value: [0, 3].vec() };
+        let result = a.div_mod(&b);
+        assert_eq!(
+            result,
+            (BigUint { value: [3].vec() }, BigUint { value: [7, 2].vec() })
         );
     }
 

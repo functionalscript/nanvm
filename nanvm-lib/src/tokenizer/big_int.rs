@@ -75,6 +75,20 @@ impl BigInt {
             },
         }
     }
+
+    pub fn div_mod(&self, d: &Self) -> (BigInt, BigInt) {
+        if d.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
+        let sign = match self.sign == d.sign {
+            true => Sign::Positive,
+            false => Sign::Negative,
+        };
+
+        let (q, r) = self.value.div_mod(&d.value);
+        (BigInt { sign, value: q }, BigInt { sign, value: r })
+    }
 }
 
 impl Add for &BigInt {

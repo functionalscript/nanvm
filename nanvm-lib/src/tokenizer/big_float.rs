@@ -31,6 +31,10 @@ impl<const Base: u32> BigFloat<Base> {
 
 impl BigFloat<10> {
     pub fn to_bin(self) -> BigFloat<2> {
+        self.to_bin_with_precision(53)
+    }
+
+    pub fn to_bin_with_precision(self, precision: u8) -> BigFloat<2> {
         if self.significand.is_zero() {
             return BigFloat::ZERO;
         }
@@ -42,8 +46,8 @@ impl BigFloat<10> {
             };
         }
 
+        let five = BigUint { value: [5].vec() };
         if self.exp > 0 {
-            let five = BigUint { value: [5].vec() };
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
             let mut result: BigFloat<2> = BigFloat {
                 significand: new_sign,
@@ -51,6 +55,13 @@ impl BigFloat<10> {
             };
             return result;
         }
+
+        let p = &five.pow_u64(-self.exp as u64);
+        let mut value = self.clone();
+        let twoPow = BigUint {
+            value: [1 << precision].vec(),
+        };
+        value.increase_significand(p * &twoPow);
 
         todo!()
     }
@@ -127,4 +138,21 @@ mod test {
             }
         );
     }
+
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn test_float() {
+    //     let a = BigFloat {
+    //         significand: BigInt::from_i64(100),
+    //         exp: -1,
+    //     };
+    //     let res = a.to_bin();
+    //     assert_eq!(
+    //         res,
+    //         BigFloat {
+    //             significand: BigInt::from_i64(10),
+    //             exp: 0,
+    //         }
+    //     );
+    // }
 }
