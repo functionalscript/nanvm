@@ -640,12 +640,21 @@ mod test {
             (BigUint { value: [3].vec() }, BigUint { value: [1].vec() })
         );
 
-        let a = BigUint { value: [7, 5].vec() };
-        let b = BigUint { value: [0, 3].vec() };
+        let a = BigUint {
+            value: [7, 5].vec(),
+        };
+        let b = BigUint {
+            value: [0, 3].vec(),
+        };
         let result = a.div_mod(&b);
         assert_eq!(
             result,
-            (BigUint { value: [3].vec() }, BigUint { value: [7, 2].vec() })
+            (
+                BigUint { value: [1].vec() },
+                BigUint {
+                    value: [7, 2].vec()
+                }
+            )
         );
     }
 

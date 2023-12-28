@@ -620,4 +620,18 @@ mod test {
             }
         );
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_div_mod() {
+        let a = BigInt::from_i64(7);
+        let b = BigInt::from_i64(2);
+        let result = a.div_mod(&b);
+        assert_eq!(result, (BigInt::from_i64(3), BigInt::from_i64(1)));
+
+        let a = BigInt::from_i64(-7);
+        let b = BigInt::from_i64(2);
+        let result = a.div_mod(&b);
+        assert_eq!(result, (BigInt::from_i64(-3), BigInt::from_i64(-1)));
+    }
 }
