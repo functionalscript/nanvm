@@ -158,7 +158,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(0);
+        let res = a.to_bin_with_precision(4);
         assert_eq!(
             res,
             BigFloat {
