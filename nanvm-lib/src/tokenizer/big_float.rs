@@ -30,8 +30,10 @@ impl<const Base: u32> BigFloat<Base> {
 }
 
 impl BigFloat<10> {
+    const DEFAULT_PRECISION: u8 = 53;
+
     pub fn to_bin(self) -> BigFloat<2> {
-        self.to_bin_with_precision(0)
+        self.to_bin_with_precision(Self::DEFAULT_PRECISION)
     }
 
     pub fn to_bin_with_precision(self, precision: u8) -> BigFloat<2> {
@@ -150,7 +152,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: -1,
         };
-        let res = a.to_bin();
+        let res = a.to_bin_with_precision(0);
         assert_eq!(
             res,
             BigFloat {
