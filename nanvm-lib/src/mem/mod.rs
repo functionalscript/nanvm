@@ -19,13 +19,13 @@ mod ref_counter_update;
 mod test {
     use std::mem::{align_of, size_of};
 
-    struct MyStruct {
+    struct _MyStruct {
         a: u8,  // 1 byte
         b: u16, // 2 bytes
         c: u8,  // 1 byte
         d: u8,
     }
 
-    const _: () = assert!(size_of::<MyStruct>() == 6);
-    const _: () = assert!(align_of::<MyStruct>() == 2);
+    const _: () = assert!(size_of::<_MyStruct>() == 6);
+    const _: () = assert!(align_of::<_MyStruct>() == 2);
 }

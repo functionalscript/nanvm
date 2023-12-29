@@ -1,13 +1,13 @@
 use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
 
 use super::{
-    any_cast::AnyCast, any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION, null::Null,
-    ref_cast::RefCast, string::StringHeader, type_::Type,
+    any_cast::AnyCast, any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION,
+    js_string::JsString, null::Null, ref_cast::RefCast, type_::Type,
 };
 
 // type Result<T> = result::Result<T, ()>;
 
-pub type Any<D: Dealloc> = OptionalRef<AnyInternal<D>>;
+pub type Any<D> = OptionalRef<AnyInternal<D>>;
 
 impl<D: Dealloc> Any<D> {
     #[inline(always)]
@@ -21,15 +21,15 @@ impl<D: Dealloc> Any<D> {
     /// `T` should have the same allocator as `Any`.
     ///
     /// ```
-    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
-    /// fn dummy<A: Dealloc>(s: Ref<StringHeader, A>) -> Any<A> {
+    /// use nanvm_lib::{js::{any::Any, js_string::JsStringRef}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc>(s: JsStringRef<A>) -> Any<A> {
     ///     Any::move_from(s)
     /// }
     /// ```
     ///
     /// ```compile_fail
-    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
-    /// fn dummy<A: Dealloc, B: Dealloc>(s: Ref<StringHeader, A>) -> Any<B> {
+    /// use nanvm_lib::{js::{any::Any, js_string::JsStringRef}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc, B: Dealloc>(s: JsStringRef<A>) -> Any<B> {
     ///     Any::move_from(s)
     /// }
     /// ```
@@ -45,7 +45,7 @@ impl<D: Dealloc> Any<D> {
     //
     pub fn get_type(&self) -> Type {
         if self.is_ref() {
-            if self.is::<Ref<StringHeader, D>>() {
+            if self.is::<Ref<JsString, D>>() {
                 Type::String
             } else {
                 Type::Object
@@ -63,15 +63,15 @@ impl<D: Dealloc> Any<D> {
     /// `T` should have the same allocator as `Any`.
     ///
     /// ```
-    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
-    /// fn dummy<A: Dealloc>(a: Any<A>) -> Ref<StringHeader, A> {
+    /// use nanvm_lib::{js::{any::Any, js_string::JsStringRef}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc>(a: Any<A>) -> JsStringRef<A> {
     ///     a.try_move().unwrap()
     /// }
     /// ```
     ///
     /// ```compile_fail
-    /// use nanvm_lib::{js::{any::Any, string::StringHeader}, mem::{manager::Dealloc, ref_::Ref}};
-    /// fn dummy<A: Dealloc, B: Dealloc>(a: Any<A>) -> Ref<StringHeader, B> {
+    /// use nanvm_lib::{js::{any::Any, js_string::JsStringRef}, mem::{manager::Dealloc, ref_::Ref}};
+    /// fn dummy<A: Dealloc, B: Dealloc>(a: Any<A>) -> JsStringRef, B> {
     ///     a.try_move().unwrap()
     /// }
     /// ```
@@ -93,7 +93,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{null::Null, object::ObjectHeader},
+        js::{js_object::JsObjectRef, js_string::JsStringRef, null::Null},
         mem::{global::Global, manager::Manager},
     };
 
@@ -161,7 +161,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_string2() {
         type A = Any<Global>;
-        type StringRef = Ref<StringHeader, Global>;
+        type StringRef = JsStringRef<Global>;
         let sm = Global().flexible_array_new::<u16>([].into_iter());
         let s = sm.to_ref();
         assert!(A::move_from(s.clone()).is::<StringRef>());
@@ -181,7 +181,7 @@ mod test {
         assert_eq!(v, [0x20, 0x21]);
         let u = A::move_from(s);
         {
-            let s = u.try_ref::<StringHeader>().unwrap();
+            let s = u.try_ref::<JsString>().unwrap();
             let items = s.object().items();
             assert_eq!(items, [0x20, 0x21]);
         }
@@ -194,22 +194,22 @@ mod test {
     #[wasm_bindgen_test]
     fn test_object2() {
         type A = Any<Global>;
-        type ObjectRc = Ref<ObjectHeader<Global>, Global>;
-        assert!(!A::move_from(Null()).is::<ObjectRc>());
+        type ObjectRef = JsObjectRef<Global>;
+        assert!(!A::move_from(Null()).is::<ObjectRef>());
 
-        let o = Global().flexible_array_new::<A>([].into_iter()).to_ref();
-        assert!(A::move_from(o.clone()).is::<ObjectRc>());
+        let o: ObjectRef = Global().flexible_array_new([].into_iter()).to_ref();
+        assert!(A::move_from(o.clone()).is::<ObjectRef>());
         let v = o.items();
         assert!(v.is_empty());
         //
-        assert!(!A::move_from(15.0).is::<ObjectRc>());
-        assert!(!A::move_from(true).is::<ObjectRc>());
+        assert!(!A::move_from(15.0).is::<ObjectRef>());
+        assert!(!A::move_from(true).is::<ObjectRef>());
 
-        let o = Global().flexible_array_new::<A>([].into_iter()).to_ref();
+        let o: ObjectRef = Global().flexible_array_new([].into_iter()).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Object);
         {
-            let o = u.try_move::<ObjectRc>().unwrap();
+            let o = u.try_move::<ObjectRef>().unwrap();
             let items = o.items();
             assert!(items.is_empty());
         }

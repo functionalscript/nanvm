@@ -1,15 +1,15 @@
-use crate::{common::array::ArrayEx, tokenizer::big_uint::BigUint};
+use crate::{common::cast::Cast, tokenizer::big_uint::BigUint};
 
 use super::big_int::BigInt;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
-pub struct BigFloat<const Base: u32> {
+pub struct BigFloat<const BASE: u32> {
     significand: BigInt,
     exp: i64,
 }
 
-impl<const Base: u32> BigFloat<Base> {
-    pub const ZERO: BigFloat<Base> = BigFloat {
+impl<const BASE: u32> BigFloat<BASE> {
+    pub const ZERO: BigFloat<BASE> = BigFloat {
         significand: BigInt::ZERO,
         exp: 0,
     };
@@ -51,7 +51,7 @@ impl BigFloat<10> {
         let five = BigUint { value: [5].vec() };
         if self.exp > 0 {
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
-            let mut result: BigFloat<2> = BigFloat {
+            let result: BigFloat<2> = BigFloat {
                 significand: new_sign,
                 exp: self.exp,
             };

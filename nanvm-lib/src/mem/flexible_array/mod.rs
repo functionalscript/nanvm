@@ -229,9 +229,9 @@ mod test {
     const _: () = assert!(FlexibleArray::<u64, E>::OBJECT_ALIGN == 8);
     const _: () = assert!(FlexibleArray::<u64, E>::FLEXIBLE_HEADER_LAYOUT.align == 8);
     const _: () = assert!(size_of::<E>() == 0);
-    const FL: FieldLayout<E, u64> = FieldLayout::align_to(align_of::<u64>());
-    const _: () = assert!(FL.align == 8);
-    const _: () = assert!(FL.size == 0);
+    const _FL: FieldLayout<E, u64> = FieldLayout::align_to(align_of::<u64>());
+    const _: () = assert!(_FL.align == 8);
+    const _: () = assert!(_FL.size == 0);
     const _: () = assert!(FlexibleArray::<u64, E>::FLEXIBLE_HEADER_LAYOUT.size == 0);
 
     #[test]
