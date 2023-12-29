@@ -30,7 +30,13 @@ impl<const BASE: u32> BigFloat<BASE> {
 }
 
 impl BigFloat<10> {
+    const DEFAULT_PRECISION: u8 = 63;
+
     pub fn to_bin(self) -> BigFloat<2> {
+        self.to_bin_with_precision(Self::DEFAULT_PRECISION)
+    }
+
+    pub fn to_bin_with_precision(self, precision: u8) -> BigFloat<2> {
         if self.significand.is_zero() {
             return BigFloat::ZERO;
         }
@@ -42,8 +48,8 @@ impl BigFloat<10> {
             };
         }
 
+        let five = BigUint { value: [5].cast() };
         if self.exp > 0 {
-            let five = BigUint { value: [5].cast() };
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
             let result: BigFloat<2> = BigFloat {
                 significand: new_sign,
@@ -52,7 +58,18 @@ impl BigFloat<10> {
             return result;
         }
 
-        todo!()
+        let p = five.pow_u64(-self.exp as u64);
+        let mut value = self.clone();
+        let twoPow = BigUint {
+            value: [1 << precision].cast(),
+        };
+        value.increase_significand(&p * &twoPow);
+        let (q, _) = value.significand.div_mod(&p.to_big_int());
+
+        BigFloat {
+            significand: q,
+            exp: value.exp,
+        }
     }
 }
 
@@ -60,7 +77,13 @@ impl BigFloat<10> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::tokenizer::big_int::BigInt;
+    use crate::{
+        common::cast::Cast,
+        tokenizer::{
+            big_int::{BigInt, Sign},
+            big_uint::BigUint,
+        },
+    };
 
     use super::BigFloat;
 
@@ -124,6 +147,41 @@ mod test {
             BigFloat {
                 significand: BigInt::from_i64(2500),
                 exp: 2,
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_float() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(4);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(20),
+                exp: -1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: -1,
+        };
+        let res = a.to_bin();
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt {
+                    sign: Sign::Positive,
+                    value: BigUint {
+                        value: [(1 << 63) + (1 << 61)].cast()
+                    }
+                },
+                exp: -60,
             }
         );
     }

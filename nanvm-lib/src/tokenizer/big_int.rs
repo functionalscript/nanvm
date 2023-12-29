@@ -75,6 +75,20 @@ impl BigInt {
             },
         }
     }
+
+    pub fn div_mod(&self, d: &Self) -> (BigInt, BigInt) {
+        if d.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
+        let sign = match self.sign == d.sign {
+            true => Sign::Positive,
+            false => Sign::Negative,
+        };
+
+        let (q, r) = self.value.div_mod(&d.value);
+        (BigInt { sign, value: q }, BigInt { sign, value: r })
+    }
 }
 
 impl Add for &BigInt {
@@ -605,5 +619,19 @@ mod test {
                 }
             }
         );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_div_mod() {
+        let a = BigInt::from_i64(7);
+        let b = BigInt::from_i64(2);
+        let result = a.div_mod(&b);
+        assert_eq!(result, (BigInt::from_i64(3), BigInt::from_i64(1)));
+
+        let a = BigInt::from_i64(-7);
+        let b = BigInt::from_i64(2);
+        let result = a.div_mod(&b);
+        assert_eq!(result, (BigInt::from_i64(-3), BigInt::from_i64(-1)));
     }
 }
