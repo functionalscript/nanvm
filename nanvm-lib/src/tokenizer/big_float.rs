@@ -31,7 +31,7 @@ impl<const Base: u32> BigFloat<Base> {
 
 impl BigFloat<10> {
     pub fn to_bin(self) -> BigFloat<2> {
-        self.to_bin_with_precision(53)
+        self.to_bin_with_precision(0)
     }
 
     pub fn to_bin_with_precision(self, precision: u8) -> BigFloat<2> {
@@ -62,8 +62,12 @@ impl BigFloat<10> {
             value: [1 << precision].vec(),
         };
         value.increase_significand(p * &twoPow);
+        let (q, _) = value.significand.div_mod(&p.clone().to_big_int()); //todo: move
 
-        todo!()
+        BigFloat {
+            significand: q,
+            exp: value.exp,
+        }
     }
 }
 
@@ -139,20 +143,20 @@ mod test {
         );
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_float() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(100),
-    //         exp: -1,
-    //     };
-    //     let res = a.to_bin();
-    //     assert_eq!(
-    //         res,
-    //         BigFloat {
-    //             significand: BigInt::from_i64(10),
-    //             exp: 0,
-    //         }
-    //     );
-    // }
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_float() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: -1,
+        };
+        let res = a.to_bin();
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(20),
+                exp: -1,
+            }
+        );
+    }
 }
