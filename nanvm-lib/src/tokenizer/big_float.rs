@@ -58,13 +58,13 @@ impl BigFloat<10> {
             return result;
         }
 
-        let p = &five.pow_u64(-self.exp as u64);
+        let p = five.pow_u64(-self.exp as u64);
         let mut value = self.clone();
         let twoPow = BigUint {
             value: [1 << precision].vec(),
         };
-        value.increase_significand(p * &twoPow);
-        let (q, _) = value.significand.div_mod(&p.clone().to_big_int()); //todo: move
+        value.increase_significand(&p * &twoPow);
+        let (q, _) = value.significand.div_mod(&p.to_big_int());
 
         BigFloat {
             significand: q,
