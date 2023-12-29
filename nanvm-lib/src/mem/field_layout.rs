@@ -29,15 +29,15 @@ impl<T, A> FieldLayout<T, A> {
     }
     #[inline(always)]
     pub const unsafe fn to_adjacent(&self, r: &T) -> *const A {
-        unsafe { (r as *const _ as *const u8).add(self.size) as *const _ }
+        unsafe { (r as *const T).byte_add(self.size) as *const _ }
     }
     #[inline(always)]
     pub unsafe fn to_adjacent_mut(&self, r: &mut T) -> *mut A {
-        unsafe { (r as *mut _ as *mut u8).add(self.size) as *mut _ }
+        unsafe { (r as *mut T).byte_add(self.size) as *mut _ }
     }
     #[inline(always)]
     pub unsafe fn from_adjacent_mut(&self, r: &mut A) -> *mut T {
-        unsafe { (r as *mut _ as *mut u8).sub(self.size) as *mut _ }
+        unsafe { (r as *mut A).byte_sub(self.size) as *mut _ }
     }
     #[inline(always)]
     pub const fn layout(&self, a_size: usize) -> Layout {

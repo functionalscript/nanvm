@@ -26,6 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+    - run: rustup update
     - uses: actions/checkout@v4
     - run: sysctl -n machdep.cpu.brand_string
       if: matrix.os == 'macos-13'
@@ -38,6 +39,7 @@ jobs:
         type: ['', '--release']
     runs-on: ubuntu-latest
     steps:
+      - run: rustup update
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@wasm-pack
       - run: wasm-pack test --node ${{ matrix.type }} ./nanvm-lib
