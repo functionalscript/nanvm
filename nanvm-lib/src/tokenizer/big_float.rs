@@ -30,7 +30,7 @@ impl<const Base: u32> BigFloat<Base> {
 }
 
 impl BigFloat<10> {
-    const DEFAULT_PRECISION: u8 = 53;
+    const DEFAULT_PRECISION: u8 = 63;
 
     pub fn to_bin(self) -> BigFloat<2> {
         self.to_bin_with_precision(Self::DEFAULT_PRECISION)
@@ -77,7 +77,13 @@ impl BigFloat<10> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::tokenizer::big_int::BigInt;
+    use crate::{
+        common::array::ArrayEx,
+        tokenizer::{
+            big_int::{BigInt, Sign},
+            big_uint::BigUint,
+        },
+    };
 
     use super::BigFloat;
 
@@ -158,6 +164,24 @@ mod test {
             BigFloat {
                 significand: BigInt::from_i64(20),
                 exp: -1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: -1,
+        };
+        let res = a.to_bin();
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt {
+                    sign: Sign::Positive,
+                    value: BigUint {
+                        value: [(1 << 63) + (1 << 61)].vec()
+                    }
+                },
+                exp: -60,
             }
         );
     }
