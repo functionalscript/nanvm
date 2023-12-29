@@ -48,7 +48,7 @@ impl BigFloat<10> {
             };
         }
 
-        let five = BigUint { value: [5].vec() };
+        let five = BigUint { value: [5] };
         if self.exp > 0 {
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
             let result: BigFloat<2> = BigFloat {
