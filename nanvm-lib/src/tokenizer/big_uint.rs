@@ -632,27 +632,27 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_div_mod() {
-        let a = BigUint { value: [7].vec() };
-        let b = BigUint { value: [2].vec() };
+        let a = BigUint { value: [7].cast() };
+        let b = BigUint { value: [2].cast() };
         let result = a.div_mod(&b);
         assert_eq!(
             result,
-            (BigUint { value: [3].vec() }, BigUint { value: [1].vec() })
+            (BigUint { value: [3].cast() }, BigUint { value: [1].cast() })
         );
 
         let a = BigUint {
-            value: [7, 5].vec(),
+            value: [7, 5].cast(),
         };
         let b = BigUint {
-            value: [0, 3].vec(),
+            value: [0, 3].cast(),
         };
         let result = a.div_mod(&b);
         assert_eq!(
             result,
             (
-                BigUint { value: [1].vec() },
+                BigUint { value: [1].cast() },
                 BigUint {
-                    value: [7, 2].vec()
+                    value: [7, 2].cast()
                 }
             )
         );

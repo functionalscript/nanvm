@@ -48,7 +48,7 @@ impl BigFloat<10> {
             };
         }
 
-        let five = BigUint { value: [5] };
+        let five = BigUint { value: [5].cast() };
         if self.exp > 0 {
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
             let result: BigFloat<2> = BigFloat {
@@ -61,7 +61,7 @@ impl BigFloat<10> {
         let p = five.pow_u64(-self.exp as u64);
         let mut value = self.clone();
         let twoPow = BigUint {
-            value: [1 << precision].vec(),
+            value: [1 << precision].cast(),
         };
         value.increase_significand(&p * &twoPow);
         let (q, _) = value.significand.div_mod(&p.to_big_int());
@@ -78,7 +78,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        common::array::ArrayEx,
+        common::cast::Cast,
         tokenizer::{
             big_int::{BigInt, Sign},
             big_uint::BigUint,
@@ -178,7 +178,7 @@ mod test {
                 significand: BigInt {
                     sign: Sign::Positive,
                     value: BigUint {
-                        value: [(1 << 63) + (1 << 61)].vec()
+                        value: [(1 << 63) + (1 << 61)].cast()
                     }
                 },
                 exp: -60,
