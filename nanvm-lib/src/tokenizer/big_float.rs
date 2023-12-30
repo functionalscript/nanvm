@@ -27,6 +27,20 @@ impl<const BASE: u32> BigFloat<BASE> {
             self.exp = self.exp - 1;
         }
     }
+
+    fn decrease_significand(&mut self, max_significand: BigUint) {
+        if self.significand.is_zero() {
+            return;
+        }
+
+        loop {
+            if self.significand.value <= max_significand {
+                return;
+            }
+            self.significand.value = &self.significand.value >> &BigUint::one();
+            self.exp = self.exp + 1;
+        }
+    }
 }
 
 impl BigFloat<10> {
