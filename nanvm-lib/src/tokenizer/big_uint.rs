@@ -43,6 +43,10 @@ impl BigUint {
         self.value.len()
     }
 
+    pub fn from_u64(n: u64) -> Self {
+        BigUint { value: [n].cast() }
+    }
+
     pub fn pow(&self, exp: &BigUint) -> BigUint {
         if self.is_one() {
             return BigUint::one();

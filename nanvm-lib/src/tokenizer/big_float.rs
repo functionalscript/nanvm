@@ -74,16 +74,20 @@ impl BigFloat<10> {
 
         let p = five.pow_u64(-self.exp as u64);
         let mut value = self.clone();
-        let twoPow = BigUint {
-            value: [1 << precision].cast(),
-        };
-        value.increase_significand(&p * &twoPow);
-        let (q, _) = value.significand.div_mod(&p.to_big_int());
+        let min_significand = &BigUint::from_u64(1) << &BigUint::from_u64(precision as u64);
+        value.increase_significand(&p * &min_significand);
+        let (q, r) = value.significand.div_mod(&p.to_big_int());
 
-        BigFloat {
+        let mut result = BigFloat {
             significand: q,
             exp: value.exp,
-        }
+        };
+        let max_significand = &min_significand << &BigUint::one();
+        result.decrease_significand(max_significand);
+
+        //todo: round
+
+        result
     }
 }
 
@@ -196,6 +200,23 @@ mod test {
                     }
                 },
                 exp: -60,
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_roand() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(100),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(10),
+                exp: 0,
             }
         );
     }
