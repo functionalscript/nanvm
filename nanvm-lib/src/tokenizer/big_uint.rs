@@ -86,6 +86,14 @@ impl BigUint {
         }
     }
 
+    pub fn get_last_bit(&self) -> u64 {
+        if self.is_zero() {
+            return 0;
+        }
+
+        self.value[0] & 1
+    }
+
     pub fn to_big_int(self) -> BigInt {
         BigInt::new(Sign::Positive, self)
     }

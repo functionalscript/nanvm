@@ -44,7 +44,7 @@ impl<const BASE: u32> BigFloat<BASE> {
 }
 
 impl BigFloat<10> {
-    const DEFAULT_PRECISION: u8 = 63;
+    const DEFAULT_PRECISION: u8 = 64;
 
     pub fn to_bin(self) -> BigFloat<2> {
         self.to_bin_with_precision(Self::DEFAULT_PRECISION)
@@ -73,21 +73,38 @@ impl BigFloat<10> {
         }
 
         let p = five.pow_u64(-self.exp as u64);
-        let mut value = self.clone();
-        let min_significand = &BigUint::from_u64(1) << &BigUint::from_u64(precision as u64);
-        value.increase_significand(&p * &min_significand);
-        let (q, r) = value.significand.div_mod(&p.to_big_int());
+        let mut bf10 = self.clone();
+        let min_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
+        bf10.increase_significand(&p * &min_significand);
 
-        let mut result = BigFloat {
+        let (q, r) = bf10.significand.div_mod(&p.to_big_int());
+        let mut bf2: BigFloat<2> = BigFloat {
             significand: q,
-            exp: value.exp,
+            exp: bf10.exp,
         };
         let max_significand = &min_significand << &BigUint::one();
-        result.decrease_significand(max_significand);
+        bf2.decrease_significand(max_significand);
 
-        //todo: round
+        let lastBit = bf2.significand.value.get_last_bit();
+        let absValue = bf2.significand.value;
+        let mut significand = &absValue >> &BigUint::one();
+        let exp = bf2.exp + 1;
 
-        result
+        //todo: check for last bit 1, r is zero and all bits that were removed are zero
+        // if last_bit == 1 && r.is_zero() {
+        // }
+
+        if lastBit == 1 {
+            significand = &significand + &BigUint::one();
+        }
+
+        BigFloat {
+            significand: BigInt {
+                value: significand,
+                sign: bf2.significand.sign,
+            },
+            exp,
+        }
     }
 }
 
@@ -176,7 +193,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(4);
+        let res = a.to_bin_with_precision(5);
         assert_eq!(
             res,
             BigFloat {
@@ -206,12 +223,12 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_roand() {
+    fn test_round() {
         let a = BigFloat {
             significand: BigInt::from_i64(100),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(3);
+        let res = a.to_bin_with_precision(4);
         assert_eq!(
             res,
             BigFloat {
