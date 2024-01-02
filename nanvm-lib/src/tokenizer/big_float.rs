@@ -225,15 +225,41 @@ mod test {
     #[wasm_bindgen_test]
     fn test_round() {
         let a = BigFloat {
-            significand: BigInt::from_i64(100),
+            significand: BigInt::from_i64(0b1000_0001),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(5);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b11010),
+                exp: -1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b1000_0001),
             exp: -1,
         };
         let res = a.to_bin_with_precision(4);
         assert_eq!(
             res,
             BigFloat {
-                significand: BigInt::from_i64(10),
+                significand: BigInt::from_i64(0b1101),
                 exp: 0,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b1000_0001),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b110),
+                exp: 1,
             }
         );
     }
