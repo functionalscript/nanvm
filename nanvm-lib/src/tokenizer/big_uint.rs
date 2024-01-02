@@ -43,6 +43,10 @@ impl BigUint {
         self.value.len()
     }
 
+    pub fn from_u64(n: u64) -> Self {
+        BigUint { value: [n].cast() }
+    }
+
     pub fn pow(&self, exp: &BigUint) -> BigUint {
         if self.is_one() {
             return BigUint::one();
@@ -80,6 +84,14 @@ impl BigUint {
             exp = exp >> 1;
             b = &b * &b;
         }
+    }
+
+    pub fn get_last_bit(&self) -> u64 {
+        if self.is_zero() {
+            return 0;
+        }
+
+        self.value[0] & 1
     }
 
     pub fn to_big_int(self) -> BigInt {
