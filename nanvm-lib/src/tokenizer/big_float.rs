@@ -86,16 +86,16 @@ impl BigFloat<10> {
         let max_significand = &min_significand << &BigUint::one();
         let are_bits_lost = bf2.decrease_significand(max_significand);
 
-        let mut lastBit = bf2.significand.value.get_last_bit();
+        let mut last_bit = bf2.significand.value.get_last_bit();
         let abs_value = bf2.significand.value;
         let mut significand = &abs_value >> &BigUint::one();
         let exp = bf2.exp + 1;
 
-        if lastBit == 1 && r.is_zero() && !are_bits_lost {
-            lastBit = significand.get_last_bit();
+        if last_bit == 1 && r.is_zero() && !are_bits_lost {
+            last_bit = significand.get_last_bit();
         }
 
-        if lastBit == 1 {
+        if last_bit == 1 {
             significand = &significand + &BigUint::one();
         }
 
@@ -316,6 +316,19 @@ mod test {
             res,
             BigFloat {
                 significand: BigInt::from_i64(0b110),
+                exp: 1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b1001_0110),
+            exp: -1,
+        };
+        let res = a.to_bin(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b1000),
                 exp: 1,
             }
         );
