@@ -51,13 +51,7 @@ impl<const BASE: u32> BigFloat<BASE> {
 }
 
 impl BigFloat<10> {
-    const DEFAULT_PRECISION: u8 = 64;
-
-    pub fn to_bin(self) -> BigFloat<2> {
-        self.to_bin_with_precision(Self::DEFAULT_PRECISION)
-    }
-
-    pub fn to_bin_with_precision(self, precision: u8) -> BigFloat<2> {
+    pub fn to_bin(self, precision: u8) -> BigFloat<2> {
         if self.significand.is_zero() {
             return BigFloat::ZERO;
         }
@@ -132,21 +126,21 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_zero() {
-        let res = BigFloat::ZERO.to_bin();
+        let res = BigFloat::ZERO.to_bin(64);
         assert_eq!(res, BigFloat::ZERO);
 
         let res = BigFloat {
             significand: BigInt::ZERO,
             exp: 10,
         }
-        .to_bin();
+        .to_bin(64);
         assert_eq!(res, BigFloat::ZERO);
 
         let res = BigFloat {
             significand: BigInt::ZERO,
             exp: -10,
         }
-        .to_bin();
+        .to_bin(64);
         assert_eq!(res, BigFloat::ZERO);
     }
 
@@ -157,7 +151,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: 0,
         };
-        let res = a.to_bin();
+        let res = a.to_bin(64);
         assert_eq!(
             res,
             BigFloat {
@@ -170,7 +164,7 @@ mod test {
             significand: BigInt::from_i64(1),
             exp: 1,
         };
-        let res = a.to_bin();
+        let res = a.to_bin(64);
         assert_eq!(
             res,
             BigFloat {
@@ -183,7 +177,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: 2,
         };
-        let res = a.to_bin();
+        let res = a.to_bin(64);
         assert_eq!(
             res,
             BigFloat {
@@ -200,7 +194,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(5);
+        let res = a.to_bin(5);
         assert_eq!(
             res,
             BigFloat {
@@ -213,7 +207,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: -1,
         };
-        let res = a.to_bin();
+        let res = a.to_bin(64);
         assert_eq!(
             res,
             BigFloat {
@@ -235,7 +229,7 @@ mod test {
             significand: BigInt::from_i64(0b1000_0001),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(5);
+        let res = a.to_bin(5);
         assert_eq!(
             res,
             BigFloat {
@@ -248,7 +242,7 @@ mod test {
             significand: BigInt::from_i64(0b1000_0001),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(4);
+        let res = a.to_bin(4);
         assert_eq!(
             res,
             BigFloat {
@@ -261,7 +255,7 @@ mod test {
             significand: BigInt::from_i64(0b1000_0001),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(3);
+        let res = a.to_bin(3);
         assert_eq!(
             res,
             BigFloat {
@@ -278,7 +272,7 @@ mod test {
             significand: BigInt::from_i64(0b101_1010),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(3);
+        let res = a.to_bin(3);
         assert_eq!(
             res,
             BigFloat {
@@ -291,7 +285,7 @@ mod test {
             significand: BigInt::from_i64(0b101_1011),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(3);
+        let res = a.to_bin(3);
         assert_eq!(
             res,
             BigFloat {
@@ -304,7 +298,7 @@ mod test {
             significand: BigInt::from_i64(0b110_1101),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(3);
+        let res = a.to_bin(3);
         assert_eq!(
             res,
             BigFloat {
@@ -317,7 +311,7 @@ mod test {
             significand: BigInt::from_i64(0b110_1110),
             exp: -1,
         };
-        let res = a.to_bin_with_precision(3);
+        let res = a.to_bin(3);
         assert_eq!(
             res,
             BigFloat {
