@@ -275,19 +275,6 @@ mod test {
     #[wasm_bindgen_test]
     fn test_round_half() {
         let a = BigFloat {
-            significand: BigInt::from_i64(0b110_1110),
-            exp: -1,
-        };
-        let res = a.to_bin_with_precision(3);
-        assert_eq!(
-            res,
-            BigFloat {
-                significand: BigInt::from_i64(0b110),
-                exp: 1,
-            }
-        );
-
-        let a = BigFloat {
             significand: BigInt::from_i64(0b101_1010),
             exp: -1,
         };
@@ -296,6 +283,45 @@ mod test {
             res,
             BigFloat {
                 significand: BigInt::from_i64(0b100),
+                exp: 1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b101_1011),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b101),
+                exp: 1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b110_1101),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b101),
+                exp: 1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b110_1110),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b110),
                 exp: 1,
             }
         );
