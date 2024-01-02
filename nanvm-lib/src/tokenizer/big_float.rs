@@ -33,20 +33,20 @@ impl<const BASE: u32> BigFloat<BASE> {
             return false;
         }
 
-        let mut isBitsLost = false;
+        let mut areBitsLost = false;
         loop {
             if self.significand.value <= max_significand {
                 break;
             }
             let lastBit = self.significand.value.get_last_bit();
             if lastBit == 1 {
-                isBitsLost = true;
+                areBitsLost = true;
             }
             self.significand.value = &self.significand.value >> &BigUint::one();
             self.exp = self.exp + 1;
         }
 
-        isBitsLost
+        areBitsLost
     }
 }
 
@@ -90,14 +90,14 @@ impl BigFloat<10> {
             exp: bf10.exp,
         };
         let max_significand = &min_significand << &BigUint::one();
-        let isBitsLost = bf2.decrease_significand(max_significand);
+        let areBitsLost = bf2.decrease_significand(max_significand);
 
         let mut lastBit = bf2.significand.value.get_last_bit();
         let absValue = bf2.significand.value;
         let mut significand = &absValue >> &BigUint::one();
         let exp = bf2.exp + 1;
 
-        if lastBit == 1 && r.is_zero() && !isBitsLost {
+        if lastBit == 1 && r.is_zero() && !areBitsLost {
             lastBit = significand.get_last_bit();
         }
 
