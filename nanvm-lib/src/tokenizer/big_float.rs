@@ -28,18 +28,25 @@ impl<const BASE: u32> BigFloat<BASE> {
         }
     }
 
-    fn decrease_significand(&mut self, max_significand: BigUint) {
+    fn decrease_significand(&mut self, max_significand: BigUint) -> bool {
         if self.significand.is_zero() {
-            return;
+            return false;
         }
 
+        let mut isLoss = false;
         loop {
             if self.significand.value <= max_significand {
-                return;
+                break;
+            }
+            let lastBit = self.significand.value.get_last_bit();
+            if lastBit == 1 {
+                isLoss = true;
             }
             self.significand.value = &self.significand.value >> &BigUint::one();
             self.exp = self.exp + 1;
         }
+
+        isLoss
     }
 }
 
@@ -83,16 +90,16 @@ impl BigFloat<10> {
             exp: bf10.exp,
         };
         let max_significand = &min_significand << &BigUint::one();
-        bf2.decrease_significand(max_significand);
+        let isLoss = bf2.decrease_significand(max_significand);
 
-        let lastBit = bf2.significand.value.get_last_bit();
+        let mut lastBit = bf2.significand.value.get_last_bit();
         let absValue = bf2.significand.value;
         let mut significand = &absValue >> &BigUint::one();
         let exp = bf2.exp + 1;
 
-        //todo: check for last bit 1, r is zero and all bits that were removed are zero
-        // if last_bit == 1 && r.is_zero() {
-        // }
+        if lastBit == 1 && r.is_zero() && !isLoss {
+            lastBit = significand.get_last_bit();
+        }
 
         if lastBit == 1 {
             significand = &significand + &BigUint::one();
@@ -259,6 +266,36 @@ mod test {
             res,
             BigFloat {
                 significand: BigInt::from_i64(0b110),
+                exp: 1,
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_round_half() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b110_1110),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b110),
+                exp: 1,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(0b101_1010),
+            exp: -1,
+        };
+        let res = a.to_bin_with_precision(3);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(0b100),
                 exp: 1,
             }
         );
