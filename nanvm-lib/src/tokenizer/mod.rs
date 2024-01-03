@@ -841,22 +841,31 @@ mod test {
         );
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_float() {
-    //     let result = tokenize(String::from("0.01"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 1, e: -2 })]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_float() {
+        let result = tokenize(String::from("0.01"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(1),
+                exp: -2
+            })]
+        );
 
-    //     let result = tokenize(String::from("[-12.34]"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ArrayBegin,
-    //             JsonToken::Number(BigFloatTemp { m: -1234, e: -2 }),
-    //             JsonToken::ArrayEnd
-    //         ]
-    //     );
-    // }
+        let result = tokenize(String::from("[-12.34]"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ArrayBegin,
+                JsonToken::Number(BigFloat {
+                    significand: BigInt::from_i64(-1234),
+                    exp: -2
+                }),
+                JsonToken::ArrayEnd
+            ]
+        );
+    }
 
     // #[test]
     // #[wasm_bindgen_test]
