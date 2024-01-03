@@ -867,36 +867,72 @@ mod test {
         );
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_exp() {
-    //     let result = tokenize(String::from("1e2"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 1, e: 2 })]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_exp() {
+        let result = tokenize(String::from("1e2"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(1),
+                exp: 2
+            })]
+        );
 
-    //     let result = tokenize(String::from("1E+2"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 1, e: 2 })]);
+        let result = tokenize(String::from("1E+2"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(1),
+                exp: 2
+            })]
+        );
 
-    //     let result = tokenize(String::from("0e-2"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 0, e: -2 })]);
+        let result = tokenize(String::from("0e-2"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::ZERO,
+                exp: -2
+            })]
+        );
 
-    //     let result = tokenize(String::from("1e-2"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 1, e: -2 })]);
+        let result = tokenize(String::from("1e-2"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(1),
+                exp: -2
+            })]
+        );
 
-    //     let result = tokenize(String::from("1.2e+2"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 12, e: 1 })]);
+        let result = tokenize(String::from("1.2e+2"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(12),
+                exp: 1
+            })]
+        );
 
-    //     let result = tokenize(String::from("12e0000"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 12, e: 0 })]);
+        let result = tokenize(String::from("12e0000"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(12),
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("1e"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+        let result = tokenize(String::from("1e"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
 
-    //     let result = tokenize(String::from("1e+"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+        let result = tokenize(String::from("1e+"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
 
-    //     let result = tokenize(String::from("1e-"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
-    // }
+        let result = tokenize(String::from("1e-"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+    }
 
     #[test]
     #[wasm_bindgen_test]
