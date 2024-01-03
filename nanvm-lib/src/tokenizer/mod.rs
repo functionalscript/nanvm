@@ -45,8 +45,8 @@ enum TokenizerState {
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
     ParseZero(Sign),
-    ParseInt(BigInt),
-    ParseFracBegin(BigInt),
+    ParseInt(IntegerState),
+    ParseFracBegin(IntegerState),
     ParseFrac(FloatState),
     ParseExpBegin(ExpState),
     ParseExpSign(ExpState),
@@ -136,42 +136,63 @@ impl ParseUnicodeCharState {
     }
 }
 
-impl BigInt {
-    fn from_difit(sign: Sign, c: char) -> BigInt {
-        BigInt {
-            sign,
-            value: BigUint::from_u64(digit_to_number(c)),
+struct IntegerState {
+    s: Sign,
+    b: BigUint,
+}
+
+impl BigUint {
+    fn add_digit(mut self, c: char) -> BigUint {
+        self = &(&self * &BigUint::from_u64(10)) + &BigUint::from_u64(digit_to_number(c));
+        self
+    }
+}
+
+impl IntegerState {
+    fn from_difit(sign: Sign, c: char) -> IntegerState {
+        IntegerState {
+            s: sign,
+            b: BigUint::from_u64(digit_to_number(c)),
         }
     }
 
-    fn add_digit(mut self, c: char) -> BigInt {
-        self = &(&self * &BigInt::from_u64(10)) + &BigInt::from_u64(digit_to_number(c));
+    fn add_digit(mut self, c: char) -> IntegerState {
+        self.b = self.b.add_digit(c);
         self
     }
 
-    const fn to_float_state(self) -> FloatState {
-        FloatState { b: self, fe: 0 }
+    fn to_float_state(self) -> FloatState {
+        FloatState {
+            s: self.s,
+            b: self.b,
+            fe: 0,
+        }
     }
 
-    const fn to_exp_state(self) -> ExpState {
+    fn to_exp_state(self) -> ExpState {
         ExpState {
-            b: self,
+            s: self.s,
+            b: self.b,
             fe: 0,
             es: Sign::Positive,
             e: 0,
         }
     }
 
-    const fn to_token(self) -> JsonToken {
+    fn to_token(self) -> JsonToken {
         JsonToken::Number(BigFloat {
-            significand: self,
+            significand: BigInt {
+                sign: self.s,
+                value: self.b,
+            },
             exp: 0,
         })
     }
 }
 
 struct FloatState {
-    b: BigInt,
+    s: Sign,
+    b: BigUint,
     fe: i64,
 }
 
@@ -184,6 +205,7 @@ impl FloatState {
 
     fn to_exp_state(self) -> ExpState {
         ExpState {
+            s: self.s,
             b: self.b,
             fe: self.fe,
             es: Sign::Positive,
@@ -193,14 +215,18 @@ impl FloatState {
 
     fn to_token(self) -> JsonToken {
         JsonToken::Number(BigFloat {
-            significand: self.b,
+            significand: BigInt {
+                sign: self.s,
+                value: self.b,
+            },
             exp: self.fe,
         })
     }
 }
 
 struct ExpState {
-    b: BigInt,
+    s: Sign,
+    b: BigUint,
     fe: i64,
     es: Sign,
     e: i64,
@@ -219,7 +245,10 @@ impl ExpState {
                 Sign::Negative => -self.e,
             };
         JsonToken::Number(BigFloat {
-            significand: self.b,
+            significand: BigInt {
+                sign: self.s,
+                value: self.b,
+            },
             exp,
         })
     }
@@ -265,8 +294,8 @@ const fn digit_to_number(c: char) -> u64 {
     c as u64 - CP_0 as u64
 }
 
-fn start_number(s: Sign, c: char) -> BigInt {
-    BigInt::from_difit(s, c)
+fn start_number(s: Sign, c: char) -> IntegerState {
+    IntegerState::from_difit(s, c)
 }
 
 fn keyword_to_token(s: &str) -> JsonToken {
@@ -384,18 +413,16 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
         '0'..='9' => tokenize_invalid_number(c),
         '.' => (
             default(),
-            TokenizerState::ParseFracBegin(BigInt {
-                sign: s,
-                value: BigUint::ZERO,
+            TokenizerState::ParseFracBegin(IntegerState {
+                s,
+                b: BigUint::ZERO,
             }),
         ),
         'e' | 'E' => (
             default(),
             TokenizerState::ParseExpBegin(ExpState {
-                b: BigInt {
-                    sign: s,
-                    value: BigUint::ZERO,
-                },
+                s,
+                b: BigUint::ZERO,
                 fe: 0,
                 es: Sign::Positive,
                 e: 0,
@@ -410,7 +437,7 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_integer(s: BigInt, c: char) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_integer(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseInt(s.add_digit(c))),
         '.' => (default(), TokenizerState::ParseFracBegin(s)),
@@ -422,7 +449,7 @@ fn tokenize_integer(s: BigInt, c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_frac_begin(s: BigInt, c: char) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_frac_begin(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (
             default(),
@@ -534,6 +561,8 @@ impl<T: Iterator<Item = char>> Iterator for TokenizerStateIterator<T> {
 #[cfg(test)]
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::tokenizer::{big_float::BigFloat, big_int::BigInt};
 
     use super::{tokenize, ErrorType, JsonToken};
 
@@ -680,113 +709,137 @@ mod test {
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_integer() {
-    //     let result = tokenize(String::from("0"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 0, e: 0 })]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_integer() {
+        let result = tokenize(String::from("0"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::ZERO,
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("-0"));
-    //     assert_eq!(&result, &[JsonToken::Number(BigFloatTemp { m: 0, e: 0 })]);
+        let result = tokenize(String::from("-0"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::ZERO,
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("0abc"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::ErrorToken(ErrorType::InvalidToken)
-    //         ]
-    //     );
+        let result = tokenize(String::from("0abc"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::ErrorToken(ErrorType::InvalidToken)
+            ]
+        );
 
-    //     let result = tokenize(String::from("0. 2"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Number(BigFloatTemp { m: 2, e: 0 })
-    //         ]
-    //     );
+        let result = tokenize(String::from("0. 2"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Number(BigFloat {
+                    significand: BigInt::from_u64(2),
+                    exp: 0
+                })
+            ]
+        );
 
-    //     let result = tokenize(String::from("1234567890"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::Number(BigFloatTemp {
-    //             m: 1234567890,
-    //             e: 0
-    //         })]
-    //     );
+        let result = tokenize(String::from("1234567890"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(1234567890),
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("-1234567890"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::Number(BigFloatTemp {
-    //             m: -1234567890,
-    //             e: 0
-    //         })]
-    //     );
+        let result = tokenize(String::from("-1234567890"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_i64(-1234567890),
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("[0,1]"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ArrayBegin,
-    //             JsonToken::Number(BigFloatTemp { m: 0, e: 0 }),
-    //             JsonToken::Comma,
-    //             JsonToken::Number(BigFloatTemp { m: 1, e: 0 }),
-    //             JsonToken::ArrayEnd
-    //         ]
-    //     );
+        let result = tokenize(String::from("[0,1]"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ArrayBegin,
+                JsonToken::Number(BigFloat {
+                    significand: BigInt::ZERO,
+                    exp: 0
+                }),
+                JsonToken::Comma,
+                JsonToken::Number(BigFloat {
+                    significand: BigInt::from_u64(1),
+                    exp: 0
+                }),
+                JsonToken::ArrayEnd
+            ]
+        );
 
-    //     let result = tokenize(String::from("001"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Number(BigFloatTemp { m: 1, e: 0 }),
-    //         ]
-    //     );
+        let result = tokenize(String::from("001"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Number(BigFloat {
+                    significand: BigInt::from_u64(1),
+                    exp: 0
+                }),
+            ]
+        );
 
-    //     let result = tokenize(String::from("-"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+        let result = tokenize(String::from("-"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
 
-    //     let result = tokenize(String::from("-{}"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::ObjectBegin,
-    //             JsonToken::ObjectEnd
-    //         ]
-    //     );
+        let result = tokenize(String::from("-{}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::ObjectBegin,
+                JsonToken::ObjectEnd
+            ]
+        );
 
-    //     let result = tokenize(String::from("9007199254740991"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::Number(BigFloatTemp {
-    //             m: 9007199254740991,
-    //             e: 0
-    //         })]
-    //     );
+        let result = tokenize(String::from("9007199254740991"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(9007199254740991),
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("9007199254740992"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::Number(BigFloatTemp {
-    //             m: 9007199254740992,
-    //             e: 0
-    //         })]
-    //     );
+        let result = tokenize(String::from("9007199254740992"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(9007199254740992),
+                exp: 0
+            })]
+        );
 
-    //     let result = tokenize(String::from("9007199254740993"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::Number(BigFloatTemp {
-    //             m: 9007199254740993,
-    //             e: 0
-    //         })]
-    //     );
-    // }
+        let result = tokenize(String::from("9007199254740993"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt::from_u64(9007199254740993),
+                exp: 0
+            })]
+        );
+    }
 
     // #[test]
     // #[wasm_bindgen_test]
