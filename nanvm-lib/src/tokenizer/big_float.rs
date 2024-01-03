@@ -4,8 +4,8 @@ use super::big_int::BigInt;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 pub struct BigFloat<const BASE: u32> {
-    significand: BigInt,
-    exp: i64,
+    pub significand: BigInt,
+    pub exp: i64,
 }
 
 impl<const BASE: u32> BigFloat<BASE> {
