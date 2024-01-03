@@ -562,7 +562,14 @@ impl<T: Iterator<Item = char>> Iterator for TokenizerStateIterator<T> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::tokenizer::{big_float::BigFloat, big_int::BigInt};
+    use crate::{
+        common::cast::Cast,
+        tokenizer::{
+            big_float::BigFloat,
+            big_int::{BigInt, Sign},
+            big_uint::BigUint,
+        },
+    };
 
     use super::{tokenize, ErrorType, JsonToken};
 
@@ -836,6 +843,24 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(9007199254740993),
+                exp: 0
+            })]
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_big_int() {
+        let result = tokenize(String::from("340282366920938463463374607431768211456"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(BigFloat {
+                significand: BigInt {
+                    sign: Sign::Positive,
+                    value: BigUint {
+                        value: [0, 0, 1].cast()
+                    }
+                },
                 exp: 0
             })]
         );
