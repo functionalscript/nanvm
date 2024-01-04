@@ -435,5 +435,24 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, -1.5);
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(1),
+            exp: -1022,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 2.0f64.powf(-1022.0));
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(1),
+            exp: 1023,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 2.0f64.powf(1023.0));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_infinity_to_f64() {
     }
 }
