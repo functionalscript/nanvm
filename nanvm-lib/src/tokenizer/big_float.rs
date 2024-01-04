@@ -1,4 +1,7 @@
-use crate::{common::cast::Cast, tokenizer::big_uint::BigUint};
+use crate::{
+    common::cast::Cast,
+    tokenizer::{big_int::Sign, big_uint::BigUint},
+};
 
 use super::big_int::BigInt;
 
@@ -110,6 +113,25 @@ impl BigFloat<10> {
             },
             exp,
         }
+    }
+}
+
+impl BigFloat<2> {
+    fn to_f64(self) -> f64 {
+        f64::from_bits(self.get_f64_bits())
+    }
+
+    fn get_f64_bits(self) -> u64 {
+        let mut bits: u64 = 0;
+        if self.significand.sign == Sign::Negative {
+            bits = bits | 1 << 63;
+        }
+
+        if self.significand.is_zero() {
+            return bits;
+        }
+
+        todo!()
     }
 }
 
@@ -336,5 +358,28 @@ mod test {
                 exp: 2,
             }
         );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_zero_to_f64() {
+        let a = BigFloat {
+            significand: BigInt::ZERO,
+            exp: 100,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, -0.0);
+        assert!(res.is_sign_positive());
+
+        let a = BigFloat {
+            significand: BigInt {
+                sign: Sign::Negative,
+                value: BigUint::ZERO,
+            },
+            exp: 100,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, -0.0);
+        assert!(res.is_sign_negative());
     }
 }
