@@ -153,7 +153,7 @@ impl BigFloat<2> {
                 bits = bits | 2047 << 52;
                 bits
             }
-            _ => bits
+            _ => bits,
         }
     }
 }
