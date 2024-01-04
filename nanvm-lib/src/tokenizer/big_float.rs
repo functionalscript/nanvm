@@ -38,7 +38,7 @@ impl<const BASE: u32> BigFloat<BASE> {
 
         let mut are_bits_lost = false;
         loop {
-            if self.significand.value <= *max_significand {
+            if self.significand.value < *max_significand {
                 break;
             }
             let lastBit = self.significand.value.get_last_bit();
@@ -57,13 +57,6 @@ impl BigFloat<10> {
     pub fn to_bin(self, precision: u8) -> BigFloat<2> {
         if self.significand.is_zero() {
             return BigFloat::ZERO;
-        }
-
-        if self.exp == 0 {
-            return BigFloat {
-                significand: self.significand,
-                exp: 0,
-            };
         }
 
         let five = BigUint { value: [5].cast() };
@@ -150,7 +143,7 @@ impl BigFloat<2> {
                 bits = bits | frac_bits;
                 bits
             }
-            _ => todo!()
+            _ => todo!(),
         }
     }
 }
@@ -197,7 +190,7 @@ mod test {
             significand: BigInt::from_i64(100),
             exp: 0,
         };
-        let res = a.to_bin(64);
+        let res = a.to_bin(7);
         assert_eq!(
             res,
             BigFloat {
@@ -264,6 +257,29 @@ mod test {
                     }
                 },
                 exp: -60,
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt {
+                sign: Sign::Positive,
+                value: BigUint {
+                    value: [0, 1].cast(),
+                },
+            },
+            exp: 0,
+        };
+        let res = a.to_bin(53);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt {
+                    sign: Sign::Positive,
+                    value: BigUint {
+                        value: [1 << 52].cast()
+                    }
+                },
+                exp: 12,
             }
         );
     }
