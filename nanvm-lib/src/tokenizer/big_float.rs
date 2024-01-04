@@ -110,15 +110,15 @@ impl BigFloat<10> {
 }
 
 impl BigFloat<2> {
-    const PRECISION: u64 = 52;
-    const DEFAULT_EXP: u64 = 1023;
-    const FRAC_MASK: u64 = (1 << Self::PRECISION) - 1;
-
     fn to_f64(self) -> f64 {
         f64::from_bits(self.get_f64_bits())
     }
 
     fn get_f64_bits(self) -> u64 {
+        const PRECISION: u64 = 52;
+        const DEFAULT_EXP: u64 = 1023;
+        const FRAC_MASK: u64 = (1 << PRECISION) - 1;
+
         let mut bits: u64 = 0;
         if self.significand.sign == Sign::Negative {
             bits = bits | 1 << 63;
@@ -129,17 +129,17 @@ impl BigFloat<2> {
         }
 
         let mut value = self.clone();
-        let min_significand = &BigUint::one() << &BigUint::from_u64(Self::PRECISION);
+        let min_significand = &BigUint::one() << &BigUint::from_u64(PRECISION);
         value.increase_significand(&min_significand);
         let max_significand = &min_significand << &BigUint::one();
         value.decrease_significand(&max_significand);
 
-        let f64_exp = value.exp + Self::PRECISION as i64;
+        let f64_exp = value.exp + PRECISION as i64;
         match f64_exp {
             -1022..=1023 => {
                 let exp_bits = (f64_exp + 1023) as u64;
                 bits = bits | exp_bits << 52;
-                let frac_bits = value.significand.value.value[0] & Self::FRAC_MASK;
+                let frac_bits = value.significand.value.value[0] & FRAC_MASK;
                 bits = bits | frac_bits;
                 bits
             }
