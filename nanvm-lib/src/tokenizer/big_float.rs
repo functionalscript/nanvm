@@ -458,6 +458,27 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 2.0f64.powf(1023.0));
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 52) - 1),
+            exp: 0,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 4503599627370495f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 53) - 1),
+            exp: 0,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 9007199254740991f64);
+
+        // let a = BigFloat {
+        //     significand: BigInt::from_u64((1 << 54) - 1),
+        //     exp: 0,
+        // };
+        // let res = a.to_f64();
+        // assert_eq!(res, 18014398509481983f64);
     }
 
     #[test]
