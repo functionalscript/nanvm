@@ -143,6 +143,12 @@ impl BigFloat<2> {
                 bits = bits | frac_bits;
                 bits
             }
+            -1075..=-1023 => {
+                let exp_dif = -1022 - f64_exp;
+                let frac_bits = value.significand.value.value[0] >> exp_dif;
+                bits = bits | frac_bits;
+                bits
+            }
             exp if exp > 1023 => {
                 bits = bits | 2047 << 52;
                 bits
@@ -473,5 +479,41 @@ mod test {
         let res = a.to_f64();
         assert!(res.is_infinite());
         assert!(res.is_sign_negative());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_subnormal_to_f64() {
+        let a = BigFloat {
+            significand: BigInt::from_u64(1),
+            exp: -1023,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 2.0f64.powf(-1023.0));
+        assert!(res.is_subnormal());
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(-1),
+            exp: -1023,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, -2.0f64.powf(-1023.0));
+        assert!(res.is_subnormal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64(1),
+            exp: -1074,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 1);
+        assert_eq!(res, 2.0f64.powf(-1074.0));
+        assert!(res.is_subnormal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64(1),
+            exp: -1075,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 0.0);
     }
 }
