@@ -428,5 +428,12 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 1.0);
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(-3),
+            exp: -1,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, -1.5);
     }
 }
