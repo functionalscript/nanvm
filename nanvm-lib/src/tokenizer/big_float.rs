@@ -9,6 +9,7 @@ use super::big_int::BigInt;
 pub struct BigFloat<const BASE: u32> {
     pub significand: BigInt,
     pub exp: i64,
+    //pub non_zero_reminder: bool
 }
 
 impl<const BASE: u32> BigFloat<BASE> {
