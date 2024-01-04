@@ -134,10 +134,10 @@ impl BigFloat<2> {
         let max_significand = &min_significand << &BigUint::one();
         value.decrease_significand(&max_significand);
 
-        let f64_exp = value.exp - Self::PRECISION as i64;
-        match value.exp {
+        let f64_exp = value.exp + Self::PRECISION as i64;
+        match f64_exp {
             -1022..=1023 => {
-                let exp_bits = (value.exp + 1023) as u64;
+                let exp_bits = (f64_exp + 1023) as u64;
                 bits = bits | exp_bits << 52;
                 let frac_bits = value.significand.value.value[0] & Self::FRAC_MASK;
                 bits = bits | frac_bits;
@@ -417,5 +417,16 @@ mod test {
         let res = a.to_f64();
         assert_eq!(res, 0.0);
         assert!(res.is_sign_negative());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_normal_to_f64() {
+        let a = BigFloat {
+            significand: BigInt::from_u64(1),
+            exp: 0,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 1.0);
     }
 }
