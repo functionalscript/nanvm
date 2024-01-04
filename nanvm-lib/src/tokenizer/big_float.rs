@@ -116,7 +116,6 @@ impl BigFloat<2> {
 
     fn get_f64_bits(self) -> u64 {
         const PRECISION: u64 = 52;
-        const DEFAULT_EXP: u64 = 1023;
         const FRAC_MASK: u64 = (1 << PRECISION) - 1;
 
         let mut bits: u64 = 0;
