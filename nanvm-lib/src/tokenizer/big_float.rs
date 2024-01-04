@@ -143,7 +143,7 @@ impl BigFloat<2> {
                 bits = bits | frac_bits;
                 bits
             }
-            -1075..=-1023 => {
+            -1074..=-1023 => {
                 let exp_dif = -1022 - f64_exp;
                 let frac_bits = value.significand.value.value[0] >> exp_dif;
                 bits = bits | frac_bits;
@@ -153,7 +153,7 @@ impl BigFloat<2> {
                 bits = bits | 2047 << 52;
                 bits
             }
-            _ => todo!(),
+            _ => bits
         }
     }
 }
