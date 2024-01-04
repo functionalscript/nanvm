@@ -17,13 +17,13 @@ impl<const BASE: u32> BigFloat<BASE> {
         exp: 0,
     };
 
-    fn increase_significand(&mut self, min_significand: BigUint) {
+    fn increase_significand(&mut self, min_significand: &BigUint) {
         if self.significand.is_zero() {
             return;
         }
 
         loop {
-            if self.significand.value >= min_significand {
+            if self.significand.value >= *min_significand {
                 return;
             }
             self.significand.value = &self.significand.value << &BigUint::one();
@@ -79,7 +79,7 @@ impl BigFloat<10> {
         let p = five.pow_u64(-self.exp as u64);
         let mut bf10 = self.clone();
         let min_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
-        bf10.increase_significand(&p * &min_significand);
+        bf10.increase_significand(&(&p * &min_significand));
 
         let (q, r) = bf10.significand.div_mod(&p.to_big_int());
         let mut bf2: BigFloat<2> = BigFloat {
@@ -117,6 +117,10 @@ impl BigFloat<10> {
 }
 
 impl BigFloat<2> {
+    const PRECISION: u64 = 52;
+    const DEFAULT_EXP: u64 = 1023;
+    const FRAC_MASK: u64 = (1 << Self::PRECISION) - 1;
+
     fn to_f64(self) -> f64 {
         f64::from_bits(self.get_f64_bits())
     }
@@ -131,7 +135,23 @@ impl BigFloat<2> {
             return bits;
         }
 
-        todo!()
+        let mut value = self.clone();
+        let min_significand = &BigUint::one() << &BigUint::from_u64(Self::PRECISION);
+        value.increase_significand(&min_significand);
+        let max_significand = &min_significand << &BigUint::one();
+        value.decrease_significand(&max_significand);
+
+        let f64_exp = value.exp - Self::PRECISION as i64;
+        match value.exp {
+            -1022..=1023 => {
+                let exp_bits = (value.exp + 1023) as u64;
+                bits = bits | exp_bits << 52;
+                let frac_bits = value.significand.value.value[0] & Self::FRAC_MASK;
+                bits = bits | frac_bits;
+                bits
+            }
+            _ => todo!()
+        }
     }
 }
 
