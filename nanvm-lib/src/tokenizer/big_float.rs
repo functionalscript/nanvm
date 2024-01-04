@@ -404,7 +404,7 @@ mod test {
             exp: 100,
         };
         let res = a.to_f64();
-        assert_eq!(res, -0.0);
+        assert_eq!(res, 0.0);
         assert!(res.is_sign_positive());
 
         let a = BigFloat {
@@ -415,7 +415,7 @@ mod test {
             exp: 100,
         };
         let res = a.to_f64();
-        assert_eq!(res, -0.0);
+        assert_eq!(res, 0.0);
         assert!(res.is_sign_negative());
     }
 }
