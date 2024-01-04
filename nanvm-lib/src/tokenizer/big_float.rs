@@ -143,6 +143,10 @@ impl BigFloat<2> {
                 bits = bits | frac_bits;
                 bits
             }
+            exp if exp > 1023 => {
+                bits = bits | 2047 << 52;
+                bits
+            }
             _ => todo!(),
         }
     }
@@ -454,5 +458,20 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_infinity_to_f64() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(1),
+            exp: 1024,
+        };
+        let res = a.to_f64();
+        assert!(res.is_infinite());
+        assert!(res.is_sign_positive());
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(-1),
+            exp: 1024,
+        };
+        let res = a.to_f64();
+        assert!(res.is_infinite());
+        assert!(res.is_sign_negative());
     }
 }
