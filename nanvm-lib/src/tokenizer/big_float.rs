@@ -19,7 +19,16 @@ impl<const BASE: u32> BigFloat<BASE> {
         non_zero_reminder: false,
     };
 
-    fn increase_significand(&mut self, min_significand: &BigUint) {
+    fn increase_significand(&mut self, precision: u64) {
+        if self.significand.is_zero() {
+            return;
+        }
+
+        let min_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
+        self.increase_significand_to(&min_significand);
+    }
+
+    fn increase_significand_to(&mut self, min_significand: &BigUint) {
         if self.significand.is_zero() {
             return;
         }
@@ -74,7 +83,7 @@ impl BigFloat<10> {
         let p = five.pow_u64(-self.exp as u64);
         let mut bf10 = self.clone();
         let min_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
-        bf10.increase_significand(&(&p * &min_significand));
+        bf10.increase_significand_to(&(&p * &min_significand));
 
         let (q, r) = bf10.significand.div_mod(&p.to_big_int());
         let mut bf2: BigFloat<2> = BigFloat {
@@ -132,8 +141,7 @@ impl BigFloat<2> {
         }
 
         let mut value = self.clone();
-        let min_significand = &BigUint::one() << &BigUint::from_u64(PRECISION);
-        value.increase_significand(&min_significand);
+        value.increase_significand(PRECISION);
         value.decrease_significand(PRECISION + 1);
 
         let f64_exp = value.exp + PRECISION as i64;
