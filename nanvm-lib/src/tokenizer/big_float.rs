@@ -47,7 +47,6 @@ impl<const BASE: u32> BigFloat<BASE> {
             return;
         }
 
-        let mut are_bits_lost = false;
         let max_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
         loop {
             if self.significand.value < max_significand {
@@ -69,14 +68,27 @@ impl BigFloat<10> {
             return BigFloat::ZERO;
         }
 
+        if self.exp == 0 {
+            let mut result: BigFloat<2> = BigFloat {
+                significand: self.significand,
+                exp: self.exp,
+                non_zero_reminder: self.non_zero_reminder,
+            };
+            result.increase_significand(precision as u64);
+            result.decrease_significand(precision as u64);
+            return result;
+        }
+
         let five = BigUint { value: [5].cast() };
         if self.exp > 0 {
             let new_sign = &self.significand * &five.pow_u64(self.exp as u64).to_big_int();
-            let result: BigFloat<2> = BigFloat {
+            let mut result: BigFloat<2> = BigFloat {
                 significand: new_sign,
                 exp: self.exp,
                 non_zero_reminder: self.non_zero_reminder,
             };
+            result.increase_significand(precision as u64);
+            result.decrease_significand(precision as u64);
             return result;
         }
 
@@ -86,13 +98,13 @@ impl BigFloat<10> {
         bf10.increase_significand_to(&(&p * &min_significand));
 
         let (q, r) = bf10.significand.div_mod(&p.to_big_int());
-        let mut bf2: BigFloat<2> = BigFloat {
+        let mut result: BigFloat<2> = BigFloat {
             significand: q,
             exp: bf10.exp,
             non_zero_reminder: self.non_zero_reminder || !r.is_zero(),
         };
-        bf2.decrease_significand(precision as u64);
-        bf2
+        result.decrease_significand(precision as u64);
+        result
 
         // let mut last_bit = bf2.significand.value.get_last_bit();
         // let abs_value = bf2.significand.value;
@@ -232,8 +244,8 @@ mod test {
         assert_eq!(
             res,
             BigFloat {
-                significand: BigInt::from_i64(5),
-                exp: 1,
+                significand: BigInt::from_u64(10 << 60),
+                exp: -60,
                 non_zero_reminder: false
             }
         );
@@ -247,9 +259,58 @@ mod test {
         assert_eq!(
             res,
             BigFloat {
-                significand: BigInt::from_i64(2500),
-                exp: 2,
+                significand: BigInt::from_u64(10000 << 50),
+                exp: -50,
                 non_zero_reminder: false
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(128),
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_bin(9);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(256),
+                exp: -1,
+                non_zero_reminder: false
+            }
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_integer_round() {
+        let a = BigFloat {
+            significand: BigInt::from_i64(128),
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_bin(4);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(8),
+                exp: 4,
+                non_zero_reminder: false
+            }
+        );
+
+        let a = BigFloat {
+            significand: BigInt::from_i64(129),
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_bin(4);
+        assert_eq!(
+            res,
+            BigFloat {
+                significand: BigInt::from_i64(8),
+                exp: 4,
+                non_zero_reminder: true
             }
         );
     }
