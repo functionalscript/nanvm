@@ -186,6 +186,7 @@ impl IntegerState {
                 value: self.b,
             },
             exp: 0,
+            non_zero_reminder: false,
         })
     }
 }
@@ -220,6 +221,7 @@ impl FloatState {
                 value: self.b,
             },
             exp: self.fe,
+            non_zero_reminder: false,
         })
     }
 }
@@ -250,6 +252,7 @@ impl ExpState {
                 value: self.b,
             },
             exp,
+            non_zero_reminder: false,
         })
     }
 }
@@ -724,7 +727,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::ZERO,
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
@@ -733,7 +737,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::ZERO,
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
@@ -753,7 +758,8 @@ mod test {
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
                 JsonToken::Number(BigFloat {
                     significand: BigInt::from_u64(2),
-                    exp: 0
+                    exp: 0,
+                    non_zero_reminder: false
                 })
             ]
         );
@@ -763,7 +769,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(1234567890),
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
@@ -772,7 +779,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_i64(-1234567890),
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
@@ -783,12 +791,14 @@ mod test {
                 JsonToken::ArrayBegin,
                 JsonToken::Number(BigFloat {
                     significand: BigInt::ZERO,
-                    exp: 0
+                    exp: 0,
+                    non_zero_reminder: false
                 }),
                 JsonToken::Comma,
                 JsonToken::Number(BigFloat {
                     significand: BigInt::from_u64(1),
-                    exp: 0
+                    exp: 0,
+                    non_zero_reminder: false
                 }),
                 JsonToken::ArrayEnd
             ]
@@ -802,7 +812,8 @@ mod test {
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
                 JsonToken::Number(BigFloat {
                     significand: BigInt::from_u64(1),
-                    exp: 0
+                    exp: 0,
+                    non_zero_reminder: false
                 }),
             ]
         );
@@ -825,7 +836,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(9007199254740991),
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
@@ -834,7 +846,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(9007199254740992),
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
@@ -843,7 +856,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(9007199254740993),
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
     }
@@ -861,7 +875,8 @@ mod test {
                         value: [0, 0, 1].cast()
                     }
                 },
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
     }
@@ -874,7 +889,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(1),
-                exp: -2
+                exp: -2,
+                non_zero_reminder: false
             })]
         );
 
@@ -885,7 +901,8 @@ mod test {
                 JsonToken::ArrayBegin,
                 JsonToken::Number(BigFloat {
                     significand: BigInt::from_i64(-1234),
-                    exp: -2
+                    exp: -2,
+                    non_zero_reminder: false
                 }),
                 JsonToken::ArrayEnd
             ]
@@ -900,7 +917,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(1),
-                exp: 2
+                exp: 2,
+                non_zero_reminder: false
             })]
         );
 
@@ -909,7 +927,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(1),
-                exp: 2
+                exp: 2,
+                non_zero_reminder: false
             })]
         );
 
@@ -918,7 +937,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::ZERO,
-                exp: -2
+                exp: -2,
+                non_zero_reminder: false
             })]
         );
 
@@ -927,7 +947,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(1),
-                exp: -2
+                exp: -2,
+                non_zero_reminder: false
             })]
         );
 
@@ -936,7 +957,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(12),
-                exp: 1
+                exp: 1,
+                non_zero_reminder: false
             })]
         );
 
@@ -945,7 +967,8 @@ mod test {
             &result,
             &[JsonToken::Number(BigFloat {
                 significand: BigInt::from_u64(12),
-                exp: 0
+                exp: 0,
+                non_zero_reminder: false
             })]
         );
 
