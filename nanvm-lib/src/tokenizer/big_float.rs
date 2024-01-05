@@ -33,14 +33,15 @@ impl<const BASE: u32> BigFloat<BASE> {
         }
     }
 
-    fn decrease_significand(&mut self, max_significand: &BigUint) {
+    fn decrease_significand(&mut self, precision: u64) {
         if self.significand.is_zero() {
             return;
         }
 
         let mut are_bits_lost = false;
+        let max_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
         loop {
-            if self.significand.value < *max_significand {
+            if self.significand.value < max_significand {
                 break;
             }
             let lastBit = self.significand.value.get_last_bit();
@@ -81,7 +82,7 @@ impl BigFloat<10> {
             exp: bf10.exp,
             non_zero_reminder: self.non_zero_reminder || !r.is_zero(),
         };
-        bf2.decrease_significand(&min_significand);
+        bf2.decrease_significand(precision as u64);
         bf2
 
         // let mut last_bit = bf2.significand.value.get_last_bit();
@@ -133,8 +134,7 @@ impl BigFloat<2> {
         let mut value = self.clone();
         let min_significand = &BigUint::one() << &BigUint::from_u64(PRECISION);
         value.increase_significand(&min_significand);
-        let max_significand = &min_significand << &BigUint::one();
-        value.decrease_significand(&max_significand);
+        value.decrease_significand(PRECISION + 1);
 
         let f64_exp = value.exp + PRECISION as i64;
         match f64_exp {
