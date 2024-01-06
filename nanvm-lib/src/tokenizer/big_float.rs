@@ -146,6 +146,8 @@ impl BigFloat<2> {
                     if frac == MAX_FRAC {
                         frac = frac >> 1;
                         f64_exp = f64_exp + 1;
+                        //if f64_exp equals 1024, then exp_bits will be all ones and frac_bits will be all zeros
+                        //it is an infinity by the f64 standard
                     }
                 }
 
@@ -578,7 +580,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_normal_to_f64_round() {
         let a = BigFloat {
-            significand: BigInt::from_u64((1 << 54) - 1),
+            significand: BigInt::from_u64((1 << 54) - 1), //111111111111111111111111111111111111111111111111111111
             exp: 0,
             non_zero_reminder: false,
         };
@@ -586,7 +588,7 @@ mod test {
         assert_eq!(res, 18014398509481984f64);
 
         let a = BigFloat {
-            significand: BigInt::from_u64((1 << 54) - 2),
+            significand: BigInt::from_u64((1 << 54) - 2), //111111111111111111111111111111111111111111111111111110
             exp: 0,
             non_zero_reminder: false,
         };
@@ -594,7 +596,7 @@ mod test {
         assert_eq!(res, 18014398509481982f64);
 
         let a = BigFloat {
-            significand: BigInt::from_u64((1 << 54) - 3),
+            significand: BigInt::from_u64((1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
             exp: 0,
             non_zero_reminder: true,
         };
@@ -602,7 +604,7 @@ mod test {
         assert_eq!(res, 18014398509481982f64);
 
         let a = BigFloat {
-            significand: BigInt::from_u64((1 << 54) - 3),
+            significand: BigInt::from_u64((1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
             exp: 0,
             non_zero_reminder: false,
         };
@@ -686,5 +688,25 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 0.0);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_rust_cast() {
+        test(18014398509481981);
+        test(18014398509481982);
+        test(18014398509481983);
+        test(18014398509481984);
+        test(18014398509481985);
+
+        fn test(n: u64) {
+            let big_float = BigFloat {
+                significand: BigInt::from_u64(n),
+                exp: 0,
+                non_zero_reminder: false,
+            };
+            let f64 = big_float.to_f64();
+            assert_eq!(f64, n as f64);
+        }
     }
 }
