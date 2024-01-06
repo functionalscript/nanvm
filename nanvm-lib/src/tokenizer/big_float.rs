@@ -583,12 +583,20 @@ mod test {
             non_zero_reminder: false,
         };
         let res = a.to_f64();
-        assert_eq!(res, 18014398509481983f64);
+        assert_eq!(res, 18014398509481984f64);
 
         let a = BigFloat {
             significand: BigInt::from_u64((1 << 54) - 2),
             exp: 0,
             non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481982f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 3),
+            exp: 0,
+            non_zero_reminder: true,
         };
         let res = a.to_f64();
         assert_eq!(res, 18014398509481982f64);
