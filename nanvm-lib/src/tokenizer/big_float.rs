@@ -137,11 +137,10 @@ impl BigFloat<2> {
             -1022..=1023 => {
                 let mut last_bit = value.significand.value.get_last_bit();
                 let mut frac = value.significand.value.value[0] >> 1;
-                println!("{:b} {:?}", frac, last_bit);
-                if last_bit == 1 && value.non_zero_reminder {
+
+                if last_bit == 1 && !value.non_zero_reminder {
                     last_bit = frac & 1;
                 }
-
                 if last_bit == 1 {
                     frac = frac + 1;
                     if frac == MAX_FRAC {
@@ -577,7 +576,11 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 9007199254740991f64);
+    }
 
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_normal_to_f64_round() {
         let a = BigFloat {
             significand: BigInt::from_u64((1 << 54) - 1),
             exp: 0,
@@ -585,6 +588,22 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 18014398509481983f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 2),
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481982f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 3),
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481980f64);
     }
 
     #[test]
