@@ -146,10 +146,6 @@ impl BigFloat<2> {
                     if frac == MAX_FRAC {
                         frac = frac >> 1;
                         f64_exp = f64_exp + 1;
-                        if f64_exp > 1023 {
-                            bits = bits | INF_BITS; //todo: check this case
-                            return bits;
-                        }
                     }
                 }
 
@@ -604,6 +600,22 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 18014398509481980f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 1),
+            exp: 969,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert!(res.is_normal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 1),
+            exp: 970,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert!(res.is_infinite());
     }
 
     #[test]
