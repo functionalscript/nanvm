@@ -1,9 +1,6 @@
-use crate::{
-    common::cast::Cast,
-    tokenizer::{big_int::Sign, big_uint::BigUint},
-};
+use crate::{big_numbers::big_int::Sign, common::cast::Cast};
 
-use super::big_int::BigInt;
+use super::{big_int::BigInt, big_uint::BigUint};
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 pub struct BigFloat<const BASE: u32> {
@@ -178,11 +175,11 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        common::cast::Cast,
-        tokenizer::{
+        big_numbers::{
             big_int::{BigInt, Sign},
             big_uint::BigUint,
         },
+        common::cast::Cast,
     };
 
     use super::BigFloat;

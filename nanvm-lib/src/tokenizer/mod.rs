@@ -1,15 +1,12 @@
-mod big_float;
-mod big_int;
-mod big_uint;
-
 use std::{collections::VecDeque, mem::take};
 
-use crate::common::{cast::Cast, default::default};
-
-use self::{
-    big_float::BigFloat,
-    big_int::{BigInt, Sign},
-    big_uint::BigUint,
+use crate::{
+    big_numbers::{
+        big_float::BigFloat,
+        big_int::{BigInt, Sign},
+        big_uint::BigUint,
+    },
+    common::{cast::Cast, default::default},
 };
 
 #[derive(Debug, PartialEq)]
@@ -566,12 +563,12 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        common::cast::Cast,
-        tokenizer::{
+        big_numbers::{
             big_float::BigFloat,
             big_int::{BigInt, Sign},
             big_uint::BigUint,
         },
+        common::cast::Cast,
     };
 
     use super::{tokenize, ErrorType, JsonToken};
