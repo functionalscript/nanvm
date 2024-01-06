@@ -4,7 +4,8 @@ use std::{
 };
 
 use crate::common::cast::Cast;
-use crate::tokenizer::big_uint::BigUint;
+
+use super::big_uint::BigUint;
 
 #[derive(Debug, PartialEq, Clone, Eq, Default)]
 pub struct BigInt {
@@ -209,7 +210,7 @@ mod test {
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{common::cast::Cast, tokenizer::big_uint::BigUint};
+    use crate::{big_numbers::big_uint::BigUint, common::cast::Cast};
 
     use super::{BigInt, Sign};
 
