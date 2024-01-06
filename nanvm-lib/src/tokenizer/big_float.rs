@@ -148,7 +148,7 @@ impl BigFloat<2> {
                         frac = frac >> 1;
                         f64_exp = f64_exp + 1;
                         if f64_exp > 1023 {
-                            bits = bits | INF_BITS;
+                            bits = bits | INF_BITS; //todo: check this case
                             return bits;
                         }
                     }
