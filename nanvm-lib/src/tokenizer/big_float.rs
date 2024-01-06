@@ -135,14 +135,6 @@ impl BigFloat<2> {
         let mut f64_exp = value.exp + PRECISION as i64 + 1;
         match f64_exp {
             -1022..=1023 => {
-                // 0.0 => 0
-                // 0.0+ => 0
-                // 0.1 => 0
-                // 0.1+ => 1
-                // 1.0 => 1
-                // 1.0+ => 1
-                // 1.1 => 2
-                // 1.1+ => 2
                 let mut last_bit = value.significand.value.get_last_bit();
                 let mut frac = value.significand.value.value[0] >> 1;
 
