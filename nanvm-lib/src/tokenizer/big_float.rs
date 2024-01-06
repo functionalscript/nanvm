@@ -105,32 +105,6 @@ impl BigFloat<10> {
         };
         result.decrease_significand(precision as u64);
         result
-
-        // let mut last_bit = bf2.significand.value.get_last_bit();
-        // let abs_value = bf2.significand.value;
-        // let mut significand = &abs_value >> &BigUint::one();
-        // let mut exp = bf2.exp + 1;
-
-        // if last_bit == 1 && bf2.non_zero_reminder {
-        //     last_bit = significand.get_last_bit();
-        // }
-
-        // if last_bit == 1 {
-        //     significand = &significand + &BigUint::one();
-        //     if significand.eq(&min_significand) {
-        //         significand = &significand >> &BigUint::one();
-        //         exp = exp + 1;
-        //     }
-        // }
-
-        // BigFloat {
-        //     significand: BigInt {
-        //         value: significand,
-        //         sign: bf2.significand.sign,
-        //     },
-        //     exp,
-        //     non_zero_reminder: bf2.non_zero_reminder,
-        // }
     }
 }
 
@@ -141,7 +115,9 @@ impl BigFloat<2> {
 
     fn get_f64_bits(self) -> u64 {
         const PRECISION: u64 = 52;
+        const MAX_FRAC: u64 = 1 << (PRECISION + 1);
         const FRAC_MASK: u64 = (1 << PRECISION) - 1;
+        const INF_BITS: u64 = 2047 << 52;
 
         let mut bits: u64 = 0;
         if self.significand.sign == Sign::Negative {
@@ -153,26 +129,43 @@ impl BigFloat<2> {
         }
 
         let mut value = self.clone();
-        value.increase_significand(PRECISION);
-        value.decrease_significand(PRECISION + 1);
+        value.increase_significand(PRECISION + 1);
+        value.decrease_significand(PRECISION + 2);
 
-        let f64_exp = value.exp + PRECISION as i64;
+        let mut f64_exp = value.exp + PRECISION as i64 + 1;
         match f64_exp {
             -1022..=1023 => {
+                let mut last_bit = value.significand.value.get_last_bit();
+                let mut frac = value.significand.value.value[0] >> 1;
+
+                if last_bit == 1 && !value.non_zero_reminder {
+                    last_bit = frac & 1;
+                }
+                if last_bit == 1 {
+                    frac = frac + 1;
+                    if frac == MAX_FRAC {
+                        frac = frac >> 1;
+                        f64_exp = f64_exp + 1;
+                        //if f64_exp equals 1024, then exp_bits will be all ones and frac_bits will be all zeros
+                        //it is an infinity by the f64 standard
+                    }
+                }
+
                 let exp_bits = (f64_exp + 1023) as u64;
                 bits = bits | exp_bits << 52;
-                let frac_bits = value.significand.value.value[0] & FRAC_MASK;
+                let frac_bits = frac & FRAC_MASK;
                 bits = bits | frac_bits;
                 bits
             }
             -1074..=-1023 => {
-                let exp_dif = -1022 - f64_exp;
+                //todo: check last_bit for subnormal
+                let exp_dif = -1021 - f64_exp;
                 let frac_bits = value.significand.value.value[0] >> exp_dif;
                 bits = bits | frac_bits;
                 bits
             }
             exp if exp > 1023 => {
-                bits = bits | 2047 << 52;
+                bits = bits | INF_BITS;
                 bits
             }
             _ => bits,
@@ -582,13 +575,58 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 9007199254740991f64);
+    }
 
-        // let a = BigFloat {
-        //     significand: BigInt::from_u64((1 << 54) - 1),
-        //     exp: 0,
-        // };
-        // let res = a.to_f64();
-        // assert_eq!(res, 18014398509481983f64);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_normal_to_f64_round() {
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 1), //111111111111111111111111111111111111111111111111111111
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481984f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 2), //111111111111111111111111111111111111111111111111111110
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481982f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
+            exp: 0,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481982f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
+            exp: 0,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 18014398509481980f64);
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 1),
+            exp: 969,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert!(res.is_normal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 54) - 1),
+            exp: 970,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert!(res.is_infinite());
     }
 
     #[test]
@@ -651,5 +689,25 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 0.0);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_rust_cast() {
+        test(18014398509481981);
+        test(18014398509481982);
+        test(18014398509481983);
+        test(18014398509481984);
+        test(18014398509481985);
+
+        fn test(n: u64) {
+            let big_float = BigFloat {
+                significand: BigInt::from_u64(n),
+                exp: 0,
+                non_zero_reminder: false,
+            };
+            let f64 = big_float.to_f64();
+            assert_eq!(f64, n as f64);
+        }
     }
 }
