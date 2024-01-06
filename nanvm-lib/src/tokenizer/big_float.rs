@@ -135,6 +135,14 @@ impl BigFloat<2> {
         let mut f64_exp = value.exp + PRECISION as i64 + 1;
         match f64_exp {
             -1022..=1023 => {
+                // 0.0 => 0
+                // 0.0+ => 0
+                // 0.1 => 0
+                // 0.1+ => 1
+                // 1.0 => 1
+                // 1.0+ => 1
+                // 1.1 => 2
+                // 1.1+ => 2
                 let mut last_bit = value.significand.value.get_last_bit();
                 let mut frac = value.significand.value.value[0] >> 1;
 
@@ -158,6 +166,7 @@ impl BigFloat<2> {
                 bits
             }
             -1074..=-1023 => {
+                //todo: check last_bit for subnormal
                 let exp_dif = -1021 - f64_exp;
                 let frac_bits = value.significand.value.value[0] >> exp_dif;
                 bits = bits | frac_bits;
