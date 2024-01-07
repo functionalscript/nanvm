@@ -155,10 +155,32 @@ impl BigFloat<2> {
                 bits
             }
             -1074..=-1023 => {
-                //todo: check last_bit for subnormal
-                let exp_dif = -1021 - f64_exp;
-                let frac_bits = value.significand.value.value[0] >> exp_dif;
-                bits = bits | frac_bits;
+                let subnormal_precision = (f64_exp + 1076) as u64;
+                println!("prec = {:?}", subnormal_precision);
+                println!(
+                    "before {:b} {:?}",
+                    value.significand.value.value[0], f64_exp
+                );
+                value.decrease_significand(subnormal_precision);
+                println!(
+                    "middle {:b} {:?}",
+                    value.significand.value.value[0], f64_exp
+                );
+                let mut last_bit = value.significand.value.get_last_bit();
+                let mut frac = value.significand.value.value[0] >> 1;
+                if last_bit == 1 && !value.non_zero_reminder {
+                    last_bit = frac & 1;
+                }
+                if last_bit == 1 {
+                    frac = frac + 1;
+                    // if frac == MAX_FRAC {
+                    //     frac = frac >> 1;
+                    //     f64_exp = f64_exp + 1;
+                    // }
+                }
+
+                println!("after {:b} {:?}", frac, f64_exp);
+                bits = bits | frac;
                 bits
             }
             exp if exp > 1023 => {
@@ -691,6 +713,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_subnormal_to_f64_rounding() {
+        //0.0 => 0
         let a = BigFloat {
             significand: BigInt::from_u64(0b100),
             exp: -1075,
@@ -701,6 +724,7 @@ mod test {
         assert_eq!(res, 2.0f64.powf(-1073.0));
         assert!(res.is_subnormal());
 
+        //0.0+ => 0
         let a = BigFloat {
             significand: BigInt::from_u64(0b100),
             exp: -1075,
@@ -711,6 +735,7 @@ mod test {
         assert_eq!(res, 2.0f64.powf(-1073.0));
         assert!(res.is_subnormal());
 
+        //0.1 => 0
         let a = BigFloat {
             significand: BigInt::from_u64(0b101),
             exp: -1075,
@@ -721,15 +746,60 @@ mod test {
         assert_eq!(res, 2.0f64.powf(-1073.0));
         assert!(res.is_subnormal());
 
-        // let a = BigFloat {
-        //     significand: BigInt::from_u64(0b101),
-        //     exp: -1075,
-        //     non_zero_reminder: true,
-        // };
-        // let res = a.to_f64();
-        // assert_eq!(res.to_bits(), 0b11);
-        // assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
-        // assert!(res.is_subnormal());
+        //0.1+ => 1
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b101),
+            exp: -1075,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //1.0 => 1
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b110),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //1.0+ => 1
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b110),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //1.1 => 2
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b111),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b100);
+        assert_eq!(res, 2.0f64.powf(-1072.0));
+        assert!(res.is_subnormal());
+
+        //1.1+ => 2
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b111),
+            exp: -1075,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b100);
+        assert_eq!(res, 2.0f64.powf(-1072.0));
+        assert!(res.is_subnormal());
     }
 
     #[test]
