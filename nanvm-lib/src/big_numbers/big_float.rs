@@ -273,7 +273,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_integer_round() {
+    fn test_integer_rounding() {
         let a = BigFloat {
             significand: BigInt::from_i64(128),
             exp: 0,
@@ -371,7 +371,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_round() {
+    fn test_rounding() {
         let a = BigFloat {
             significand: BigInt::from_i64(0b1000_0001),
             exp: -1,
@@ -420,7 +420,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_round_half() {
+    fn test_rounding_half() {
         let a = BigFloat {
             significand: BigInt::from_i64(0b101_1010),
             exp: -1,
@@ -576,7 +576,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_normal_to_f64_round() {
+    fn test_normal_to_f64_rounding() {
         let a = BigFloat {
             significand: BigInt::from_u64((1 << 54) - 1), //111111111111111111111111111111111111111111111111111111
             exp: 0,
@@ -687,6 +687,10 @@ mod test {
         let res = a.to_f64();
         assert_eq!(res, 0.0);
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_subnormal_to_f64_rounding() {}
 
     #[test]
     #[wasm_bindgen_test]
