@@ -155,10 +155,19 @@ impl BigFloat<2> {
                 bits
             }
             -1074..=-1023 => {
-                //todo: check last_bit for subnormal
-                let exp_dif = -1021 - f64_exp;
-                let frac_bits = value.significand.value.value[0] >> exp_dif;
-                bits = bits | frac_bits;
+                let subnormal_precision = (f64_exp + 1076) as u64;
+                value.decrease_significand(subnormal_precision);
+                let mut last_bit = value.significand.value.get_last_bit();
+                let mut frac = value.significand.value.value[0] >> 1;
+                if last_bit == 1 && !value.non_zero_reminder {
+                    last_bit = frac & 1;
+                }
+                if last_bit == 1 {
+                    frac = frac + 1;
+                    //if frac equals 1 << 53, then exp_bits will be 1 and frac_bits will be all zeros
+                    //it is a normal number by the f64 standard and it is the correct number
+                }
+                bits = bits | frac;
                 bits
             }
             exp if exp > 1023 => {
@@ -273,7 +282,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_integer_round() {
+    fn test_integer_rounding() {
         let a = BigFloat {
             significand: BigInt::from_i64(128),
             exp: 0,
@@ -371,7 +380,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_round() {
+    fn test_rounding() {
         let a = BigFloat {
             significand: BigInt::from_i64(0b1000_0001),
             exp: -1,
@@ -420,7 +429,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_round_half() {
+    fn test_rounding_half() {
         let a = BigFloat {
             significand: BigInt::from_i64(0b101_1010),
             exp: -1,
@@ -548,6 +557,25 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 2.0f64.powf(-1022.0));
+        assert!(res.is_normal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64(1 << 59),
+            exp: -1022 - 59,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 2.0f64.powf(-1022.0));
+        assert!(res.is_normal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64((1 << 60) - 1),
+            exp: -1022 - 60,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res, 2.0f64.powf(-1022.0));
+        assert!(res.is_normal());
 
         let a = BigFloat {
             significand: BigInt::from_i64(1),
@@ -576,7 +604,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_normal_to_f64_round() {
+    fn test_normal_to_f64_rounding() {
         let a = BigFloat {
             significand: BigInt::from_u64((1 << 54) - 1), //111111111111111111111111111111111111111111111111111111
             exp: 0,
@@ -686,6 +714,98 @@ mod test {
         };
         let res = a.to_f64();
         assert_eq!(res, 0.0);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_subnormal_to_f64_rounding() {
+        //0.0 => 0
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b100),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //0.0+ => 0
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b100),
+            exp: -1075,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //0.1 => 0
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b101),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //0.1+ => 1
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b101),
+            exp: -1075,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //1.0 => 1
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b110),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //1.0+ => 1
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b110),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        //1.1 => 2
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b111),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b100);
+        assert_eq!(res, 2.0f64.powf(-1072.0));
+        assert!(res.is_subnormal());
+
+        //1.1+ => 2
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b111),
+            exp: -1075,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b100);
+        assert_eq!(res, 2.0f64.powf(-1072.0));
+        assert!(res.is_subnormal());
     }
 
     #[test]
