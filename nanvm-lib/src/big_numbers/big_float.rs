@@ -690,7 +690,47 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_subnormal_to_f64_rounding() {}
+    fn test_subnormal_to_f64_rounding() {
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b100),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b100),
+            exp: -1075,
+            non_zero_reminder: true,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        let a = BigFloat {
+            significand: BigInt::from_u64(0b101),
+            exp: -1075,
+            non_zero_reminder: false,
+        };
+        let res = a.to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
+
+        // let a = BigFloat {
+        //     significand: BigInt::from_u64(0b101),
+        //     exp: -1075,
+        //     non_zero_reminder: true,
+        // };
+        // let res = a.to_f64();
+        // assert_eq!(res.to_bits(), 0b11);
+        // assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        // assert!(res.is_subnormal());
+    }
 
     #[test]
     #[wasm_bindgen_test]
