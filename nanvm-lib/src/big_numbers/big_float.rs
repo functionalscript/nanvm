@@ -106,7 +106,22 @@ impl BigFloat<10> {
 }
 
 impl BigFloat<2> {
-    fn to_f64(self) -> f64 {
+    fn get_frac_with_shr(self) -> u64 {
+        let mut last_bit = self.significand.value.get_last_bit();
+        let mut frac = self.significand.value.value[0] >> 1;
+
+        if last_bit == 1 && !self.non_zero_reminder {
+            last_bit = frac & 1;
+        }
+
+        if last_bit == 1 {
+            frac = frac + 1;
+        }
+
+        frac
+    }
+
+    pub fn to_f64(self) -> f64 {
         f64::from_bits(self.get_f64_bits())
     }
 
@@ -132,20 +147,12 @@ impl BigFloat<2> {
         let mut f64_exp = value.exp + PRECISION as i64 + 1;
         match f64_exp {
             -1022..=1023 => {
-                let mut last_bit = value.significand.value.get_last_bit();
-                let mut frac = value.significand.value.value[0] >> 1;
-
-                if last_bit == 1 && !value.non_zero_reminder {
-                    last_bit = frac & 1;
-                }
-                if last_bit == 1 {
-                    frac = frac + 1;
-                    if frac == MAX_FRAC {
-                        frac = frac >> 1;
-                        f64_exp = f64_exp + 1;
-                        //if f64_exp equals 1024, then exp_bits will be all ones and frac_bits will be all zeros
-                        //it is an infinity by the f64 standard
-                    }
+                let mut frac = value.get_frac_with_shr();
+                if frac == MAX_FRAC {
+                    frac = frac >> 1;
+                    f64_exp = f64_exp + 1;
+                    //if f64_exp equals 1024, then exp_bits will be all ones and frac_bits will be all zeros
+                    //it is an infinity by the f64 standard
                 }
 
                 let exp_bits = (f64_exp + 1023) as u64;
@@ -157,16 +164,9 @@ impl BigFloat<2> {
             -1074..=-1023 => {
                 let subnormal_precision = (f64_exp + 1076) as u64;
                 value.decrease_significand(subnormal_precision);
-                let mut last_bit = value.significand.value.get_last_bit();
-                let mut frac = value.significand.value.value[0] >> 1;
-                if last_bit == 1 && !value.non_zero_reminder {
-                    last_bit = frac & 1;
-                }
-                if last_bit == 1 {
-                    frac = frac + 1;
-                    //if frac equals 1 << 53, then exp_bits will be 1 and frac_bits will be all zeros
-                    //it is a normal number by the f64 standard and it is the correct number
-                }
+                let frac = value.get_frac_with_shr();
+                //if frac equals 1 << 53, then exp_bits will be 1 and frac_bits will be all zeros
+                //it is a normal number by the f64 standard and it is the correct number
                 bits = bits | frac;
                 bits
             }
