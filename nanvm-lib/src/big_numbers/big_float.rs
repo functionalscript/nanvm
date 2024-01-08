@@ -106,7 +106,7 @@ impl BigFloat<10> {
 }
 
 impl BigFloat<2> {
-    fn get_frac_with_shr(self) -> u64 {
+    fn get_frac_round(self) -> u64 {
         let mut last_bit = self.significand.value.get_last_bit();
         let mut frac = self.significand.value.value[0] >> 1;
 
@@ -147,7 +147,7 @@ impl BigFloat<2> {
         let mut f64_exp = value.exp + PRECISION as i64 + 1;
         match f64_exp {
             -1022..=1023 => {
-                let mut frac = value.get_frac_with_shr();
+                let mut frac = value.get_frac_round();
                 if frac == MAX_FRAC {
                     frac = frac >> 1;
                     f64_exp = f64_exp + 1;
@@ -164,7 +164,7 @@ impl BigFloat<2> {
             -1074..=-1023 => {
                 let subnormal_precision = (f64_exp + 1076) as u64;
                 value.decrease_significand(subnormal_precision);
-                let frac = value.get_frac_with_shr();
+                let frac = value.get_frac_round();
                 //if frac equals 1 << 53, then exp_bits will be 1 and frac_bits will be all zeros
                 //it is a normal number by the f64 standard and it is the correct number
                 bits = bits | frac;
