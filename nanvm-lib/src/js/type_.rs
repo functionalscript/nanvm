@@ -5,4 +5,5 @@ pub enum Type {
     String = 2,
     Null = 3,
     Object = 4,
+    Array = 5,
 }

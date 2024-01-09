@@ -5,7 +5,8 @@ use crate::mem::{
 };
 
 use super::{
-    bitset::{REF, REF_SUBSET_SUPERPOSITION, STRING},
+    bitset::{ref_type, REF, REF_SUBSET_SUPERPOSITION},
+    js_array::JsArray,
     js_object::JsObject,
     js_string::JsString,
 };
@@ -44,10 +45,12 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     }
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
-        if STRING.has(self.0) {
-            (*block_header).block::<JsString, D>().delete();
-        } else {
-            (*block_header).block::<JsObject<D>, D>().delete();
+        let p = &mut *block_header;
+        match ref_type(self.0) {
+            REF_TYPE_STRING => p.block::<JsString, D>().delete(),
+            REF_TYPE_OBJECT => p.block::<JsObject<D>, D>().delete(),
+            REF_TYPE_ARRAY => p.block::<JsArray<D>, D>().delete(),
+            _ => unreachable!(),
         }
     }
 }

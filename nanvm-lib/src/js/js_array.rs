@@ -1,6 +1,9 @@
-use crate::{mem::{flexible_array::FlexibleArray, ref_::Ref, manager::Dealloc, block::Block}, common::bit_subset64::BitSubset64};
+use crate::{
+    common::bit_subset64::BitSubset64,
+    mem::{block::Block, flexible_array::FlexibleArray, manager::Dealloc, ref_::Ref},
+};
 
-use super::{any::Any, ref_cast::RefCast, bitset::ARRAY};
+use super::{any::Any, bitset::ARRAY, ref_cast::RefCast};
 
 pub type JsArray<D> = FlexibleArray<Any<D>>;
 

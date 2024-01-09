@@ -1,8 +1,12 @@
-use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef, ref_::Ref};
+use crate::mem::{block::Block, manager::Dealloc, optional_ref::OptionalRef};
 
 use super::{
-    any_cast::AnyCast, any_internal::AnyInternal, bitset::REF_SUBSET_SUPERPOSITION,
-    js_string::JsString, null::Null, ref_cast::RefCast, type_::Type,
+    any_cast::AnyCast,
+    any_internal::AnyInternal,
+    bitset::{ref_type, REF_SUBSET_SUPERPOSITION},
+    null::Null,
+    ref_cast::RefCast,
+    type_::Type,
 };
 
 // type Result<T> = result::Result<T, ()>;
@@ -45,10 +49,11 @@ impl<D: Dealloc> Any<D> {
     //
     pub fn get_type(&self) -> Type {
         if self.is_ref() {
-            if self.is::<Ref<JsString, D>>() {
-                Type::String
-            } else {
-                Type::Object
+            match ref_type(unsafe { self.internal().0 }) {
+                0b00 => Type::String,
+                0b01 => Type::Object,
+                0b10 => Type::Array,
+                _ => unreachable!(),
             }
         } else {
             if self.is::<f64>() {
@@ -93,7 +98,12 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{js_object::JsObjectRef, js_string::JsStringRef, null::Null, js_array::JsArrayRef},
+        js::{
+            js_array::JsArrayRef,
+            js_object::JsObjectRef,
+            js_string::{JsString, JsStringRef},
+            null::Null,
+        },
         mem::{global::Global, manager::Manager},
     };
 
@@ -232,7 +242,7 @@ mod test {
 
         let o: ArrayRef = Global().flexible_array_new([].into_iter()).to_ref();
         let u = A::move_from(o);
-        assert_eq!(u.get_type(), Type::Object);
+        assert_eq!(u.get_type(), Type::Array);
         {
             let o = u.try_move::<ArrayRef>().unwrap();
             let items = o.items();
