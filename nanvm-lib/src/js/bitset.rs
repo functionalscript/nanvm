@@ -26,10 +26,10 @@ pub const TRUE: u64 = BOOL.from_value(true as u64);
 
 pub const NULL: BitSubset64<Null> = SIMPLE_SPLIT.1.cast();
 
-// RC: 1111_1111_1111_1.1.X
+// REF: 1111_1111_1111_1.1.X.X
 
-// 49 bits for now
-pub const REF_SUBSET_SUPERPOSITION: u64 = 0x1_FFFF_FFFF_FFFF;
+// 48 bits for now
+pub const REF_SUBSET_SUPERPOSITION: u64 = 0xFFFF_FFFF_FFFF;
 
 const REF_SPLIT: (BitSubset64, BitSubset64) = REF.split(0x0002_0000_0000_0000);
 
@@ -37,9 +37,17 @@ const REF_SPLIT: (BitSubset64, BitSubset64) = REF.split(0x0002_0000_0000_0000);
 
 pub const STRING: BitSubset64 = REF_SPLIT.0;
 
-// OBJECT: 1111_1111_1111_1.1.1
+// STRING: 1111_1111_1111_1.1.1.X
 
-pub const OBJECT: BitSubset64 = REF_SPLIT.1;
+const OBJECT_ARRAY: (BitSubset64, BitSubset64) = REF_SPLIT.1.split(0x0001_0000_0000_0000);
+
+// OBJECT: 1111_1111_1111_1.1.1.0
+
+pub const OBJECT: BitSubset64 = OBJECT_ARRAY.0;
+
+// ARRAY: 1111_1111_1111_1.1.1.1.1
+
+pub const ARRAY: BitSubset64 = OBJECT_ARRAY.1;
 
 #[cfg(test)]
 mod test {
