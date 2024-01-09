@@ -15,7 +15,7 @@ pub enum JsonToken {
     False,
     Null,
     String(String),
-    Number(BigFloat<10>),
+    Number(f64),
     ObjectBegin,
     ObjectEnd,
     ArrayBegin,
@@ -138,6 +138,11 @@ struct IntegerState {
     b: BigUint,
 }
 
+pub fn bigfloat_to_f64(bf_10: BigFloat<10>) -> f64 {
+    let bf_2 = bf_10.to_bin(54);
+    bf_2.to_f64()
+}
+
 impl BigUint {
     fn add_digit(mut self, c: char) -> BigUint {
         self = &(&self * &BigUint::from_u64(10)) + &BigUint::from_u64(digit_to_number(c));
@@ -177,14 +182,14 @@ impl IntegerState {
     }
 
     fn to_token(self) -> JsonToken {
-        JsonToken::Number(BigFloat {
+        JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: BigInt {
                 sign: self.s,
                 value: self.b,
             },
             exp: 0,
             non_zero_reminder: false,
-        })
+        }))
     }
 }
 
@@ -212,14 +217,14 @@ impl FloatState {
     }
 
     fn to_token(self) -> JsonToken {
-        JsonToken::Number(BigFloat {
+        JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: BigInt {
                 sign: self.s,
                 value: self.b,
             },
             exp: self.fe,
             non_zero_reminder: false,
-        })
+        }))
     }
 }
 
@@ -243,14 +248,14 @@ impl ExpState {
                 Sign::Positive => self.e,
                 Sign::Negative => -self.e,
             };
-        JsonToken::Number(BigFloat {
+        JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: BigInt {
                 sign: self.s,
                 value: self.b,
             },
             exp,
             non_zero_reminder: false,
-        })
+        }))
     }
 }
 
@@ -569,6 +574,7 @@ mod test {
             big_uint::BigUint,
         },
         common::cast::Cast,
+        tokenizer::bigfloat_to_f64,
     };
 
     use super::{tokenize, ErrorType, JsonToken};
@@ -720,24 +726,10 @@ mod test {
     #[wasm_bindgen_test]
     fn test_integer() {
         let result = tokenize(String::from("0"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::ZERO,
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
         let result = tokenize(String::from("-0"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::ZERO,
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
         let result = tokenize(String::from("0abc"));
         assert_eq!(
@@ -753,50 +745,24 @@ mod test {
             &result,
             &[
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Number(BigFloat {
-                    significand: BigInt::from_u64(2),
-                    exp: 0,
-                    non_zero_reminder: false
-                })
+                JsonToken::Number(2.0)
             ]
         );
 
         let result = tokenize(String::from("1234567890"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(1234567890),
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(1234567890.0)]);
 
         let result = tokenize(String::from("-1234567890"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_i64(-1234567890),
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(-1234567890.0)]);
 
         let result = tokenize(String::from("[0,1]"));
         assert_eq!(
             &result,
             &[
                 JsonToken::ArrayBegin,
-                JsonToken::Number(BigFloat {
-                    significand: BigInt::ZERO,
-                    exp: 0,
-                    non_zero_reminder: false
-                }),
+                JsonToken::Number(0.0),
                 JsonToken::Comma,
-                JsonToken::Number(BigFloat {
-                    significand: BigInt::from_u64(1),
-                    exp: 0,
-                    non_zero_reminder: false
-                }),
+                JsonToken::Number(1.0),
                 JsonToken::ArrayEnd
             ]
         );
@@ -807,11 +773,7 @@ mod test {
             &[
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Number(BigFloat {
-                    significand: BigInt::from_u64(1),
-                    exp: 0,
-                    non_zero_reminder: false
-                }),
+                JsonToken::Number(1.0),
             ]
         );
 
@@ -829,34 +791,13 @@ mod test {
         );
 
         let result = tokenize(String::from("9007199254740991"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(9007199254740991),
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(9007199254740991.0)]);
 
         let result = tokenize(String::from("9007199254740992"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(9007199254740992),
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(9007199254740992.0)]);
 
         let result = tokenize(String::from("9007199254740993"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(9007199254740993),
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(9007199254740993.0)]);
     }
 
     #[test]
@@ -865,7 +806,7 @@ mod test {
         let result = tokenize(String::from("340282366920938463463374607431768211456"));
         assert_eq!(
             &result,
-            &[JsonToken::Number(BigFloat {
+            &[JsonToken::Number(bigfloat_to_f64(BigFloat {
                 significand: BigInt {
                     sign: Sign::Positive,
                     value: BigUint {
@@ -874,7 +815,7 @@ mod test {
                 },
                 exp: 0,
                 non_zero_reminder: false
-            })]
+            }))]
         );
     }
 
@@ -882,25 +823,14 @@ mod test {
     #[wasm_bindgen_test]
     fn test_float() {
         let result = tokenize(String::from("0.01"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(1),
-                exp: -2,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(0.01)]);
 
         let result = tokenize(String::from("[-12.34]"));
         assert_eq!(
             &result,
             &[
                 JsonToken::ArrayBegin,
-                JsonToken::Number(BigFloat {
-                    significand: BigInt::from_i64(-1234),
-                    exp: -2,
-                    non_zero_reminder: false
-                }),
+                JsonToken::Number(-12.34),
                 JsonToken::ArrayEnd
             ]
         );
@@ -910,64 +840,22 @@ mod test {
     #[wasm_bindgen_test]
     fn test_exp() {
         let result = tokenize(String::from("1e2"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(1),
-                exp: 2,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(1e2)]);
 
         let result = tokenize(String::from("1E+2"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(1),
-                exp: 2,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(1e2)]);
 
         let result = tokenize(String::from("0e-2"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::ZERO,
-                exp: -2,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
         let result = tokenize(String::from("1e-2"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(1),
-                exp: -2,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(1e-2)]);
 
         let result = tokenize(String::from("1.2e+2"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(12),
-                exp: 1,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(1.2e+2)]);
 
         let result = tokenize(String::from("12e0000"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(BigFloat {
-                significand: BigInt::from_u64(12),
-                exp: 0,
-                non_zero_reminder: false
-            })]
-        );
+        assert_eq!(&result, &[JsonToken::Number(12.0)]);
 
         let result = tokenize(String::from("1e"));
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
