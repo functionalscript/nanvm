@@ -3,6 +3,7 @@ mod any_cast;
 mod any_internal;
 mod bitset;
 mod bool;
+mod js_array;
 mod js_object;
 pub mod js_string;
 mod null;
