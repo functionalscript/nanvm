@@ -43,7 +43,7 @@ pub const STRING: BitSubset64 = STRING_OBJECT.0;
 
 pub const OBJECT: BitSubset64 = STRING_OBJECT.1;
 
-// ARRAY: 1111_1111_1111_1.1.1.1.0
+// ARRAY : 1111_1111_1111_1.1.1.X
 
 pub const ARRAY: BitSubset64 = REF_SPLIT.1;
 
