@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     common::cast::Cast,
-    js::any::Any,
+    js::{any::Any, null::Null, js_string::new_string},
     mem::manager::{Dealloc, Manager},
     tokenizer::JsonToken,
-    tokenizer::JsonToken::Null,
 };
 
 pub enum JsonStackElement<D: Dealloc> {
@@ -57,14 +56,14 @@ fn is_value_token(token: JsonToken) -> bool {
         _ => false,
     }
 }
-fn token_to_value<M: Manager>(token: JsonToken) -> Any<M::Dealloc> {
+fn token_to_value<M: Manager>(manager: M, token: JsonToken) -> Any<M::Dealloc> {
     match token {
-        //JsonToken::Null => Null {},
-        //JsonToken::False => false,
-        //JsonToken::True => true,
-        //JsonToken::Number(f) => f,
-        //JsonToken::String(s) => Js_String {},
-        _ => todo!(),
+        JsonToken::Null => Any::move_from(Null()),
+        JsonToken::False => Any::move_from(false),
+        JsonToken::True => Any::move_from(true),
+        JsonToken::Number(f) => Any::move_from(f),
+        JsonToken::String(s) => Any::move_from(new_string(manager, [].into_iter()).to_ref()),
+        _ => panic!(),
     }
 }
 
@@ -104,7 +103,7 @@ impl<M: Manager> StateParser<M> {
 }
 
 impl<M: Manager> JsonState<M> {
-    fn push(&mut self, token: JsonToken) {
+    fn push(&mut self, manager: M, token: JsonToken) {
         match self {
             JsonState::Result(result) => *self = JsonState::Error(ParseError::UnexpectedToken),
             JsonState::Parse(state_parse) => match state_parse.status {
@@ -124,14 +123,14 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<M: Manager>(iter: impl Iterator<Item = JsonToken>) -> Result<Any<M::Dealloc>, ParseError> {
+fn parse<M: Manager>(manager: M, iter: impl Iterator<Item = JsonToken>) -> Result<Any<M::Dealloc>, ParseError> {
     let mut state: JsonState<M> = JsonState::Parse(StateParser {
         status: ParseStatus::Initial,
         top: None,
         stack: [].cast(),
     });
     for token in iter {
-        state.push(token);
+        state.push(manager, token);
     }
     state.end()
 }
