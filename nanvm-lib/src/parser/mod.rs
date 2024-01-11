@@ -30,10 +30,10 @@ pub enum ParseStatus {
     ObjectComma,
 }
 
-pub struct StateParse<D: Dealloc> {
+pub struct StateParser<M: Manager> {
     pub status: ParseStatus,
-    pub top: Option<JsonStackElement<D>>,
-    pub stack: Vec<JsonStackElement<D>>,
+    pub top: Option<JsonStackElement<M::Dealloc>>,
+    pub stack: Vec<JsonStackElement<M::Dealloc>>,
 }
 
 pub enum ParseError {
@@ -42,7 +42,7 @@ pub enum ParseError {
 }
 
 pub enum JsonState<M: Manager> {
-    Parse(StateParse<M::Dealloc>),
+    Parse(StateParser<M>),
     Result(Any<M::Dealloc>),
     Error(ParseError),
 }
@@ -68,39 +68,39 @@ fn token_to_value<M: Manager>(token: JsonToken) -> Any<M::Dealloc> {
     }
 }
 
-// impl<M: Manager> StateParse<M::Dealloc> {
-// }
-
-fn push_value<M: Manager>(
-    mut state_parse: StateParse<M::Dealloc>,
-    value: Any<M::Dealloc>,
-) -> JsonState<M> {
-    match state_parse.top {
-        None => JsonState::Result(value),
-        Some(top) => match top {
-            JsonStackElement::Array(mut arr) => {
-                arr.push(value);
-                JsonState::Parse(StateParse {
-                    status: ParseStatus::ArrayValue,
-                    top: Option::Some(JsonStackElement::Array(arr)),
-                    stack: state_parse.stack,
-                })
+impl<M: Manager> StateParser<M> {
+    fn push_value(self, value: Any<M::Dealloc>) -> JsonState<M> {
+        match self.top {
+            None => JsonState::Result(value),
+            Some(top) => match top {
+                JsonStackElement::Array(mut arr) => {
+                    arr.push(value);
+                    JsonState::Parse(StateParser {
+                        status: ParseStatus::ArrayValue,
+                        top: Option::Some(JsonStackElement::Array(arr)),
+                        stack: self.stack,
+                    })
+                }
+                JsonStackElement::Object(mut stack_obj) => {
+                    stack_obj.map.insert(stack_obj.key, value);
+                    let new_stack_obj = JsonStackObject {
+                        map: stack_obj.map,
+                        key: String::default(),
+                    };
+                    JsonState::Parse(StateParser {
+                        status: ParseStatus::ObjectValue,
+                        top: Option::Some(JsonStackElement::Object(new_stack_obj)),
+                        stack: self.stack,
+                    })
+                }
             },
-            JsonStackElement::Object(mut stack_obj) => {
-                stack_obj.map.insert(stack_obj.key, value);
-                JsonState::Parse(StateParse {
-                    status: ParseStatus::ObjectValue,
-                    top: Option::Some(JsonStackElement::Object(stack_obj)),
-                    stack: state_parse.stack,
-                })
-            }
-        },
+        }
     }
-}
 
-fn parse_value<M: Manager>(state_parse: StateParse<M::Dealloc>, token: JsonToken) -> JsonState<M> {
-    if is_value_token(token) {}
-    todo!()
+    fn parse_value(self, token: JsonToken) -> JsonState<M> {
+        if is_value_token(token) {}
+        todo!()
+    }
 }
 
 impl<M: Manager> JsonState<M> {
@@ -125,7 +125,7 @@ impl<M: Manager> JsonState<M> {
 }
 
 fn parse<M: Manager>(iter: impl Iterator<Item = JsonToken>) -> Result<Any<M::Dealloc>, ParseError> {
-    let mut state: JsonState<M> = JsonState::Parse(StateParse {
+    let mut state: JsonState<M> = JsonState::Parse(StateParser {
         status: ParseStatus::Initial,
         top: None,
         stack: [].cast(),
