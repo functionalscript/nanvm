@@ -37,6 +37,7 @@ pub struct StateParse<D: Dealloc> {
 
 pub enum ParseError {
     UnexpectedToken,
+    UnexpectedEnd,
 }
 
 pub enum JsonState<M: Manager> {
@@ -56,12 +57,16 @@ impl<M: Manager> JsonState<M> {
         }
     }
 
-    fn end(self) -> Result<Any<M::Dealloc>, String> {
-        todo!()
+    fn end(self) -> Result<Any<M::Dealloc>, ParseError> {
+        match self {
+            JsonState::Result(result) => Ok(result),
+            JsonState::Error(error) => Err(error),
+            _ => Err(ParseError::UnexpectedEnd),
+        }
     }
 }
 
-fn parse<M: Manager>(iter: impl Iterator<Item = JsonToken>) -> Result<Any<M::Dealloc>, String> {
+fn parse<M: Manager>(iter: impl Iterator<Item = JsonToken>) -> Result<Any<M::Dealloc>, ParseError> {
     let mut state: JsonState<M> = JsonState::Parse(StateParse {
         status: ParseStatus::Initial,
         top: None,
