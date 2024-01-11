@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     common::cast::Cast,
-    js::{any::Any, null::Null, js_string::new_string},
+    js::{any::Any, js_string::new_string, null::Null},
     mem::manager::{Dealloc, Manager},
     tokenizer::JsonToken,
 };
@@ -123,8 +123,14 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<M: Manager>(manager: M, iter: impl Iterator<Item = JsonToken>) -> Result<Any<M::Dealloc>, ParseError> {
-    let mut state: JsonState<M> = JsonState::Parse(StateParser {
+fn parse<'a, M>(
+    manager: &'a M,
+    iter: impl Iterator<Item = JsonToken>,
+) -> Result<Any<<&'a M as Manager>::Dealloc>, ParseError>
+where
+    &'a M: Manager,
+{
+    let mut state: JsonState<&'a M> = JsonState::Parse(StateParser {
         status: ParseStatus::Initial,
         top: None,
         stack: [].cast(),
