@@ -64,15 +64,38 @@ fn token_to_value<M: Manager>(token: JsonToken) -> Any<M::Dealloc> {
         //JsonToken::True => true,
         //JsonToken::Number(f) => f,
         //JsonToken::String(s) => Js_String {},
-        _ => todo!()
+        _ => todo!(),
     }
 }
 
 // impl<M: Manager> StateParse<M::Dealloc> {
 // }
 
-fn push_value<M: Manager>(mut state_parse: StateParse<M::Dealloc>, token: JsonToken) {
-    todo!()
+fn push_value<M: Manager>(
+    mut state_parse: StateParse<M::Dealloc>,
+    value: Any<M::Dealloc>,
+) -> JsonState<M> {
+    match state_parse.top {
+        None => JsonState::Result(value),
+        Some(top) => match top {
+            JsonStackElement::Array(mut arr) => {
+                arr.push(value);
+                JsonState::Parse(StateParse {
+                    status: ParseStatus::ArrayValue,
+                    top: Option::Some(JsonStackElement::Array(arr)),
+                    stack: state_parse.stack,
+                })
+            },
+            JsonStackElement::Object(mut stack_obj) => {
+                stack_obj.map.insert(stack_obj.key, value);
+                JsonState::Parse(StateParse {
+                    status: ParseStatus::ObjectValue,
+                    top: Option::Some(JsonStackElement::Object(stack_obj)),
+                    stack: state_parse.stack,
+                })
+            }
+        },
+    }
 }
 
 fn parse_value<M: Manager>(state_parse: StateParse<M::Dealloc>, token: JsonToken) -> JsonState<M> {
