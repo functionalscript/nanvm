@@ -5,6 +5,7 @@ use crate::{
     js::any::Any,
     mem::manager::{Dealloc, Manager},
     tokenizer::JsonToken,
+    tokenizer::JsonToken::Null,
 };
 
 pub enum JsonStackElement<D: Dealloc> {
@@ -46,11 +47,45 @@ pub enum JsonState<M: Manager> {
     Error(ParseError),
 }
 
+fn is_value_token(token: JsonToken) -> bool {
+    match token {
+        JsonToken::Null
+        | JsonToken::False
+        | JsonToken::True
+        | JsonToken::Number(_)
+        | JsonToken::String(_) => true,
+        _ => false,
+    }
+}
+fn token_to_value<M: Manager>(token: JsonToken) -> Any<M::Dealloc> {
+    match token {
+        //JsonToken::Null => Null {},
+        //JsonToken::False => false,
+        //JsonToken::True => true,
+        //JsonToken::Number(f) => f,
+        //JsonToken::String(s) => Js_String {},
+        _ => todo!()
+    }
+}
+
+// impl<M: Manager> StateParse<M::Dealloc> {
+// }
+
+fn push_value<M: Manager>(mut state_parse: StateParse<M::Dealloc>, token: JsonToken) {
+    todo!()
+}
+
+fn parse_value<M: Manager>(state_parse: StateParse<M::Dealloc>, token: JsonToken) -> JsonState<M> {
+    if is_value_token(token) {}
+    todo!()
+}
+
 impl<M: Manager> JsonState<M> {
     fn push(&mut self, token: JsonToken) {
         match self {
             JsonState::Result(result) => *self = JsonState::Error(ParseError::UnexpectedToken),
-            JsonState::Parse(state_parse) => match state_parse {
+            JsonState::Parse(state_parse) => match state_parse.status {
+                ParseStatus::Initial | ParseStatus::ObjectComma => {}
                 _ => todo!(),
             },
             _ => {}
