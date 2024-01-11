@@ -6,7 +6,7 @@ mod bool;
 mod js_array;
 mod js_object;
 pub mod js_string;
-mod null;
+pub mod null;
 mod number;
 mod ref_cast;
 mod type_;
