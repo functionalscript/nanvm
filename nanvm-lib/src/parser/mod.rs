@@ -35,14 +35,26 @@ pub struct StateParse<D: Dealloc> {
     pub stack: Vec<JsonStackElement<D>>,
 }
 
+pub enum ParseError {
+    UnexpectedToken,
+}
+
 pub enum JsonState<M: Manager> {
     Parse(StateParse<M::Dealloc>),
     Result(Any<M::Dealloc>),
-    Error(String),
+    Error(ParseError),
 }
 
 impl<M: Manager> JsonState<M> {
-    fn push(&mut self, token: JsonToken) {}
+    fn push(&mut self, token: JsonToken) {
+        match self {
+            JsonState::Result(result) => *self = JsonState::Error(ParseError::UnexpectedToken),
+            JsonState::Parse(state_parse) => match state_parse {
+                _ => todo!(),
+            },
+            _ => {}
+        }
+    }
 
     fn end(self) -> Result<Any<M::Dealloc>, String> {
         todo!()
