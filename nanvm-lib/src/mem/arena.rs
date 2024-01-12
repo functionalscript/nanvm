@@ -34,15 +34,15 @@ impl BlockHeader for NoHeader {
     }
 }
 
-impl<'a> Dealloc for &Arena<'a> {
+impl<'a> Dealloc for Arena<'a> {
     type BlockHeader = NoHeader;
     #[inline(always)]
     unsafe fn dealloc(_: *mut u8, _: Layout) {}
 }
 
-impl<'a> Manager for &Arena<'a> {
+impl<'a> Manager for Arena<'a> {
     type Dealloc = Self;
-    unsafe fn alloc(self, layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let result = {
             let result = self.start.get();
             result.byte_add(result.align_offset(layout.align()))

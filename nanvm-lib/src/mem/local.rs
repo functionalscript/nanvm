@@ -38,7 +38,7 @@ impl Local {
     }
 }
 
-impl Dealloc for &Local {
+impl Dealloc for Local {
     type BlockHeader = AtomicIsize;
     #[inline(always)]
     unsafe fn dealloc(block_p: *mut u8, block_layout: Layout) {
@@ -53,9 +53,9 @@ impl Dealloc for &Local {
     }
 }
 
-impl Manager for &Local {
+impl Manager for Local {
     type Dealloc = Self;
-    unsafe fn alloc(self, block_layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, block_layout: Layout) -> *mut u8 {
         let (header_layout, layout) = Local::layout(block_layout);
         self.counter.ref_counter_update(RefCounterUpdate::AddRef);
         self.size.set(self.size.get() + layout.size());

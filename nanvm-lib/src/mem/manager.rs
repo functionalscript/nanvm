@@ -20,10 +20,10 @@ pub trait Dealloc {
 pub trait Manager: Sized {
     // required:
     type Dealloc: Dealloc;
-    unsafe fn alloc(self, layout: Layout) -> *mut u8;
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8;
     // optional:
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
-    fn new<N: Constructor>(self, new_in_place: N) -> MutRef<N::Result, Self::Dealloc> {
+    fn new<N: Constructor>(&self, new_in_place: N) -> MutRef<N::Result, Self::Dealloc> {
         unsafe {
             let p = self.alloc(Block::<N::Result, Self::Dealloc>::block_layout(
                 new_in_place.result_size(),
@@ -40,12 +40,12 @@ pub trait Manager: Sized {
         }
     }
     #[inline(always)]
-    fn fixed_new<T>(self, value: T) -> MutRef<Fixed<T>, Self::Dealloc> {
+    fn fixed_new<T>(&self, value: T) -> MutRef<Fixed<T>, Self::Dealloc> {
         self.new(Fixed(value))
     }
     #[inline(always)]
     fn flexible_array_new<I>(
-        self,
+        &self,
         items: impl ExactSizeIterator<Item = I>,
     ) -> MutRef<FlexibleArray<I, usize>, Self::Dealloc> {
         self.new(FlexibleArrayConstructor::from(items))

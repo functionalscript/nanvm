@@ -19,7 +19,7 @@ impl Dealloc for Global {
 impl Manager for Global {
     type Dealloc = Global;
     #[inline(always)]
-    unsafe fn alloc(self, layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         alloc(layout)
     }
 }
