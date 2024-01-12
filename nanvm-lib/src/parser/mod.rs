@@ -29,7 +29,7 @@ pub enum ParseStatus {
     ObjectComma,
 }
 
-pub struct StateParser<M: Manager> {
+pub struct ParseState<M: Manager> {
     pub status: ParseStatus,
     pub top: Option<JsonStackElement<M::Dealloc>>,
     pub stack: Vec<JsonStackElement<M::Dealloc>>,
@@ -41,7 +41,7 @@ pub enum ParseError {
 }
 
 pub enum JsonState<M: Manager> {
-    Parse(StateParser<M>),
+    Parse(ParseState<M>),
     Result(Any<M::Dealloc>),
     Error(ParseError),
 }
@@ -67,14 +67,14 @@ fn token_to_value<M: Manager>(manager: M, token: JsonToken) -> Any<M::Dealloc> {
     }
 }
 
-impl<M: Manager> StateParser<M> {
+impl<M: Manager> ParseState<M> {
     fn push_value(self, value: Any<M::Dealloc>) -> JsonState<M> {
         match self.top {
             None => JsonState::Result(value),
             Some(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
-                    JsonState::Parse(StateParser {
+                    JsonState::Parse(ParseState {
                         status: ParseStatus::ArrayValue,
                         top: Option::Some(JsonStackElement::Array(arr)),
                         stack: self.stack,
@@ -86,7 +86,7 @@ impl<M: Manager> StateParser<M> {
                         map: stack_obj.map,
                         key: String::default(),
                     };
-                    JsonState::Parse(StateParser {
+                    JsonState::Parse(ParseState {
                         status: ParseStatus::ObjectValue,
                         top: Option::Some(JsonStackElement::Object(new_stack_obj)),
                         stack: self.stack,
@@ -105,9 +105,11 @@ impl<M: Manager> StateParser<M> {
 impl<M: Manager> JsonState<M> {
     fn push(&mut self, manager: M, token: JsonToken) {
         match self {
-            JsonState::Result(result) => *self = JsonState::Error(ParseError::UnexpectedToken),
+            JsonState::Result(_) => *self = JsonState::Error(ParseError::UnexpectedToken),
             JsonState::Parse(state_parse) => match state_parse.status {
-                ParseStatus::Initial | ParseStatus::ObjectComma => {}
+                ParseStatus::Initial | ParseStatus::ObjectComma => {
+                    //*self = state_parse.parse_value(token);
+                }
                 _ => todo!(),
             },
             _ => {}
@@ -130,7 +132,7 @@ fn parse<'a, M>(
 where
     &'a M: Manager,
 {
-    let mut state: JsonState<&'a M> = JsonState::Parse(StateParser {
+    let mut state: JsonState<&'a M> = JsonState::Parse(ParseState {
         status: ParseStatus::Initial,
         top: None,
         stack: [].cast(),
