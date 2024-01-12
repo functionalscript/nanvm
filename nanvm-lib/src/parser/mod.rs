@@ -62,7 +62,7 @@ fn token_to_value<M: Manager>(manager: M, token: JsonToken) -> Any<M::Dealloc> {
         JsonToken::False => Any::move_from(false),
         JsonToken::True => Any::move_from(true),
         JsonToken::Number(f) => Any::move_from(f),
-        JsonToken::String(s) => Any::move_from(new_string(manager, [].into_iter()).to_ref()),
+        JsonToken::String(s) => Any::move_from(new_string(manager, [].into_iter()).to_ref()), //todo: string to u16 array
         _ => panic!(),
     }
 }
