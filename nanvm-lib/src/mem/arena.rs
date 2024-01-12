@@ -69,6 +69,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test() {
+        //let x = {
         let mut range = [0u8; 1024];
         let arena = Arena::new(&mut range[..]);
         assert_eq!(arena.end as usize - arena.start.get() as usize, 1024);
@@ -77,6 +78,8 @@ mod test {
         assert_eq!(arena.end as usize - arena.start.get() as usize, 1023);
         let _mr = arena.fixed_new(43);
         assert_eq!(arena.end as usize - arena.start.get() as usize, 1016);
+        //    _mr
+        //};
     }
 
     #[test]

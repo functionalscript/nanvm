@@ -123,20 +123,33 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<'a, M>(
-    manager: &'a M,
+fn parse<M: Manager + Clone>(
+    manager: M,
     iter: impl Iterator<Item = JsonToken>,
-) -> Result<Any<<&'a M as Manager>::Dealloc>, ParseError>
-where
-    &'a M: Manager,
-{
-    let mut state: JsonState<&'a M> = JsonState::Parse(StateParser {
+) -> Result<Any<M::Dealloc>, ParseError> {
+    let mut state: JsonState<M> = JsonState::Parse(StateParser {
         status: ParseStatus::Initial,
         top: None,
         stack: [].cast(),
     });
     for token in iter {
-        state.push(manager, token);
+        state.push(manager.clone(), token);
     }
     state.end()
+}
+
+#[cfg(test)]
+mod test {
+    use crate::mem::{global::GLOBAL, local::Local};
+
+    use super::parse;
+
+    fn test_local() {
+        let local = Local::default();
+        let _ = parse(&local, [].into_iter());
+    }
+
+    fn test_global() {
+        let _ = parse(GLOBAL, [].into_iter());
+    }
 }

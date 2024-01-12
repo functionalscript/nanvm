@@ -3,7 +3,7 @@ use std::alloc::{alloc, dealloc};
 
 use super::manager::{Dealloc, Manager};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Global();
 
 pub const GLOBAL: Global = Global();
