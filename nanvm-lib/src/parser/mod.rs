@@ -47,7 +47,7 @@ pub enum JsonState<M: Manager> {
 }
 
 impl JsonToken {
-    fn is_value_token(self) -> bool {
+    fn is_value_token(&self) -> bool {
         match self {
             JsonToken::Null
             | JsonToken::False
@@ -58,7 +58,7 @@ impl JsonToken {
         }
     }
 
-    fn token_to_value<M: Manager>(self, manager: M) -> Any<M::Dealloc> {
+    fn to_any<M: Manager>(self, manager: M) -> Any<M::Dealloc> {
         match self {
             JsonToken::Null => Any::move_from(Null()),
             JsonToken::False => Any::move_from(false),
@@ -99,23 +99,38 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn parse_value(&self, token: JsonToken) -> JsonState<M> {
-        if token.is_value_token() {}
+    fn start_array(&self) -> JsonState<M> {
         todo!()
+    }
+
+    fn start_object(&self) -> JsonState<M> {
+        todo!()
+    }
+
+    fn parse_value(self, manager: M, token: JsonToken) -> JsonState<M> {
+        if token.is_value_token() {
+            let any = token.to_any(manager);
+            return self.push_value(any);
+        }
+        match token {
+            JsonToken::ArrayBegin => self.start_array(),
+            JsonToken::ObjectBegin => self.start_object(),
+            _ => JsonState::Error(ParseError::UnexpectedToken),
+        }
     }
 }
 
 impl<M: Manager> JsonState<M> {
-    fn push(&mut self, manager: M, token: JsonToken) {
+    fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self {
-            JsonState::Result(_) => *self = JsonState::Error(ParseError::UnexpectedToken),
+            JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
             JsonState::Parse(parse_state) => match parse_state.status {
                 ParseStatus::Initial | ParseStatus::ObjectComma => {
-                    *self = parse_state.parse_value(token);
+                    parse_state.parse_value(manager, token)
                 }
                 _ => todo!(),
             },
-            _ => {}
+            _ => todo!(),
         }
     }
 
@@ -141,7 +156,7 @@ where
         stack: [].cast(),
     });
     for token in iter {
-        state.push(manager, token);
+        state = state.push(manager, token);
     }
     state.end()
 }
