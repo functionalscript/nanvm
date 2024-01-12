@@ -103,6 +103,10 @@ impl<M: Manager> ParseState<M> {
         todo!()
     }
 
+    fn end_array(&self) -> JsonState<M> {
+        todo!()
+    }
+
     fn start_object(&self) -> JsonState<M> {
         todo!()
     }
@@ -118,6 +122,31 @@ impl<M: Manager> ParseState<M> {
             _ => JsonState::Error(ParseError::UnexpectedToken),
         }
     }
+
+    fn parse_array_start(self, manager: M, token: JsonToken) -> JsonState<M> {
+        if token.is_value_token() {
+            let any = token.to_any(manager);
+            return self.push_value(any);
+        }
+        match token {
+            JsonToken::ArrayBegin => self.start_array(),
+            JsonToken::ArrayEnd => self.end_array(),
+            JsonToken::ObjectBegin => self.start_object(),
+            _ => JsonState::Error(ParseError::UnexpectedToken),
+        }
+    }
+
+    fn parse_array_value(self, token: JsonToken) -> JsonState<M> {
+        match token {
+            JsonToken::ArrayEnd => self.end_array(),
+            JsonToken::Comma => JsonState::Parse(ParseState {
+                status: ParseStatus::ArrayComma,
+                top: self.top,
+                stack: self.stack,
+            }),
+            _ => JsonState::Error(ParseError::UnexpectedToken),
+        }
+    }
 }
 
 impl<M: Manager> JsonState<M> {
@@ -125,9 +154,11 @@ impl<M: Manager> JsonState<M> {
         match self {
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
             JsonState::Parse(parse_state) => match parse_state.status {
-                ParseStatus::Initial | ParseStatus::ObjectComma => {
+                ParseStatus::Initial | ParseStatus::ArrayComma => {
                     parse_state.parse_value(manager, token)
                 }
+                ParseStatus::ArrayStart => parse_state.parse_array_start(manager, token),
+                ParseStatus::ArrayValue => parse_state.parse_array_value(token),
                 _ => todo!(),
             },
             _ => todo!(),
