@@ -123,7 +123,7 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<M: Manager + Clone>(
+fn parse<M: Manager>(
     manager: M,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<Any<M::Dealloc>, ParseError> {
@@ -133,7 +133,7 @@ fn parse<M: Manager + Clone>(
         stack: [].cast(),
     });
     for token in iter {
-        state.push(manager.clone(), token);
+        state.push(manager, token);
     }
     state.end()
 }
