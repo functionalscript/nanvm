@@ -64,7 +64,9 @@ impl JsonToken {
             JsonToken::False => Any::move_from(false),
             JsonToken::True => Any::move_from(true),
             JsonToken::Number(f) => Any::move_from(f),
-            JsonToken::String(s) => Any::move_from(new_string(manager, [].into_iter()).to_ref()), //todo: string to u16 array
+            JsonToken::String(s) => Any::move_from(
+                new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref(),
+            ),
             _ => panic!(),
         }
     }
