@@ -46,24 +46,27 @@ pub enum JsonState<M: Manager> {
     Error(ParseError),
 }
 
-fn is_value_token(token: JsonToken) -> bool {
-    match token {
-        JsonToken::Null
-        | JsonToken::False
-        | JsonToken::True
-        | JsonToken::Number(_)
-        | JsonToken::String(_) => true,
-        _ => false,
+impl JsonToken {
+    fn is_value_token(self) -> bool {
+        match self {
+            JsonToken::Null
+            | JsonToken::False
+            | JsonToken::True
+            | JsonToken::Number(_)
+            | JsonToken::String(_) => true,
+            _ => false,
+        }
     }
-}
-fn token_to_value<M: Manager>(manager: M, token: JsonToken) -> Any<M::Dealloc> {
-    match token {
-        JsonToken::Null => Any::move_from(Null()),
-        JsonToken::False => Any::move_from(false),
-        JsonToken::True => Any::move_from(true),
-        JsonToken::Number(f) => Any::move_from(f),
-        JsonToken::String(s) => Any::move_from(new_string(manager, [].into_iter()).to_ref()), //todo: string to u16 array
-        _ => panic!(),
+
+    fn token_to_value<M: Manager>(self, manager: M) -> Any<M::Dealloc> {
+        match self {
+            JsonToken::Null => Any::move_from(Null()),
+            JsonToken::False => Any::move_from(false),
+            JsonToken::True => Any::move_from(true),
+            JsonToken::Number(f) => Any::move_from(f),
+            JsonToken::String(s) => Any::move_from(new_string(manager, [].into_iter()).to_ref()), //todo: string to u16 array
+            _ => panic!(),
+        }
     }
 }
 
@@ -96,8 +99,8 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn parse_value(self, token: JsonToken) -> JsonState<M> {
-        if is_value_token(token) {}
+    fn parse_value(&self, token: JsonToken) -> JsonState<M> {
+        if token.is_value_token() {}
         todo!()
     }
 }
@@ -106,9 +109,9 @@ impl<M: Manager> JsonState<M> {
     fn push(&mut self, manager: M, token: JsonToken) {
         match self {
             JsonState::Result(_) => *self = JsonState::Error(ParseError::UnexpectedToken),
-            JsonState::Parse(state_parse) => match state_parse.status {
+            JsonState::Parse(parse_state) => match parse_state.status {
                 ParseStatus::Initial | ParseStatus::ObjectComma => {
-                    //*self = state_parse.parse_value(token);
+                    *self = parse_state.parse_value(token);
                 }
                 _ => todo!(),
             },
