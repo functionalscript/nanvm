@@ -17,7 +17,7 @@ pub trait Dealloc {
 }
 
 /// Block = (Header, Object)
-pub trait Manager: Sized {
+pub trait Manager: Sized + Copy {
     // required:
     type Dealloc: Dealloc;
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
