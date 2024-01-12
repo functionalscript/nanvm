@@ -229,7 +229,7 @@ fn parse<M: Manager>(
     manager: M,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<Any<M::Dealloc>, ParseError> {
-    let mut state: JsonState<M> = JsonState::Parse(StateParser {
+    let mut state: JsonState<M> = JsonState::Parse(ParseState {
         status: ParseStatus::Initial,
         top: None,
         stack: [].cast(),
