@@ -152,8 +152,23 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn start_object(&self) -> JsonState<M> {
-        todo!()
+    fn start_object(mut self) -> JsonState<M> {
+        let new_top: JsonStackElement<<M as Manager>::Dealloc> =
+            JsonStackElement::Object(JsonStackObject {
+                map: HashMap::default(),
+                key: String::default(),
+            });
+        match self.top {
+            Some(top) => {
+                self.stack.push_back(top);
+            }
+            None => {}
+        }
+        JsonState::Parse(ParseState {
+            status: ParseStatus::ObjectStart,
+            top: Some(new_top),
+            stack: self.stack,
+        })
     }
 
     fn end_object(&self) -> JsonState<M> {
