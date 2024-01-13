@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use crate::{
     common::cast::Cast,
@@ -13,6 +13,7 @@ pub enum JsonStackElement<D: Dealloc> {
 }
 
 pub struct JsonStackObject<D: Dealloc> {
+    //Vec<Property<D>>
     pub map: HashMap<String, Any<D>>,
     pub key: String,
 }
@@ -32,7 +33,7 @@ pub enum ParseStatus {
 pub struct ParseState<M: Manager> {
     pub status: ParseStatus,
     pub top: Option<JsonStackElement<M::Dealloc>>,
-    pub stack: Vec<JsonStackElement<M::Dealloc>>,
+    pub stack: VecDeque<JsonStackElement<M::Dealloc>>,
 }
 
 pub enum ParseError {
@@ -101,8 +102,21 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn push_key(&self, s: String) -> JsonState<M> {
-        todo!()
+    fn push_key(self, s: String) -> JsonState<M> {
+        match self.top {
+            Some(JsonStackElement::Object(mut stack_obj)) => {
+                let new_stack_obj = JsonStackObject {
+                    map: stack_obj.map,
+                    key: s,
+                };
+                JsonState::Parse(ParseState {
+                    status: ParseStatus::ObjectKey,
+                    top: Option::Some(JsonStackElement::Object(new_stack_obj)),
+                    stack: self.stack,
+                })
+            }
+            _ => JsonState::Error(ParseError::UnexpectedToken),
+        }
     }
 
     fn start_array(&self) -> JsonState<M> {
@@ -232,7 +246,7 @@ fn parse<M: Manager>(
     let mut state: JsonState<M> = JsonState::Parse(ParseState {
         status: ParseStatus::Initial,
         top: None,
-        stack: [].cast(),
+        stack: VecDeque::from([]),
     });
     for token in iter {
         state = state.push(manager, token);
@@ -252,6 +266,9 @@ mod test {
     }
 
     fn test_global() {
-        let _ = parse(GLOBAL, [].into_iter());
+        let _ = {
+            let global = GLOBAL;
+            parse(global, [].into_iter())
+        };
     }
 }
