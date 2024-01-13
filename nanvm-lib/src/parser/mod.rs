@@ -119,8 +119,19 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn start_array(&self) -> JsonState<M> {
-        todo!()
+    fn start_array(mut self) -> JsonState<M> {
+        let new_top = JsonStackElement::Array(Vec::default());
+        match self.top {
+            Some(top) => {
+                self.stack.push_back(top);
+            }
+            None => {}
+        }
+        JsonState::Parse(ParseState {
+            status: ParseStatus::ArrayStart,
+            top: Some(new_top),
+            stack: self.stack,
+        })
     }
 
     fn end_array(&self) -> JsonState<M> {
