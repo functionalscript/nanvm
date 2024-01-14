@@ -23,6 +23,14 @@ impl<T: Object, D: Dealloc> MutRef<T, D> {
         forget(self);
         result
     }
+    #[inline(always)]
+    pub unsafe fn internal(&mut self) -> &mut Block<T, D> {
+        &mut *self.0
+    }
+    #[inline(always)]
+    pub unsafe fn set_internal(&mut self, v: *mut Block<T, D>) {
+        self.0 = v;
+    }
 }
 
 impl<T: Object, D: Dealloc> Drop for MutRef<T, D> {

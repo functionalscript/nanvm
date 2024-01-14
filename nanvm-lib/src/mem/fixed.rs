@@ -7,13 +7,13 @@ pub struct Fixed<T>(pub T);
 impl<T> Object for Fixed<T> {}
 
 impl<T> Constructor for Fixed<T> {
-    type Result = Fixed<T>;
+    type Object = Fixed<T>;
     #[inline(always)]
-    fn result_size(&self) -> usize {
-        Self::Result::object_size(self)
+    fn new_size(&self) -> usize {
+        Self::Object::object_size(self)
     }
     #[inline(always)]
-    unsafe fn construct(self, p: *mut Self::Result) {
+    unsafe fn construct(self, p: *mut Self::Object) {
         p.write(self);
     }
 }

@@ -14,12 +14,12 @@ impl<H: FlexibleArrayHeader, I: Iterator> FlexibleArrayConstructor<H, I> {
 }
 
 impl<H: FlexibleArrayHeader, I: Iterator> Constructor for FlexibleArrayConstructor<H, I> {
-    type Result = FlexibleArray<I::Item, H>;
+    type Object = FlexibleArray<I::Item, H>;
     #[inline(always)]
-    fn result_size(&self) -> usize {
-        Self::Result::flexible_size(self.header.len())
+    fn new_size(&self) -> usize {
+        Self::Object::flexible_size(self.header.len())
     }
-    unsafe fn construct(self, p: *mut Self::Result) {
+    unsafe fn construct(self, p: *mut Self::Object) {
         let v = &mut *p;
         v.header.to_mut_ptr().write(self.header);
         let mut src = self.items;

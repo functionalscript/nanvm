@@ -104,7 +104,7 @@ mod test {
             js_string::{new_string, JsString, JsStringRef},
             null::Null,
         },
-        mem::{global::Global, manager::Manager},
+        mem::global::Global,
     };
 
     use super::*;
