@@ -22,6 +22,9 @@ pub trait Manager: Sized + Copy {
     type Dealloc: Dealloc;
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
     // optional methods:
+    unsafe fn typed_alloc<O: Object>(self, object_size: usize) -> *mut Block<O, Self::Dealloc> {
+        self.alloc(Block::<O, Self::Dealloc>::block_layout(object_size)) as _
+    }
     /// A user must call destructors for all old exceeding objects in the block before calling this method and
     /// initialize all new extra objects after calling this method.
     unsafe fn realloc(self, ptr: *mut u8, old_layout: Layout, new_layout: Layout) -> *mut u8 {
@@ -35,12 +38,19 @@ pub trait Manager: Sized + Copy {
         Self::Dealloc::dealloc(ptr, old_layout);
         new_ptr
     }
+    unsafe fn typed_realloc<O: Object>(
+        self,
+        ptr: *mut Block<O, Self::Dealloc>,
+        old_size: usize,
+        new_size: usize,
+    ) -> *mut Block<O, Self::Dealloc> {
+        let bl = |size| Block::<O, Self::Dealloc>::block_layout(size);
+        self.realloc(ptr as _, bl(old_size), bl(new_size)) as _
+    }
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     fn new<C: Constructor>(self, constructor: C) -> MutRef<C::Object, Self::Dealloc> {
         unsafe {
-            let p = self.alloc(Block::<C::Object, Self::Dealloc>::block_layout(
-                constructor.new_size(),
-            )) as *mut Block<C::Object, Self::Dealloc>;
+            let p = self.typed_alloc(constructor.new_size());
             {
                 let block = &mut *p;
                 block
@@ -63,30 +73,24 @@ pub trait Manager: Sized + Copy {
     ) -> MutRef<FlexibleArray<I, usize>, Self::Dealloc> {
         self.new(FlexibleArrayConstructor::from(items))
     }
-    fn resize<A: Assign>(self, m: &mut MutRef<A::Object, Self::Dealloc>, assign: A) {
+    fn resize<A: Assign>(self, m: &mut MutRef<A::Object, Self::Dealloc>, a: A) {
         let old_size = m.object_size();
-        let new_size = assign.new_size();
-        let realloc = |m: &mut MutRef<A::Object, Self::Dealloc>| unsafe {
-            let p = self.realloc(
-                m.internal().to_mut_ptr() as *mut u8,
-                Block::<A::Object, Self::Dealloc>::block_layout(old_size),
-                Block::<A::Object, Self::Dealloc>::block_layout(new_size),
-            ) as *mut Block<A::Object, Self::Dealloc>;
+        let new_size = a.new_size();
+        let realloc = |m: &mut MutRef<A::Object, _>| unsafe {
+            let p = self.typed_realloc(m.internal(), old_size, new_size);
             m.set_internal(p);
         };
-        let assign_fn = |m: &mut MutRef<A::Object, Self::Dealloc>| unsafe {
-            assign.assign(m.internal().object_mut())
-        };
+        let assign = |m: &mut MutRef<A::Object, _>| unsafe { a.assign(m.internal().object_mut()) };
         match old_size.cmp(&new_size) {
-            Ordering::Equal => assign_fn(m),
+            Ordering::Equal => assign(m),
             Ordering::Greater => {
-                assign_fn(m);
+                assign(m);
                 realloc(m);
-            },
+            }
             Ordering::Less => {
                 realloc(m);
-                assign_fn(m);
-            },
+                assign(m);
+            }
         }
     }
 }
