@@ -79,11 +79,11 @@ pub trait Manager: Sized + Copy {
         };
         match old_size.cmp(&new_size) {
             Ordering::Equal => assign_fn(m),
-            Ordering::Greater => unsafe {
+            Ordering::Greater => {
                 assign_fn(m);
                 realloc(m);
             },
-            Ordering::Less => unsafe {
+            Ordering::Less => {
                 realloc(m);
                 assign_fn(m);
             },
