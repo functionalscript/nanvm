@@ -22,11 +22,13 @@ pub trait Manager: Sized + Copy {
     type Dealloc: Dealloc;
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
     // optional methods:
+    #[inline(always)]
     unsafe fn typed_alloc<O: Object>(self, object_size: usize) -> *mut Block<O, Self::Dealloc> {
         self.alloc(Block::<O, Self::Dealloc>::block_layout(object_size)) as _
     }
     /// A user must call destructors for all old exceeding objects in the block before calling this method and
     /// initialize all new extra objects after calling this method.
+    #[inline(always)]
     unsafe fn realloc(self, ptr: *mut u8, old_layout: Layout, new_layout: Layout) -> *mut u8 {
         self.realloc_move(ptr, old_layout, new_layout)
     }
@@ -38,14 +40,15 @@ pub trait Manager: Sized + Copy {
         Self::Dealloc::dealloc(ptr, old_layout);
         new_ptr
     }
+    #[inline(always)]
     unsafe fn typed_realloc<O: Object>(
         self,
         ptr: *mut Block<O, Self::Dealloc>,
         old_size: usize,
         new_size: usize,
     ) -> *mut Block<O, Self::Dealloc> {
-        let bl = |size| Block::<O, Self::Dealloc>::block_layout(size);
-        self.realloc(ptr as _, bl(old_size), bl(new_size)) as _
+        let block_layout = |size| Block::<O, Self::Dealloc>::block_layout(size);
+        self.realloc(ptr as _, block_layout(old_size), block_layout(new_size)) as _
     }
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
     fn new<C: Constructor>(self, constructor: C) -> MutRef<C::Object, Self::Dealloc> {
