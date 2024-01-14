@@ -1,7 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
 use crate::{
-    common::cast::Cast,
     js::{
         any::Any,
         js_array::new_array,
@@ -9,7 +8,7 @@ use crate::{
         js_string::{new_string, JsStringRef},
         null::Null,
     },
-    mem::manager::{self, Dealloc, Manager},
+    mem::manager::{Dealloc, Manager},
     tokenizer::JsonToken,
 };
 
