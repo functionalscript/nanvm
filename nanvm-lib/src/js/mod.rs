@@ -4,7 +4,7 @@ mod any_internal;
 mod bitset;
 mod bool;
 pub mod js_array;
-mod js_object;
+pub mod js_object;
 pub mod js_string;
 pub mod null;
 mod number;

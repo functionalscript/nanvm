@@ -2,7 +2,13 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::{
     common::cast::Cast,
-    js::{any::Any, js_array::new_array, js_string::new_string, null::Null},
+    js::{
+        any::Any,
+        js_array::new_array,
+        js_object::new_object,
+        js_string::{new_string, JsStringRef},
+        null::Null,
+    },
     mem::manager::{self, Dealloc, Manager},
     tokenizer::JsonToken,
 };
@@ -13,7 +19,6 @@ pub enum JsonStackElement<D: Dealloc> {
 }
 
 pub struct JsonStackObject<D: Dealloc> {
-    //Vec<Property<D>>
     pub map: HashMap<String, Any<D>>,
     pub key: String,
 }
@@ -47,6 +52,10 @@ pub enum JsonState<M: Manager> {
     Error(ParseError),
 }
 
+fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
+    new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
+}
+
 impl JsonToken {
     fn is_value_token(&self) -> bool {
         match self {
@@ -65,9 +74,7 @@ impl JsonToken {
             JsonToken::False => Any::move_from(false),
             JsonToken::True => Any::move_from(true),
             JsonToken::Number(f) => Any::move_from(f),
-            JsonToken::String(s) => Any::move_from(
-                new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref(),
-            ),
+            JsonToken::String(s) => Any::move_from(to_js_string(manager, s)),
             _ => panic!(),
         }
     }
@@ -171,8 +178,27 @@ impl<M: Manager> ParseState<M> {
         })
     }
 
-    fn end_object(&self) -> JsonState<M> {
-        todo!()
+    fn end_object(mut self, manager: M) -> JsonState<M> {
+        match self.top {
+            Some(top) => match top {
+                JsonStackElement::Object(object) => {
+                    let vec = object
+                        .map
+                        .into_iter()
+                        .map(|kv| (to_js_string(manager, kv.0), kv.1))
+                        .collect::<Vec<_>>();
+                    let js_object = new_object(manager, vec.into_iter()).to_ref();
+                    let new_state = ParseState {
+                        status: ParseStatus::ArrayStart,
+                        top: self.stack.pop_back(),
+                        stack: self.stack,
+                    };
+                    return new_state.push_value(Any::move_from(js_object));
+                }
+                _ => panic!(),
+            },
+            _ => panic!(),
+        }
     }
 
     fn parse_value(self, manager: M, token: JsonToken) -> JsonState<M> {
@@ -212,10 +238,10 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn parse_object_start(self, token: JsonToken) -> JsonState<M> {
+    fn parse_object_start(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
-            JsonToken::ObjectEnd => self.end_object(),
+            JsonToken::ObjectEnd => self.end_object(manager),
             _ => JsonState::Error(ParseError::UnexpectedToken),
         }
     }
@@ -231,9 +257,9 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
-    fn parse_object_next(self, token: JsonToken) -> JsonState<M> {
+    fn parse_object_next(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
-            JsonToken::ObjectEnd => self.end_object(),
+            JsonToken::ObjectEnd => self.end_object(manager),
             JsonToken::Comma => JsonState::Parse(ParseState {
                 status: ParseStatus::ObjectComma,
                 top: self.top,
@@ -261,9 +287,9 @@ impl<M: Manager> JsonState<M> {
                 }
                 ParseStatus::ArrayStart => parse_state.parse_array_start(manager, token),
                 ParseStatus::ArrayValue => parse_state.parse_array_value(manager, token),
-                ParseStatus::ObjectStart => parse_state.parse_object_start(token),
+                ParseStatus::ObjectStart => parse_state.parse_object_start(manager, token),
                 ParseStatus::ObjectKey => parse_state.parse_object_key(token),
-                ParseStatus::ObjectValue => parse_state.parse_object_next(token),
+                ParseStatus::ObjectValue => parse_state.parse_object_next(manager, token),
                 ParseStatus::ObjectComma => parse_state.parse_object_comma(token),
             },
             _ => self,
