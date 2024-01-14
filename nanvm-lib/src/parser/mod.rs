@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 use crate::{
     js::{
@@ -37,7 +37,7 @@ pub enum ParseStatus {
 pub struct ParseState<M: Manager> {
     pub status: ParseStatus,
     pub top: Option<JsonStackElement<M::Dealloc>>,
-    pub stack: VecDeque<JsonStackElement<M::Dealloc>>,
+    pub stack: Vec<JsonStackElement<M::Dealloc>>,
 }
 
 pub enum ParseError {
@@ -129,7 +129,7 @@ impl<M: Manager> ParseState<M> {
         let new_top = JsonStackElement::Array(Vec::default());
         match self.top {
             Some(top) => {
-                self.stack.push_back(top);
+                self.stack.push(top);
             }
             None => {}
         }
@@ -147,7 +147,7 @@ impl<M: Manager> ParseState<M> {
                     let js_array = new_array(manager, array.into_iter()).to_ref();
                     let new_state = ParseState {
                         status: ParseStatus::ArrayStart,
-                        top: self.stack.pop_back(),
+                        top: self.stack.pop(),
                         stack: self.stack,
                     };
                     return new_state.push_value(Any::move_from(js_array));
@@ -166,7 +166,7 @@ impl<M: Manager> ParseState<M> {
             });
         match self.top {
             Some(top) => {
-                self.stack.push_back(top);
+                self.stack.push(top);
             }
             None => {}
         }
@@ -189,7 +189,7 @@ impl<M: Manager> ParseState<M> {
                     let js_object = new_object(manager, vec.into_iter()).to_ref();
                     let new_state = ParseState {
                         status: ParseStatus::ArrayStart,
-                        top: self.stack.pop_back(),
+                        top: self.stack.pop(),
                         stack: self.stack,
                     };
                     return new_state.push_value(Any::move_from(js_object));
@@ -311,7 +311,7 @@ fn parse<M: Manager>(
     let mut state: JsonState<M> = JsonState::Parse(ParseState {
         status: ParseStatus::Initial,
         top: None,
-        stack: VecDeque::from([]),
+        stack: Vec::from([]),
     });
     for token in iter {
         state = state.push(manager, token);
