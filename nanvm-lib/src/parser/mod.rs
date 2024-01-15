@@ -40,6 +40,7 @@ pub struct ParseState<M: Manager> {
     pub stack: Vec<JsonStackElement<M::Dealloc>>,
 }
 
+#[derive(Debug)]
 pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
@@ -321,7 +322,14 @@ fn parse<M: Manager>(
 
 #[cfg(test)]
 mod test {
-    use crate::mem::{global::GLOBAL, local::Local};
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::{
+        js::type_::Type,
+        mem::{global::GLOBAL, local::Local, manager::Manager},
+        parser::ParseError,
+        tokenizer::JsonToken,
+    };
 
     use super::parse;
 
@@ -335,5 +343,19 @@ mod test {
             let global = GLOBAL;
             parse(global, [].into_iter())
         };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_valid() {
+        test_valid_with_manager(&Local::default());
+        test_valid_with_manager(GLOBAL);
+    }
+
+    fn test_valid_with_manager<M: Manager>(manager: M) {
+        let tokens = [JsonToken::Null];
+        let result = parse(manager, tokens.into_iter());
+        assert!(&result.is_ok());
+        assert_eq!(result.unwrap().get_type(), Type::Null);
     }
 }

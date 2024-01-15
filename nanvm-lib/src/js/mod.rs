@@ -9,5 +9,5 @@ pub mod js_string;
 pub mod null;
 mod number;
 mod ref_cast;
-mod type_;
+pub mod type_;
 mod value_cast;
