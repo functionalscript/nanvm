@@ -357,5 +357,15 @@ mod test {
         let result = parse(manager, tokens.into_iter());
         assert!(&result.is_ok());
         assert_eq!(result.unwrap().get_type(), Type::Null);
+
+        let tokens = [JsonToken::True];
+        let result = parse(manager, tokens.into_iter());
+        assert!(&result.is_ok());
+        assert_eq!(result.unwrap().try_move(), Ok(true));
+
+        let tokens = [JsonToken::False];
+        let result = parse(manager, tokens.into_iter());
+        assert!(&result.is_ok());
+        assert_eq!(result.unwrap().try_move(), Ok(false));
     }
 }
