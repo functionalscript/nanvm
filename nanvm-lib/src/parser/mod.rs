@@ -355,17 +355,22 @@ mod test {
     fn test_valid_with_manager<M: Manager>(manager: M) {
         let tokens = [JsonToken::Null];
         let result = parse(manager, tokens.into_iter());
-        assert!(&result.is_ok());
+        assert!(result.is_ok());
         assert_eq!(result.unwrap().get_type(), Type::Null);
 
         let tokens = [JsonToken::True];
         let result = parse(manager, tokens.into_iter());
-        assert!(&result.is_ok());
+        assert!(result.is_ok());
         assert_eq!(result.unwrap().try_move(), Ok(true));
 
         let tokens = [JsonToken::False];
         let result = parse(manager, tokens.into_iter());
-        assert!(&result.is_ok());
+        assert!(result.is_ok());
         assert_eq!(result.unwrap().try_move(), Ok(false));
+
+        let tokens = [JsonToken::Number(0.1)];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().try_move(), Ok(0.1));
     }
 }
