@@ -325,7 +325,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{type_::Type, js_string::JsStringRef},
+        js::{js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
         tokenizer::JsonToken,
     };
@@ -375,6 +375,10 @@ mod test {
         let tokens = [JsonToken::String(String::from("abc"))];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        assert!(result.unwrap().try_move::<JsStringRef<M::Dealloc>>().is_ok());
+        let result = result.unwrap().try_move::<JsStringRef<M::Dealloc>>();
+        assert!(result.is_ok());
+        let s = result.unwrap();
+        let items = s.items();
+        assert_eq!(items, [0x61, 0x62, 0x63]);
     }
 }
