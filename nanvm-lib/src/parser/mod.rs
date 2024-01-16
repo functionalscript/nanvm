@@ -407,7 +407,6 @@ mod test {
         let item0 = items[0].clone();
         let item0_unwrap = item0.try_move::<JsArrayRef<M::Dealloc>>().unwrap();
         let item0_items = item0_unwrap.items();
-        //check nested array
         assert!(item0_items.is_empty());
     }
 }
