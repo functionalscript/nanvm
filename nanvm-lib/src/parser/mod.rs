@@ -393,6 +393,21 @@ mod test {
 
         let tokens = [
             JsonToken::ArrayBegin,
+            JsonToken::Number(1.0),
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(1.0));
+
+        let tokens = [
+            JsonToken::ArrayBegin,
             JsonToken::ArrayBegin,
             JsonToken::ArrayEnd,
             JsonToken::ArrayEnd,
