@@ -384,9 +384,30 @@ mod test {
         let tokens = [JsonToken::ArrayBegin, JsonToken::ArrayEnd];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        let result = result.unwrap().try_move::<JsArrayRef<M::Dealloc>>();
-        let result = result.unwrap();
-        let items = result.items();
+        let result_unwrap = result
+            .unwrap()
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
         assert!(items.is_empty());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::ArrayBegin,
+            JsonToken::ArrayEnd,
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        let item0_unwrap = item0.try_move::<JsArrayRef<M::Dealloc>>().unwrap();
+        let item0_items = item0_unwrap.items();
+        //check nested array
+        assert!(item0_items.is_empty());
     }
 }
