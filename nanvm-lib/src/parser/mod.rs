@@ -325,7 +325,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{js_array::JsArrayRef, js_string::JsStringRef, type_::Type},
+        js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
         tokenizer::JsonToken,
     };
@@ -427,5 +427,15 @@ mod test {
         let item0_unwrap = item0.try_move::<JsArrayRef<M::Dealloc>>().unwrap();
         let item0_items = item0_unwrap.items();
         assert!(item0_items.is_empty());
+
+        let tokens = [JsonToken::ObjectBegin, JsonToken::ObjectEnd];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .try_move::<JsObjectRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        assert!(items.is_empty());
     }
 }
