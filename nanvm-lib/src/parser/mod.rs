@@ -323,12 +323,14 @@ fn parse<M: Manager>(
 
 #[cfg(test)]
 mod test {
+    use std::string::ParseError;
+
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
         js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
-        tokenizer::JsonToken,
+        tokenizer::{ErrorType, JsonToken},
     };
 
     use super::parse;
@@ -471,5 +473,84 @@ mod test {
         let value0_unwrap = value0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
         let value0_items = value0_unwrap.items();
         assert!(value0_items.is_empty());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_invalid() {
+        test_invalid_with_manager(&Local::default());
+        test_invalid_with_manager(GLOBAL);
+    }
+
+    fn test_invalid_with_manager<M: Manager>(manager: M) {
+        let tokens = [];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [JsonToken::ErrorToken(ErrorType::InvalidNumber)];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [JsonToken::ArrayBegin, JsonToken::Comma, JsonToken::ArrayEnd];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::Number(0.0),
+            JsonToken::Number(1.0),
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::Number(0.0),
+            JsonToken::Comma,
+            JsonToken::Comma,
+            JsonToken::Number(1.0),
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::ArrayEnd,
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [JsonToken::ArrayBegin, JsonToken::String(String::default())];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::Number(1.0),
+            JsonToken::Comma,
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::Comma,
+            JsonToken::Number(1.0),
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [JsonToken::ArrayBegin, JsonToken::Colon, JsonToken::ArrayEnd];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [JsonToken::ArrayEnd];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
     }
 }
