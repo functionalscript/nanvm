@@ -552,5 +552,101 @@ mod test {
         let tokens = [JsonToken::ArrayEnd];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::Comma,
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::Number(0.0),
+            JsonToken::Comma,
+            JsonToken::Number(1.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("key")),
+            JsonToken::Number(0.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("key")),
+            JsonToken::Colon,
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("key0")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::Comma,
+            JsonToken::Comma,
+            JsonToken::String(String::from("key1")),
+            JsonToken::Colon,
+            JsonToken::Number(1.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::ObjectEnd,
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("key")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("key")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::Comma,
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::Comma,
+            JsonToken::String(String::from("key")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [JsonToken::ObjectEnd];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
     }
 }
