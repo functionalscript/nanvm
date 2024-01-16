@@ -394,6 +394,8 @@ mod test {
         let tokens = [
             JsonToken::ArrayBegin,
             JsonToken::Number(1.0),
+            JsonToken::Comma,
+            JsonToken::True,
             JsonToken::ArrayEnd,
         ];
         let result = parse(manager, tokens.into_iter());
@@ -405,6 +407,8 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(1.0));
+        let item1 = items[1].clone();
+        assert_eq!(item1.try_move(), Ok(true));
 
         let tokens = [
             JsonToken::ArrayBegin,
