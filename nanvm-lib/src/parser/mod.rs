@@ -648,5 +648,23 @@ mod test {
         let tokens = [JsonToken::ObjectEnd];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::ObjectBegin,
+            JsonToken::ArrayEnd,
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::ArrayBegin,
+            JsonToken::ObjectEnd,
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
     }
 }
