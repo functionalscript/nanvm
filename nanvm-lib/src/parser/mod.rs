@@ -437,5 +437,25 @@ mod test {
             .unwrap();
         let items = result_unwrap.items();
         assert!(items.is_empty());
+
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("k")),
+            JsonToken::Colon,
+            JsonToken::ObjectBegin,
+            JsonToken::ObjectEnd,
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .try_move::<JsObjectRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let (_, value0) = items[0].clone();
+        let value0_unwrap = value0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
+        let value0_items = value0_unwrap.items();
+        assert!(value0_items.is_empty());
     }
 }
