@@ -181,6 +181,7 @@ impl<M: Manager> ParseState<M> {
     fn end_object(mut self, manager: M) -> JsonState<M> {
         match self.top {
             Some(top) => match top {
+                //todo: sort
                 JsonStackElement::Object(object) => {
                     let vec = object
                         .map
@@ -411,22 +412,35 @@ mod test {
         assert_eq!(item1.try_move(), Ok(true));
 
         let tokens = [
-            JsonToken::ArrayBegin,
-            JsonToken::ArrayBegin,
-            JsonToken::ArrayEnd,
-            JsonToken::ArrayEnd,
+            JsonToken::ObjectBegin,
+            JsonToken::String(String::from("k0")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::Comma,
+            JsonToken::String(String::from("k1")),
+            JsonToken::Colon,
+            JsonToken::Number(1.0),
+            JsonToken::ObjectEnd,
         ];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
-            .try_move::<JsArrayRef<M::Dealloc>>()
+            .try_move::<JsObjectRef<M::Dealloc>>()
             .unwrap();
         let items = result_unwrap.items();
-        let item0 = items[0].clone();
-        let item0_unwrap = item0.try_move::<JsArrayRef<M::Dealloc>>().unwrap();
-        let item0_items = item0_unwrap.items();
-        assert!(item0_items.is_empty());
+        let (key0, value0) = items[0].clone();
+        let key0_items = key0.items();
+        assert!(!key0_items.is_empty());
+        assert!(value0.try_move::<f64>().is_ok());
+        // assert_eq!(key0_items, [0x6b, 0x30]);
+        // assert_eq!(value0.try_move(), Ok(0.0));
+        let (key1, value1) = items[1].clone();
+        let key1_items = key1.items();
+        assert!(!key1_items.is_empty());
+        assert!(value1.try_move::<f64>().is_ok());
+        // assert_eq!(key1_items, [0x6b, 0x31]);
+        // assert_eq!(value1.try_move(), Ok(1.0));
 
         let tokens = [JsonToken::ObjectBegin, JsonToken::ObjectEnd];
         let result = parse(manager, tokens.into_iter());
