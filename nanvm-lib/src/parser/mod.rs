@@ -348,8 +348,58 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_valid() {
+    fn test_check_sizes() {
+        let local = Local::default();
+        {
+            let tokens = [
+                JsonToken::ObjectBegin,
+                JsonToken::String(String::from("k")),
+                JsonToken::Colon,
+                JsonToken::ObjectBegin,
+                JsonToken::ObjectEnd,
+                JsonToken::ObjectEnd,
+            ];
+            {
+                let result = parse(&local, tokens.into_iter());
+                assert!(result.is_ok());
+                let _result_unwrap = result.unwrap();
+            }
+            assert_eq!(local.size(), 0);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_check_sizes2() {
+        let local = Local::default();
+        {
+            let tokens = [
+                JsonToken::ObjectBegin,
+                JsonToken::String(String::from("k")),
+                JsonToken::Colon,
+                JsonToken::ObjectBegin,
+                JsonToken::ObjectEnd,
+                JsonToken::ObjectEnd,
+            ];
+            {
+                let result = parse(&local, tokens.into_iter());
+                assert!(result.is_ok());
+                let result_unwrap = result.unwrap();
+                let _result_unwrap = result_unwrap.try_move::<JsObjectRef<_>>();
+            }
+            assert_eq!(local.size(), 0);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_valid_local() {
         test_valid_with_manager(&Local::default());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_valid_global() {
         test_valid_with_manager(GLOBAL);
     }
 
@@ -456,7 +506,6 @@ mod test {
             .unwrap();
         let items = result_unwrap.items();
         assert!(items.is_empty());
-
         let tokens = [
             JsonToken::ObjectBegin,
             JsonToken::String(String::from("k")),
@@ -465,23 +514,28 @@ mod test {
             JsonToken::ObjectEnd,
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
-        assert!(result.is_ok());
-        let result_unwrap = result
-            .unwrap()
-            .try_move::<JsObjectRef<M::Dealloc>>()
-            .unwrap();
-        let items = result_unwrap.items();
-        let (_, value0) = items[0].clone();
-        let value0_unwrap = value0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
-        let value0_items = value0_unwrap.items();
-        assert!(value0_items.is_empty());
+        {
+            let result = parse(manager, tokens.into_iter());
+            assert!(result.is_ok());
+            let result_unwrap = result.unwrap();
+            let result_unwrap = result_unwrap.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
+            let items = result_unwrap.items();
+            let (_, value0) = items[0].clone();
+            let value0_unwrap = value0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
+            let value0_items = value0_unwrap.items();
+            assert!(value0_items.is_empty());
+        }
     }
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_invalid() {
+    fn test_invalid_local() {
         test_invalid_with_manager(&Local::default());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_invalid_global() {
         test_invalid_with_manager(GLOBAL);
     }
 
