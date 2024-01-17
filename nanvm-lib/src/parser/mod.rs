@@ -75,7 +75,7 @@ impl JsonToken {
             JsonToken::True => Any::move_from(true),
             JsonToken::Number(f) => Any::move_from(f),
             JsonToken::String(s) => Any::move_from(to_js_string(manager, s)),
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 }
@@ -153,9 +153,9 @@ impl<M: Manager> ParseState<M> {
                     };
                     return new_state.push_value(Any::move_from(js_array));
                 }
-                _ => panic!(),
+                _ => unreachable!(),
             },
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 
@@ -196,9 +196,9 @@ impl<M: Manager> ParseState<M> {
                     };
                     return new_state.push_value(Any::move_from(js_object));
                 }
-                _ => panic!(),
+                _ => unreachable!(),
             },
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 
