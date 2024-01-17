@@ -386,8 +386,7 @@ mod test {
                 let result = parse(&local, tokens.into_iter());
                 assert!(result.is_ok());
                 let result_unwrap = result.unwrap();
-                let _result_unwrap = result_unwrap
-                    .try_move::<JsObjectRef<_>>();
+                let _result_unwrap = result_unwrap.try_move::<JsObjectRef<_>>();
             }
             //assert_eq!(local.size(), 0);
         }
