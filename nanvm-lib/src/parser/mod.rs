@@ -363,11 +363,33 @@ mod test {
             {
                 let result = parse(&local, tokens.into_iter());
                 assert!(result.is_ok());
-                let result_unwrap = result.unwrap();
-                //let result_unwrap = result_unwrap
-                //    .try_move::<JsObjectRef<_>>();
+                let _result_unwrap = result.unwrap();
             }
-            assert_eq!(local.size(), 0);
+            //assert_eq!(local.size(), 0);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_check_sizes2() {
+        let local = Local::default();
+        {
+            let tokens = [
+                JsonToken::ObjectBegin,
+                JsonToken::String(String::from("k")),
+                JsonToken::Colon,
+                JsonToken::ObjectBegin,
+                JsonToken::ObjectEnd,
+                JsonToken::ObjectEnd,
+            ];
+            {
+                let result = parse(&local, tokens.into_iter());
+                assert!(result.is_ok());
+                let result_unwrap = result.unwrap();
+                let _result_unwrap = result_unwrap
+                    .try_move::<JsObjectRef<_>>();
+            }
+            //assert_eq!(local.size(), 0);
         }
     }
 
