@@ -365,7 +365,7 @@ mod test {
                 assert!(result.is_ok());
                 let _result_unwrap = result.unwrap();
             }
-            //assert_eq!(local.size(), 0);
+            assert_eq!(local.size(), 0);
         }
     }
 
@@ -388,7 +388,7 @@ mod test {
                 let result_unwrap = result.unwrap();
                 let _result_unwrap = result_unwrap.try_move::<JsObjectRef<_>>();
             }
-            //assert_eq!(local.size(), 0);
+            assert_eq!(local.size(), 0);
         }
     }
 
