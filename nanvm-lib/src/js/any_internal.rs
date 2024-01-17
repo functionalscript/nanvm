@@ -51,9 +51,9 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
         let p = &mut *block_header;
         println!("delete: {}", ref_type(self.0));
         match ref_type(self.0) {
-            bitset::REF_TYPE_STRING => p.block::<JsString, D>().delete(),
-            bitset::REF_TYPE_OBJECT => p.block::<JsObject<D>, D>().delete(),
-            bitset::REF_TYPE_ARRAY => p.block::<JsArray<D>, D>().delete(),
+            REF_TYPE_STRING => p.block::<JsString, D>().delete(),
+            REF_TYPE_OBJECT => p.block::<JsObject<D>, D>().delete(),
+            REF_TYPE_ARRAY => p.block::<JsArray<D>, D>().delete(),
             _ => unreachable!(),
         }
     }
