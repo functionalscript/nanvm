@@ -22,6 +22,7 @@ jobs:
       matrix:
         os: ['ubuntu-latest', 'windows-latest', 'macos-13']
         type: ['', '--release']
+        target: []
         include:
           - os: windows-latest
             target: '--target i686-pc-windows-msvc'
