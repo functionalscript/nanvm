@@ -49,7 +49,6 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         let p = &mut *block_header;
-        println!("delete: {}", ref_type(self.0));
         match ref_type(self.0) {
             bitset::REF_TYPE_STRING => p.block::<JsString, D>().delete(),
             bitset::REF_TYPE_OBJECT => p.block::<JsObject<D>, D>().delete(),
