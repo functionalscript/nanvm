@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use crate::{
     js::{
@@ -322,8 +322,6 @@ fn parse<M: Manager>(
 
 #[cfg(test)]
 mod test {
-    use std::string::ParseError;
-
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
