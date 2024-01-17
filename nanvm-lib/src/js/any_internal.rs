@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
 
-use crate::mem::{
+use crate::{mem::{
     block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
-};
+}, js::bitset};
 
 use super::{
     bitset::{ref_type, REF, REF_SUBSET_SUPERPOSITION},
@@ -46,10 +46,11 @@ impl<D: Dealloc> OptionalBlock for AnyInternal<D> {
     #[inline(always)]
     unsafe fn delete(self, block_header: *mut Self::BlockHeader) {
         let p = &mut *block_header;
+        println!("delete: {}", ref_type(self.0));
         match ref_type(self.0) {
-            REF_TYPE_STRING => p.block::<JsString, D>().delete(),
-            REF_TYPE_OBJECT => p.block::<JsObject<D>, D>().delete(),
-            REF_TYPE_ARRAY => p.block::<JsArray<D>, D>().delete(),
+            bitset::REF_TYPE_STRING => p.block::<JsString, D>().delete(),
+            bitset::REF_TYPE_OBJECT => p.block::<JsObject<D>, D>().delete(),
+            bitset::REF_TYPE_ARRAY => p.block::<JsArray<D>, D>().delete(),
             _ => unreachable!(),
         }
     }
