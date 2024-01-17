@@ -838,6 +838,16 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
+    fn test_infinity() {
+        let result = tokenize(String::from("1e1000"));
+        assert_eq!(&result, &[JsonToken::Number(f64::INFINITY)]);
+
+        let result = tokenize(String::from("-1e+1000"));
+        assert_eq!(&result, &[JsonToken::Number(f64::NEG_INFINITY)]);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn test_exp() {
         let result = tokenize(String::from("1e2"));
         assert_eq!(&result, &[JsonToken::Number(1e2)]);

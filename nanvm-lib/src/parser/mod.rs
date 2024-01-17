@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::{
     js::{
@@ -18,7 +18,7 @@ pub enum JsonStackElement<D: Dealloc> {
 }
 
 pub struct JsonStackObject<D: Dealloc> {
-    pub map: HashMap<String, Any<D>>,
+    pub map: BTreeMap<String, Any<D>>,
     pub key: String,
 }
 
@@ -75,7 +75,7 @@ impl JsonToken {
             JsonToken::True => Any::move_from(true),
             JsonToken::Number(f) => Any::move_from(f),
             JsonToken::String(s) => Any::move_from(to_js_string(manager, s)),
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 }
@@ -153,16 +153,16 @@ impl<M: Manager> ParseState<M> {
                     };
                     return new_state.push_value(Any::move_from(js_array));
                 }
-                _ => panic!(),
+                _ => unreachable!(),
             },
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 
     fn start_object(mut self) -> JsonState<M> {
         let new_top: JsonStackElement<<M as Manager>::Dealloc> =
             JsonStackElement::Object(JsonStackObject {
-                map: HashMap::default(),
+                map: BTreeMap::default(),
                 key: String::default(),
             });
         match self.top {
@@ -181,7 +181,6 @@ impl<M: Manager> ParseState<M> {
     fn end_object(mut self, manager: M) -> JsonState<M> {
         match self.top {
             Some(top) => match top {
-                //todo: sort
                 JsonStackElement::Object(object) => {
                     let vec = object
                         .map
@@ -196,9 +195,9 @@ impl<M: Manager> ParseState<M> {
                     };
                     return new_state.push_value(Any::move_from(js_object));
                 }
-                _ => panic!(),
+                _ => unreachable!(),
             },
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 
@@ -323,8 +322,6 @@ fn parse<M: Manager>(
 
 #[cfg(test)]
 mod test {
-    use std::string::ParseError;
-
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
@@ -465,13 +462,17 @@ mod test {
 
         let tokens = [
             JsonToken::ObjectBegin,
+            JsonToken::String(String::from("k1")),
+            JsonToken::Colon,
+            JsonToken::Number(1.0),
+            JsonToken::Comma,
             JsonToken::String(String::from("k0")),
             JsonToken::Colon,
             JsonToken::Number(0.0),
             JsonToken::Comma,
-            JsonToken::String(String::from("k1")),
+            JsonToken::String(String::from("k2")),
             JsonToken::Colon,
-            JsonToken::Number(1.0),
+            JsonToken::Number(2.0),
             JsonToken::ObjectEnd,
         ];
         let result = parse(manager, tokens.into_iter());
@@ -483,16 +484,16 @@ mod test {
         let items = result_unwrap.items();
         let (key0, value0) = items[0].clone();
         let key0_items = key0.items();
-        assert!(!key0_items.is_empty());
-        assert!(value0.try_move::<f64>().is_ok());
-        // assert_eq!(key0_items, [0x6b, 0x30]);
-        // assert_eq!(value0.try_move(), Ok(0.0));
+        assert_eq!(key0_items, [0x6b, 0x30]);
+        assert_eq!(value0.try_move(), Ok(0.0));
         let (key1, value1) = items[1].clone();
         let key1_items = key1.items();
-        assert!(!key1_items.is_empty());
-        assert!(value1.try_move::<f64>().is_ok());
-        // assert_eq!(key1_items, [0x6b, 0x31]);
-        // assert_eq!(value1.try_move(), Ok(1.0));
+        assert_eq!(key1_items, [0x6b, 0x31]);
+        assert_eq!(value1.try_move(), Ok(1.0));
+        let (key2, value2) = items[2].clone();
+        let key2_items = key2.items();
+        assert_eq!(key2_items, [0x6b, 0x32]);
+        assert_eq!(value2.try_move(), Ok(2.0));
 
         let tokens = [JsonToken::ObjectBegin, JsonToken::ObjectEnd];
         let result = parse(manager, tokens.into_iter());
