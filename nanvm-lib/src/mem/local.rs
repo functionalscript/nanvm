@@ -36,6 +36,9 @@ impl Local {
         let layout = header_layout.layout(block_layout.size());
         (header_layout, layout)
     }
+    pub fn size(&self) -> usize {
+        self.size.get()
+    }
 }
 
 impl Dealloc for &Local {
