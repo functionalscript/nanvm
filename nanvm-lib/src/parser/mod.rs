@@ -494,9 +494,7 @@ mod test {
             let result = parse(manager, tokens.into_iter());
             assert!(result.is_ok());
             let result_unwrap = result.unwrap();
-            let result_unwrap = result_unwrap
-                .try_move::<JsObjectRef<M::Dealloc>>()
-                .unwrap();
+            let result_unwrap = result_unwrap.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
             let items = result_unwrap.items();
             let (_, value0) = items[0].clone();
             let value0_unwrap = value0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();

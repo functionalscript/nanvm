@@ -1,8 +1,11 @@
 use core::marker::PhantomData;
 
-use crate::{mem::{
-    block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
-}, js::bitset};
+use crate::{
+    js::bitset,
+    mem::{
+        block_header::BlockHeader, global::Global, manager::Dealloc, optional_block::OptionalBlock,
+    },
+};
 
 use super::{
     bitset::{ref_type, REF, REF_SUBSET_SUPERPOSITION},
