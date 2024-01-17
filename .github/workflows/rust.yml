@@ -26,6 +26,8 @@ jobs:
         include:
           - os: windows-latest
             target: '--target i686-pc-windows-msvc'
+          - os: ubuntu-latest
+            target: '--target i686-unknown-linux-gnu'
 
     runs-on: ${{ matrix.os }}
 
