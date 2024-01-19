@@ -298,6 +298,21 @@ const fn to_operator(c: char) -> Option<JsonToken> {
     }
 }
 
+const fn is_id_start(c: char) -> bool {
+    match c {
+        'a'..='z' | 'A'..='Z' | '_' | '$' => true,
+        _ => false,
+    }
+}
+
+const fn is_id_char(c: char) -> bool {
+    match c {
+        '0'..='9' => true,
+        c if is_id_start(c) => true,
+        _ => false,
+    }
+}
+
 fn is_terminal_for_number(c: char) -> bool {
     match c {
         '"' => true,
@@ -336,7 +351,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         '"' => (default(), TokenizerState::ParseString(String::default())),
         '0' => (default(), TokenizerState::ParseZero(Sign::Positive)),
         '-' => (default(), TokenizerState::ParseMinus),
-        'a'..='z' => (default(), TokenizerState::ParseId(c.to_string())),
+        c if is_id_start(c) => (default(), TokenizerState::ParseId(c.to_string())),
         c if is_white_space(c) => (default(), TokenizerState::Initial),
         _ => (
             [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
@@ -347,7 +362,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
 
 fn tokenize_id(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        'a'..='z' => {
+        c if is_id_char(c) => {
             s.push(c);
             (default(), TokenizerState::ParseId(s))
         }
@@ -680,6 +695,18 @@ mod test {
                 JsonToken::Id(String::from("tru")),
             ]
         );
+
+        let result = tokenize(String::from("ABCxyz_0123456789$"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Id(String::from("ABCxyz_0123456789$")),]
+        );
+
+        let result = tokenize(String::from("_"));
+        assert_eq!(&result, &[JsonToken::Id(String::from("_")),]);
+
+        let result = tokenize(String::from("$"));
+        assert_eq!(&result, &[JsonToken::Id(String::from("$")),]);
     }
 
     #[test]
