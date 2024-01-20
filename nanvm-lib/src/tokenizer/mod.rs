@@ -1014,4 +1014,19 @@ mod test {
             &[JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)]
         );
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_djs() {
+        let result = tokenize(String::from("module.exports = "));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::Id(String::from("module")),
+                JsonToken::Dot,
+                JsonToken::Id(String::from("exports")),
+                JsonToken::Equals
+            ]
+        );
+    }
 }
