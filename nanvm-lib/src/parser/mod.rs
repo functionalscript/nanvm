@@ -47,6 +47,7 @@ pub enum ParseError {
     UnexpectedEnd,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum DataType {
     Json,
     Djs,
@@ -352,6 +353,7 @@ mod test {
     use crate::{
         js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
+        parser::DataType,
         tokenizer::{ErrorType, JsonToken},
     };
 
@@ -412,6 +414,16 @@ mod test {
             }
             assert_eq!(local.size(), 0);
         }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_data_type() {
+        let local = Local::default();
+        let tokens = [JsonToken::Null];
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Json);
     }
 
     #[test]
