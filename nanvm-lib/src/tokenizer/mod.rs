@@ -22,6 +22,7 @@ pub enum JsonToken {
     ArrayEnd,
     Colon,
     Comma,
+    Equals,
     ErrorToken(ErrorType),
     BigInt(BigInt),
     Id(String),
@@ -294,6 +295,7 @@ const fn to_operator(c: char) -> Option<JsonToken> {
         ']' => Some(JsonToken::ArrayEnd),
         ':' => Some(JsonToken::Colon),
         ',' => Some(JsonToken::Comma),
+        '=' => Some(JsonToken::Equals),
         _ => None,
     }
 }
@@ -650,6 +652,9 @@ mod test {
 
         let result = tokenize(String::from(","));
         assert_eq!(&result, &[JsonToken::Comma]);
+
+        let result = tokenize(String::from("="));
+        assert_eq!(&result, &[JsonToken::Equals]);
 
         let result = tokenize(String::from("[{ :, }]"));
         assert_eq!(
