@@ -35,6 +35,7 @@ pub enum ParseStatus {
 }
 
 pub struct ParseState<M: Manager> {
+    pub data_type: DataType,
     pub status: ParseStatus,
     pub top: Option<JsonStackElement<M::Dealloc>>,
     pub stack: Vec<JsonStackElement<M::Dealloc>>,
@@ -46,9 +47,19 @@ pub enum ParseError {
     UnexpectedEnd,
 }
 
+pub enum DataType {
+    Json,
+    Djs,
+}
+
+pub struct ParseResult<M: Manager> {
+    pub data_type: DataType,
+    pub any: Any<M::Dealloc>,
+}
+
 pub enum JsonState<M: Manager> {
     Parse(ParseState<M>),
-    Result(Any<M::Dealloc>),
+    Result(ParseResult<M>),
     Error(ParseError),
 }
 
@@ -83,11 +94,15 @@ impl JsonToken {
 impl<M: Manager> ParseState<M> {
     fn push_value(self, value: Any<M::Dealloc>) -> JsonState<M> {
         match self.top {
-            None => JsonState::Result(value),
+            None => JsonState::Result(ParseResult {
+                data_type: self.data_type,
+                any: value,
+            }),
             Some(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
                     JsonState::Parse(ParseState {
+                        data_type: self.data_type,
                         status: ParseStatus::ArrayValue,
                         top: Option::Some(JsonStackElement::Array(arr)),
                         stack: self.stack,
@@ -100,6 +115,7 @@ impl<M: Manager> ParseState<M> {
                         key: String::default(),
                     };
                     JsonState::Parse(ParseState {
+                        data_type: self.data_type,
                         status: ParseStatus::ObjectValue,
                         top: Option::Some(JsonStackElement::Object(new_stack_obj)),
                         stack: self.stack,
@@ -117,6 +133,7 @@ impl<M: Manager> ParseState<M> {
                     key: s,
                 };
                 JsonState::Parse(ParseState {
+                    data_type: self.data_type,
                     status: ParseStatus::ObjectKey,
                     top: Option::Some(JsonStackElement::Object(new_stack_obj)),
                     stack: self.stack,
@@ -135,6 +152,7 @@ impl<M: Manager> ParseState<M> {
             None => {}
         }
         JsonState::Parse(ParseState {
+            data_type: self.data_type,
             status: ParseStatus::ArrayStart,
             top: Some(new_top),
             stack: self.stack,
@@ -147,6 +165,7 @@ impl<M: Manager> ParseState<M> {
                 JsonStackElement::Array(array) => {
                     let js_array = new_array(manager, array.into_iter()).to_ref();
                     let new_state = ParseState {
+                        data_type: self.data_type,
                         status: ParseStatus::ArrayStart,
                         top: self.stack.pop(),
                         stack: self.stack,
@@ -172,6 +191,7 @@ impl<M: Manager> ParseState<M> {
             None => {}
         }
         JsonState::Parse(ParseState {
+            data_type: self.data_type,
             status: ParseStatus::ObjectStart,
             top: Some(new_top),
             stack: self.stack,
@@ -189,6 +209,7 @@ impl<M: Manager> ParseState<M> {
                         .collect::<Vec<_>>();
                     let js_object = new_object(manager, vec.into_iter()).to_ref();
                     let new_state = ParseState {
+                        data_type: self.data_type,
                         status: ParseStatus::ArrayStart,
                         top: self.stack.pop(),
                         stack: self.stack,
@@ -230,6 +251,7 @@ impl<M: Manager> ParseState<M> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
             JsonToken::Comma => JsonState::Parse(ParseState {
+                data_type: self.data_type,
                 status: ParseStatus::ArrayComma,
                 top: self.top,
                 stack: self.stack,
@@ -249,6 +271,7 @@ impl<M: Manager> ParseState<M> {
     fn parse_object_key(self, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::Colon => JsonState::Parse(ParseState {
+                data_type: self.data_type,
                 status: ParseStatus::ObjectColon,
                 top: self.top,
                 stack: self.stack,
@@ -261,6 +284,7 @@ impl<M: Manager> ParseState<M> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
             JsonToken::Comma => JsonState::Parse(ParseState {
+                data_type: self.data_type,
                 status: ParseStatus::ObjectComma,
                 top: self.top,
                 stack: self.stack,
@@ -296,7 +320,7 @@ impl<M: Manager> JsonState<M> {
         }
     }
 
-    fn end(self) -> Result<Any<M::Dealloc>, ParseError> {
+    fn end(self) -> Result<ParseResult<M>, ParseError> {
         match self {
             JsonState::Result(result) => Ok(result),
             JsonState::Error(error) => Err(error),
@@ -308,8 +332,9 @@ impl<M: Manager> JsonState<M> {
 fn parse<M: Manager>(
     manager: M,
     iter: impl Iterator<Item = JsonToken>,
-) -> Result<Any<M::Dealloc>, ParseError> {
+) -> Result<ParseResult<M>, ParseError> {
     let mut state: JsonState<M> = JsonState::Parse(ParseState {
+        data_type: DataType::Json,
         status: ParseStatus::Initial,
         top: None,
         stack: Vec::from([]),
@@ -382,7 +407,7 @@ mod test {
             {
                 let result = parse(&local, tokens.into_iter());
                 assert!(result.is_ok());
-                let result_unwrap = result.unwrap();
+                let result_unwrap = result.unwrap().any;
                 let _result_unwrap = result_unwrap.try_move::<JsObjectRef<_>>();
             }
             assert_eq!(local.size(), 0);
@@ -405,27 +430,27 @@ mod test {
         let tokens = [JsonToken::Null];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().get_type(), Type::Null);
+        assert_eq!(result.unwrap().any.get_type(), Type::Null);
 
         let tokens = [JsonToken::True];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().try_move(), Ok(true));
+        assert_eq!(result.unwrap().any.try_move(), Ok(true));
 
         let tokens = [JsonToken::False];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().try_move(), Ok(false));
+        assert_eq!(result.unwrap().any.try_move(), Ok(false));
 
         let tokens = [JsonToken::Number(0.1)];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().try_move(), Ok(0.1));
+        assert_eq!(result.unwrap().any.try_move(), Ok(0.1));
 
         let tokens = [JsonToken::String(String::from("abc"))];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        let result = result.unwrap().try_move::<JsStringRef<M::Dealloc>>();
+        let result = result.unwrap().any.try_move::<JsStringRef<M::Dealloc>>();
         assert!(result.is_ok());
         let result = result.unwrap();
         let items = result.items();
@@ -436,6 +461,7 @@ mod test {
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
+            .any
             .try_move::<JsArrayRef<M::Dealloc>>()
             .unwrap();
         let items = result_unwrap.items();
@@ -452,6 +478,7 @@ mod test {
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
+            .any
             .try_move::<JsArrayRef<M::Dealloc>>()
             .unwrap();
         let items = result_unwrap.items();
@@ -479,6 +506,7 @@ mod test {
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
+            .any
             .try_move::<JsObjectRef<M::Dealloc>>()
             .unwrap();
         let items = result_unwrap.items();
@@ -500,6 +528,7 @@ mod test {
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
+            .any
             .try_move::<JsObjectRef<M::Dealloc>>()
             .unwrap();
         let items = result_unwrap.items();
@@ -516,7 +545,10 @@ mod test {
             let result = parse(manager, tokens.into_iter());
             assert!(result.is_ok());
             let result_unwrap = result.unwrap();
-            let result_unwrap = result_unwrap.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
+            let result_unwrap = result_unwrap
+                .any
+                .try_move::<JsObjectRef<M::Dealloc>>()
+                .unwrap();
             let items = result_unwrap.items();
             let (_, value0) = items[0].clone();
             let value0_unwrap = value0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
