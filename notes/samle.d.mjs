@@ -3,9 +3,13 @@
 // const false = false
 const undefined = void 0
 const NaN = 0/0
+// const const = "const"
+// const export = "export"
+// const default = "default"
 
 export default {
     null: null,
     true: true,
-    export: "export", // export,
+    export: "export",
+    const: "const",
 }
