@@ -68,26 +68,22 @@ fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
     new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
 }
 
-impl JsonToken {
-    fn is_value_token(&self) -> bool {
-        match self {
-            JsonToken::Null
-            | JsonToken::False
-            | JsonToken::True
-            | JsonToken::Number(_)
-            | JsonToken::String(_) => true,
-            _ => false,
-        }
+fn try_id_to_any<M: Manager>(s: &str, manager: M) -> Option<Any<M::Dealloc>> {
+    match s {
+        "null" => Some(Any::move_from(Null())),
+        "true" => Some(Any::move_from(true)),
+        "false" => Some(Any::move_from(false)),
+        _ => None,
     }
+}
 
-    fn to_any<M: Manager>(self, manager: M) -> Any<M::Dealloc> {
+impl JsonToken {
+    fn try_to_any<M: Manager>(self, manager: M) -> Option<Any<M::Dealloc>> {
         match self {
-            JsonToken::Null => Any::move_from(Null()),
-            JsonToken::False => Any::move_from(false),
-            JsonToken::True => Any::move_from(true),
-            JsonToken::Number(f) => Any::move_from(f),
-            JsonToken::String(s) => Any::move_from(to_js_string(manager, s)),
-            _ => unreachable!(),
+            JsonToken::Number(f) => Some(Any::move_from(f)),
+            JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
+            JsonToken::Id(s) => try_id_to_any(&s, manager),
+            _ => None,
         }
     }
 }
@@ -224,27 +220,31 @@ impl<M: Manager> ParseState<M> {
     }
 
     fn parse_value(self, manager: M, token: JsonToken) -> JsonState<M> {
-        if token.is_value_token() {
-            let any = token.to_any(manager);
-            return self.push_value(any);
-        }
         match token {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ObjectBegin => self.start_object(),
-            _ => JsonState::Error(ParseError::UnexpectedToken),
+            _ => {
+                let option_any = token.try_to_any(manager);
+                match option_any {
+                    Some(any) => self.push_value(any),
+                    None => JsonState::Error(ParseError::UnexpectedToken),
+                }
+            }
         }
     }
 
     fn parse_array_start(self, manager: M, token: JsonToken) -> JsonState<M> {
-        if token.is_value_token() {
-            let any = token.to_any(manager);
-            return self.push_value(any);
-        }
         match token {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ArrayEnd => self.end_array(manager),
             JsonToken::ObjectBegin => self.start_object(),
-            _ => JsonState::Error(ParseError::UnexpectedToken),
+            _ => {
+                let option_any = token.try_to_any(manager);
+                match option_any {
+                    Some(any) => self.push_value(any),
+                    None => JsonState::Error(ParseError::UnexpectedToken),
+                }
+            }
         }
     }
 
@@ -420,7 +420,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_data_type() {
         let local = Local::default();
-        let tokens = [JsonToken::Null];
+        let tokens = [JsonToken::Id(String::from("null"))];
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
@@ -439,17 +439,17 @@ mod test {
     }
 
     fn test_valid_with_manager<M: Manager>(manager: M) {
-        let tokens = [JsonToken::Null];
+        let tokens = [JsonToken::Id(String::from("null"))];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.get_type(), Type::Null);
 
-        let tokens = [JsonToken::True];
+        let tokens = [JsonToken::Id(String::from("true"))];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(true));
 
-        let tokens = [JsonToken::False];
+        let tokens = [JsonToken::Id(String::from("false"))];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(false));
@@ -483,7 +483,7 @@ mod test {
             JsonToken::ArrayBegin,
             JsonToken::Number(1.0),
             JsonToken::Comma,
-            JsonToken::True,
+            JsonToken::Id(String::from("true")),
             JsonToken::ArrayEnd,
         ];
         let result = parse(manager, tokens.into_iter());

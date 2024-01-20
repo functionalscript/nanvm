@@ -11,9 +11,6 @@ use crate::{
 
 #[derive(Debug, PartialEq)]
 pub enum JsonToken {
-    True,
-    False,
-    Null,
     String(String),
     Number(f64),
     ObjectBegin,
@@ -89,7 +86,7 @@ impl TokenizerState {
     fn end(self) -> Vec<JsonToken> {
         match self {
             TokenizerState::Initial => default(),
-            TokenizerState::ParseId(s) => [id_to_token(&s)].cast(),
+            TokenizerState::ParseId(s) => [JsonToken::Id(s)].cast(),
             TokenizerState::ParseString(_)
             | TokenizerState::ParseEscapeChar(_)
             | TokenizerState::ParseUnicodeChar(_) => {
@@ -334,15 +331,6 @@ fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
 }
 
-fn id_to_token(s: &str) -> JsonToken {
-    match s {
-        "true" => JsonToken::True,
-        "false" => JsonToken::False,
-        "null" => JsonToken::Null,
-        _ => JsonToken::Id(String::from(s)),
-    }
-}
-
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     if let Some(t) = to_operator(c) {
         return ([t].cast(), TokenizerState::Initial);
@@ -370,10 +358,7 @@ fn tokenize_id(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
             s.push(c);
             (default(), TokenizerState::ParseId(s))
         }
-        _ => {
-            let token = id_to_token(&s);
-            transfer_state([token].cast(), TokenizerState::Initial, c)
-        }
+        _ => transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
     }
 }
 
@@ -677,26 +662,16 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_keyword() {
+    fn test_id() {
         let result = tokenize(String::from("true"));
-        assert_eq!(&result, &[JsonToken::True]);
+        assert_eq!(&result, &[JsonToken::Id(String::from("true"))]);
 
         let result = tokenize(String::from("false"));
-        assert_eq!(&result, &[JsonToken::False]);
+        assert_eq!(&result, &[JsonToken::Id(String::from("false"))]);
 
         let result = tokenize(String::from("null"));
-        assert_eq!(&result, &[JsonToken::Null]);
+        assert_eq!(&result, &[JsonToken::Id(String::from("null"))]);
 
-        let result = tokenize(String::from("true false null"));
-        assert_eq!(
-            &result,
-            &[JsonToken::True, JsonToken::False, JsonToken::Null]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_id() {
         let result = tokenize(String::from("tru tru"));
         assert_eq!(
             &result,
