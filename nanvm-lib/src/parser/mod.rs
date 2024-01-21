@@ -304,6 +304,9 @@ impl<M: Manager> ParseState<M> {
 
 impl<M: Manager> JsonState<M> {
     fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
+        if token == JsonToken::WhiteSpace {
+            return self;
+        }
         match self {
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
             JsonState::Parse(parse_state) => match parse_state.status {
@@ -424,6 +427,20 @@ mod test {
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_white_space() {
+        let local = Local::default();
+        let tokens = [
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("null")),
+            JsonToken::WhiteSpace,
+        ];
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().any.get_type(), Type::Null);
     }
 
     #[test]
