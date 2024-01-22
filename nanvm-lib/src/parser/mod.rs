@@ -303,6 +303,21 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> JsonState<M> {
+        match token {
+            JsonToken::ArrayBegin => self.start_array(),
+            JsonToken::ObjectBegin => self.start_object(),
+            JsonToken::ArrayEnd => self.end_array(manager),
+            _ => {
+                let option_any = token.try_to_any(manager);
+                match option_any {
+                    Some(any) => self.push_value(any),
+                    None => JsonState::Error(ParseError::UnexpectedToken),
+                }
+            }
+        }
+    }
+
     fn parse_array_start(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
@@ -383,11 +398,12 @@ impl<M: Manager> JsonState<M> {
             JsonState::Parse(parse_state) => match token {
                 JsonToken::WhiteSpace => JsonState::Parse(parse_state),
                 _ => match parse_state.status {
-                    ParseStatus::Initial | ParseStatus::ArrayComma | ParseStatus::ObjectColon => {
+                    ParseStatus::Initial | ParseStatus::ObjectColon => {
                         parse_state.parse_value(manager, token)
                     }
                     ParseStatus::ArrayStart => parse_state.parse_array_start(manager, token),
                     ParseStatus::ArrayValue => parse_state.parse_array_value(manager, token),
+                    ParseStatus::ArrayComma => parse_state.parse_array_comma(manager, token),
                     ParseStatus::ObjectStart => parse_state.parse_object_start(manager, token),
                     ParseStatus::ObjectKey => parse_state.parse_object_key(token),
                     ParseStatus::ObjectValue => parse_state.parse_object_next(manager, token),
@@ -621,6 +637,17 @@ mod test {
         assert_eq!(item1.try_move(), Ok(true));
 
         let tokens = [
+            JsonToken::ArrayBegin,
+            JsonToken::Number(1.0),
+            JsonToken::Comma,
+            JsonToken::Id(String::from("true")),
+            JsonToken::Comma,
+            JsonToken::ArrayEnd,
+        ];
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+
+        let tokens = [
             JsonToken::ObjectBegin,
             JsonToken::String(String::from("k1")),
             JsonToken::Colon,
@@ -744,15 +771,6 @@ mod test {
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::String(String::default())];
-        let result = parse(manager, tokens.into_iter());
-        assert!(result.is_err());
-
-        let tokens = [
-            JsonToken::ArrayBegin,
-            JsonToken::Number(1.0),
-            JsonToken::Comma,
-            JsonToken::ArrayEnd,
-        ];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_err());
 
