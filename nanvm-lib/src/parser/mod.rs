@@ -349,6 +349,7 @@ impl<M: Manager> ParseState<M> {
     fn parse_object_start(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
+            JsonToken::Id(s) if self.data_type == DataType::Djs => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => JsonState::Error(ParseError::UnexpectedToken),
         }
@@ -561,6 +562,42 @@ mod test {
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.get_type(), Type::Null);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_id_in_objects() {
+        let local = Local::default();
+        let tokens = [
+            JsonToken::Id(String::from("export")),
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("default")),
+            JsonToken::WhiteSpace,
+            JsonToken::ObjectBegin,
+            JsonToken::Id(String::from("key")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result.unwrap().any.try_move::<JsObjectRef<_>>().unwrap();
+        let items = result_unwrap.items();
+        let (key0, value0) = items[0].clone();
+        let key0_items = key0.items();
+        assert_eq!(key0_items, [0x6b, 0x65, 0x79]);
+        assert_eq!(value0.try_move(), Ok(0.0));
+
+        let local = Local::default();
+        let tokens = [
+            JsonToken::ObjectBegin,
+            JsonToken::Id(String::from("key")),
+            JsonToken::Colon,
+            JsonToken::Number(0.0),
+            JsonToken::ObjectEnd,
+        ];
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_err());
     }
 
     #[test]
