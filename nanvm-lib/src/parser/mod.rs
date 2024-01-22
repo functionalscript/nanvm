@@ -99,24 +99,24 @@ impl JsonToken {
 }
 
 impl DataType {
-    fn parse_initial<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn initial_parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
         if token == JsonToken::WhiteSpace {
             return JsonState::Initial(self);
         }
-        if self == DataType::Json {
-            return self.parse_initial_value(manager, token);
+        if self == DataType::Djs {
+            return self.initial_parse_value(manager, token);
         }
         match token {
             JsonToken::Id(s) => match s.as_ref() {
                 "export" => JsonState::ParseExport(ParseExport::Export),
                 "module" => JsonState::ParseExport(ParseExport::Module),
-                _ => self.parse_initial_value(manager, JsonToken::Id(s)),
+                _ => self.initial_parse_value(manager, JsonToken::Id(s)),
             },
-            _ => self.parse_initial_value(manager, token),
+            _ => self.initial_parse_value(manager, token),
         }
     }
 
-    fn parse_initial_value<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn initial_parse_value<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
         let parse_state = ParseState {
             data_type: self,
             status: ParseStatus::Initial,
@@ -128,11 +128,11 @@ impl DataType {
 }
 
 impl ParseExport {
-    fn parse_export<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self {
             ParseExport::Export => match token {
                 JsonToken::WhiteSpace => JsonState::ParseExport(ParseExport::Export),
-                JsonToken::String(s) => match s.as_ref() {
+                JsonToken::Id(s) => match s.as_ref() {
                     "default" => JsonState::Initial(DataType::Djs),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
@@ -143,7 +143,7 @@ impl ParseExport {
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
             ParseExport::ModuleDot => match token {
-                JsonToken::String(s) => match s.as_ref() {
+                JsonToken::Id(s) => match s.as_ref() {
                     "exports" => JsonState::ParseExport(ParseExport::ModuleDotExports),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
@@ -375,7 +375,7 @@ impl<M: Manager> ParseState<M> {
 impl<M: Manager> JsonState<M> {
     fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self {
-            JsonState::Initial(data_type) => data_type.parse_initial(manager, token),
+            JsonState::Initial(data_type) => data_type.initial_parse(manager, token),
             JsonState::Result(_) => match token {
                 JsonToken::WhiteSpace => self,
                 _ => JsonState::Error(ParseError::UnexpectedToken),
@@ -394,6 +394,7 @@ impl<M: Manager> JsonState<M> {
                     ParseStatus::ObjectComma => parse_state.parse_object_comma(token),
                 },
             },
+            JsonState::ParseExport(parse_export_state) => parse_export_state.parse(manager, token),
             _ => self,
         }
     }
@@ -496,6 +497,40 @@ mod test {
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_export_block() {
+        let local = Local::default();
+        let tokens = [
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("export")),
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("default")),
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("null")),
+            JsonToken::WhiteSpace,
+        ];
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Djs);
+
+        let local = Local::default();
+        let tokens = [
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("module")),
+            JsonToken::Dot,
+            JsonToken::Id(String::from("exports")),
+            JsonToken::WhiteSpace,
+            JsonToken::Equals,
+            JsonToken::WhiteSpace,
+            JsonToken::Id(String::from("null")),
+            JsonToken::WhiteSpace,
+        ];
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Djs);
     }
 
     #[test]
