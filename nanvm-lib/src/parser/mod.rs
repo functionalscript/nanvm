@@ -100,9 +100,6 @@ impl JsonToken {
 
 impl DataType {
     fn initial_parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
-        if token == JsonToken::WhiteSpace {
-            return JsonState::Initial(self);
-        }
         if self == DataType::Djs {
             return self.initial_parse_value(manager, token);
         }
@@ -391,14 +388,13 @@ impl<M: Manager> ParseState<M> {
 
 impl<M: Manager> JsonState<M> {
     fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
+        if token == JsonToken::WhiteSpace {
+            return self;
+        }
         match self {
             JsonState::Initial(data_type) => data_type.initial_parse(manager, token),
-            JsonState::Result(_) => match token {
-                JsonToken::WhiteSpace => self,
-                _ => JsonState::Error(ParseError::UnexpectedToken),
-            },
+            JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
             JsonState::Parse(parse_state) => match token {
-                JsonToken::WhiteSpace => JsonState::Parse(parse_state),
                 _ => match parse_state.status {
                     ParseStatus::Initial | ParseStatus::ObjectColon => {
                         parse_state.parse_value(manager, token)
