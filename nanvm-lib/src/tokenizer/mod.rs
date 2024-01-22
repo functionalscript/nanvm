@@ -24,7 +24,6 @@ pub enum JsonToken {
     ErrorToken(ErrorType),
     BigInt(BigInt),
     Id(String),
-    WhiteSpace,
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,7 +50,6 @@ enum TokenizerState {
     ParseExpSign(ExpState),
     ParseExp(ExpState),
     ParseBigInt(IntegerState),
-    ParseWhiteSpace,
 }
 
 impl Default for TokenizerState {
@@ -76,7 +74,6 @@ impl TokenizerState {
             TokenizerState::ParseExpBegin(s) => tokenize_exp_begin(s, c),
             TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(s, c),
             TokenizerState::ParseBigInt(s) => tokenize_big_int(s, c),
-            TokenizerState::ParseWhiteSpace => tokenize_white_space(c),
         }
     }
 
@@ -95,7 +92,6 @@ impl TokenizerState {
             | TokenizerState::ParseUnicodeChar(_) => {
                 [JsonToken::ErrorToken(ErrorType::MissingQuotes)].cast()
             }
-            TokenizerState::ParseWhiteSpace => [JsonToken::WhiteSpace].cast(),
             TokenizerState::ParseZero(_) => [JsonToken::Number(default())].cast(),
             TokenizerState::ParseInt(s) => [s.to_token()].cast(),
             TokenizerState::ParseFrac(s) => [s.to_token()].cast(),
@@ -348,7 +344,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         '0' => (default(), TokenizerState::ParseZero(Sign::Positive)),
         '-' => (default(), TokenizerState::ParseMinus),
         c if is_id_start(c) => (default(), TokenizerState::ParseId(c.to_string())),
-        c if is_white_space(c) => (default(), TokenizerState::ParseWhiteSpace),
+        c if is_white_space(c) => (default(), TokenizerState::Initial),
         _ => (
             [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
             TokenizerState::Initial,
@@ -556,13 +552,6 @@ fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
     )
 }
 
-fn tokenize_white_space(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_white_space(c) => (default(), TokenizerState::ParseWhiteSpace),
-        _ => transfer_state([JsonToken::WhiteSpace].cast(), TokenizerState::Initial, c),
-    }
-}
-
 pub fn tokenize(input: String) -> Vec<JsonToken> {
     TokenizerStateIterator::new(input.chars()).collect()
 }
@@ -663,10 +652,8 @@ mod test {
             &[
                 JsonToken::ArrayBegin,
                 JsonToken::ObjectBegin,
-                JsonToken::WhiteSpace,
                 JsonToken::Colon,
                 JsonToken::Comma,
-                JsonToken::WhiteSpace,
                 JsonToken::ObjectEnd,
                 JsonToken::ArrayEnd
             ]
@@ -690,7 +677,6 @@ mod test {
             &result,
             &[
                 JsonToken::Id(String::from("tru")),
-                JsonToken::WhiteSpace,
                 JsonToken::Id(String::from("tru")),
             ]
         );
@@ -712,7 +698,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_whitespace() {
         let result = tokenize(String::from(" \t\n\r"));
-        assert_eq!(&result, &[JsonToken::WhiteSpace]);
+        assert_eq!(&result, &[]);
     }
 
     #[test]
@@ -729,7 +715,6 @@ mod test {
             &result,
             &[
                 JsonToken::String("value1".to_string()),
-                JsonToken::WhiteSpace,
                 JsonToken::String("value2".to_string())
             ]
         );
@@ -805,7 +790,6 @@ mod test {
             &result,
             &[
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::WhiteSpace,
                 JsonToken::Number(2.0)
             ]
         );
@@ -1016,9 +1000,7 @@ mod test {
                 JsonToken::Id(String::from("module")),
                 JsonToken::Dot,
                 JsonToken::Id(String::from("exports")),
-                JsonToken::WhiteSpace,
                 JsonToken::Equals,
-                JsonToken::WhiteSpace,
             ]
         );
     }
