@@ -11,9 +11,6 @@ use crate::{
 
 #[derive(Debug, PartialEq)]
 pub enum JsonToken {
-    True,
-    False,
-    Null,
     String(String),
     Number(f64),
     ObjectBegin,
@@ -22,8 +19,11 @@ pub enum JsonToken {
     ArrayEnd,
     Colon,
     Comma,
+    Equals,
+    Dot,
     ErrorToken(ErrorType),
     BigInt(BigInt),
+    Id(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -37,7 +37,7 @@ pub enum ErrorType {
 
 enum TokenizerState {
     Initial,
-    ParseKeyword(String),
+    ParseId(String),
     ParseString(String),
     ParseEscapeChar(String),
     ParseUnicodeChar(ParseUnicodeCharState),
@@ -49,6 +49,7 @@ enum TokenizerState {
     ParseExpBegin(ExpState),
     ParseExpSign(ExpState),
     ParseExp(ExpState),
+    ParseBigInt(IntegerState),
 }
 
 impl Default for TokenizerState {
@@ -61,7 +62,7 @@ impl TokenizerState {
     fn push(self, c: char) -> (Vec<JsonToken>, TokenizerState) {
         match self {
             TokenizerState::Initial => tokenize_initial(c),
-            TokenizerState::ParseKeyword(s) => tokenize_keyword(s, c),
+            TokenizerState::ParseId(s) => tokenize_id(s, c),
             TokenizerState::ParseString(s) => tokenize_string(s, c),
             TokenizerState::ParseEscapeChar(s) => tokenize_escape_char(s, c),
             TokenizerState::ParseUnicodeChar(s) => tokenize_unicode_char(s, c),
@@ -72,6 +73,7 @@ impl TokenizerState {
             TokenizerState::ParseFrac(s) => tokenize_frac(s, c),
             TokenizerState::ParseExpBegin(s) => tokenize_exp_begin(s, c),
             TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(s, c),
+            TokenizerState::ParseBigInt(s) => tokenize_big_int(s, c),
         }
     }
 
@@ -84,7 +86,7 @@ impl TokenizerState {
     fn end(self) -> Vec<JsonToken> {
         match self {
             TokenizerState::Initial => default(),
-            TokenizerState::ParseKeyword(s) => [keyword_to_token(&s)].cast(),
+            TokenizerState::ParseId(s) => [JsonToken::Id(s)].cast(),
             TokenizerState::ParseString(_)
             | TokenizerState::ParseEscapeChar(_)
             | TokenizerState::ParseUnicodeChar(_) => {
@@ -94,6 +96,7 @@ impl TokenizerState {
             TokenizerState::ParseInt(s) => [s.to_token()].cast(),
             TokenizerState::ParseFrac(s) => [s.to_token()].cast(),
             TokenizerState::ParseExp(s) => [s.to_token()].cast(),
+            TokenizerState::ParseBigInt(s) => [s.to_big_int_token()].cast(),
             TokenizerState::ParseMinus
             | TokenizerState::ParseFracBegin(_)
             | TokenizerState::ParseExpBegin(_)
@@ -290,7 +293,24 @@ const fn to_operator(c: char) -> Option<JsonToken> {
         ']' => Some(JsonToken::ArrayEnd),
         ':' => Some(JsonToken::Colon),
         ',' => Some(JsonToken::Comma),
+        '=' => Some(JsonToken::Equals),
+        '.' => Some(JsonToken::Dot),
         _ => None,
+    }
+}
+
+const fn is_id_start(c: char) -> bool {
+    match c {
+        'a'..='z' | 'A'..='Z' | '_' | '$' => true,
+        _ => false,
+    }
+}
+
+const fn is_id_char(c: char) -> bool {
+    match c {
+        '0'..='9' => true,
+        c if is_id_start(c) => true,
+        _ => false,
     }
 }
 
@@ -311,15 +331,6 @@ fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
 }
 
-fn keyword_to_token(s: &str) -> JsonToken {
-    match s {
-        "true" => JsonToken::True,
-        "false" => JsonToken::False,
-        "null" => JsonToken::Null,
-        _ => JsonToken::ErrorToken(ErrorType::InvalidToken),
-    }
-}
-
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     if let Some(t) = to_operator(c) {
         return ([t].cast(), TokenizerState::Initial);
@@ -332,7 +343,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         '"' => (default(), TokenizerState::ParseString(String::default())),
         '0' => (default(), TokenizerState::ParseZero(Sign::Positive)),
         '-' => (default(), TokenizerState::ParseMinus),
-        'a'..='z' => (default(), TokenizerState::ParseKeyword(c.to_string())),
+        c if is_id_start(c) => (default(), TokenizerState::ParseId(c.to_string())),
         c if is_white_space(c) => (default(), TokenizerState::Initial),
         _ => (
             [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
@@ -341,16 +352,13 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_keyword(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_id(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        'a'..='z' => {
+        c if is_id_char(c) => {
             s.push(c);
-            (default(), TokenizerState::ParseKeyword(s))
+            (default(), TokenizerState::ParseId(s))
         }
-        _ => {
-            let token = keyword_to_token(&s);
-            transfer_state([token].cast(), TokenizerState::Initial, c)
-        }
+        _ => transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
     }
 }
 
@@ -442,8 +450,11 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
             }),
         ),
         'n' => (
-            [JsonToken::BigInt(BigInt::ZERO)].cast(),
-            TokenizerState::Initial,
+            default(),
+            TokenizerState::ParseBigInt(IntegerState {
+                s,
+                b: BigUint::ZERO,
+            }),
         ),
         c if is_terminal_for_number(c) => transfer_state(
             [JsonToken::Number(default())].cast(),
@@ -459,7 +470,7 @@ fn tokenize_integer(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState
         '0'..='9' => (default(), TokenizerState::ParseInt(s.add_digit(c))),
         '.' => (default(), TokenizerState::ParseFracBegin(s)),
         'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
-        'n' => ([s.to_big_int_token()].cast(), TokenizerState::Initial),
+        'n' => (default(), TokenizerState::ParseBigInt(s)),
         c if is_terminal_for_number(c) => {
             transfer_state([s.to_token()].cast(), TokenizerState::Initial, c)
         }
@@ -519,6 +530,15 @@ fn tokenize_exp(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
         '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
         c if is_terminal_for_number(c) => {
             transfer_state([s.to_token()].cast(), TokenizerState::Initial, c)
+        }
+        _ => tokenize_invalid_number(c),
+    }
+}
+
+fn tokenize_big_int(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        c if is_terminal_for_number(c) => {
+            transfer_state([s.to_big_int_token()].cast(), TokenizerState::Initial, c)
         }
         _ => tokenize_invalid_number(c),
     }
@@ -620,6 +640,12 @@ mod test {
         let result = tokenize(String::from(","));
         assert_eq!(&result, &[JsonToken::Comma]);
 
+        let result = tokenize(String::from("="));
+        assert_eq!(&result, &[JsonToken::Equals]);
+
+        let result = tokenize(String::from("."));
+        assert_eq!(&result, &[JsonToken::Dot]);
+
         let result = tokenize(String::from("[{ :, }]"));
         assert_eq!(
             &result,
@@ -636,30 +662,36 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_keyword() {
+    fn test_id() {
         let result = tokenize(String::from("true"));
-        assert_eq!(&result, &[JsonToken::True]);
+        assert_eq!(&result, &[JsonToken::Id(String::from("true"))]);
 
         let result = tokenize(String::from("false"));
-        assert_eq!(&result, &[JsonToken::False]);
+        assert_eq!(&result, &[JsonToken::Id(String::from("false"))]);
 
         let result = tokenize(String::from("null"));
-        assert_eq!(&result, &[JsonToken::Null]);
-
-        let result = tokenize(String::from("true false null"));
-        assert_eq!(
-            &result,
-            &[JsonToken::True, JsonToken::False, JsonToken::Null]
-        );
+        assert_eq!(&result, &[JsonToken::Id(String::from("null"))]);
 
         let result = tokenize(String::from("tru tru"));
         assert_eq!(
             &result,
             &[
-                JsonToken::ErrorToken(ErrorType::InvalidToken),
-                JsonToken::ErrorToken(ErrorType::InvalidToken)
+                JsonToken::Id(String::from("tru")),
+                JsonToken::Id(String::from("tru")),
             ]
         );
+
+        let result = tokenize(String::from("ABCxyz_0123456789$"));
+        assert_eq!(
+            &result,
+            &[JsonToken::Id(String::from("ABCxyz_0123456789$")),]
+        );
+
+        let result = tokenize(String::from("_"));
+        assert_eq!(&result, &[JsonToken::Id(String::from("_")),]);
+
+        let result = tokenize(String::from("$"));
+        assert_eq!(&result, &[JsonToken::Id(String::from("$")),]);
     }
 
     #[test]
@@ -749,7 +781,7 @@ mod test {
             &result,
             &[
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::ErrorToken(ErrorType::InvalidToken)
+                JsonToken::Id(String::from("abc"))
             ]
         );
 
@@ -897,7 +929,13 @@ mod test {
         assert_eq!(&result, &[JsonToken::BigInt(BigInt::ZERO)]);
 
         let result = tokenize(String::from("-0n"));
-        assert_eq!(&result, &[JsonToken::BigInt(BigInt::ZERO)]);
+        assert_eq!(
+            &result,
+            &[JsonToken::BigInt(BigInt {
+                sign: Sign::Negative,
+                value: BigUint::ZERO
+            })]
+        );
 
         let result = tokenize(String::from("1234567890n"));
         assert_eq!(&result, &[JsonToken::BigInt(BigInt::from_u64(1234567890))]);
@@ -910,7 +948,7 @@ mod test {
             &result,
             &[
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::ErrorToken(ErrorType::InvalidToken)
+                JsonToken::Id(String::from("n"))
             ]
         );
 
@@ -919,7 +957,7 @@ mod test {
             &result,
             &[
                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::ErrorToken(ErrorType::InvalidToken)
+                JsonToken::Id(String::from("n"))
             ]
         );
 
@@ -927,8 +965,8 @@ mod test {
         assert_eq!(
             &result,
             &[
-                JsonToken::BigInt(BigInt::from_u64(1234567890)),
-                JsonToken::ErrorToken(ErrorType::InvalidToken)
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("a"))
             ]
         );
 
@@ -936,8 +974,8 @@ mod test {
         assert_eq!(
             &result,
             &[
-                JsonToken::BigInt(BigInt::from_u64(1234567890)),
-                JsonToken::ErrorToken(ErrorType::InvalidToken)
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("n"))
             ]
         );
     }
@@ -949,6 +987,21 @@ mod test {
         assert_eq!(
             &result,
             &[JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)]
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_djs() {
+        let result = tokenize(String::from("module.exports = "));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::Id(String::from("module")),
+                JsonToken::Dot,
+                JsonToken::Id(String::from("exports")),
+                JsonToken::Equals,
+            ]
         );
     }
 }
