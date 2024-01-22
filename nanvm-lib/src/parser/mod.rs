@@ -129,9 +129,11 @@ impl DataType {
 
 impl ParseExport {
     fn parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
+        if token == JsonToken::WhiteSpace {
+            return JsonState::ParseExport(self);
+        }
         match self {
             ParseExport::Export => match token {
-                JsonToken::WhiteSpace => JsonState::ParseExport(ParseExport::Export),
                 JsonToken::Id(s) => match s.as_ref() {
                     "default" => JsonState::Initial(DataType::Djs),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
@@ -150,7 +152,6 @@ impl ParseExport {
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
             ParseExport::ModuleDotExports => match token {
-                JsonToken::WhiteSpace => JsonState::ParseExport(ParseExport::ModuleDotExports),
                 JsonToken::Equals => JsonState::Initial(DataType::Djs),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
