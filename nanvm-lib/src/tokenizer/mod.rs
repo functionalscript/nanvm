@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, mem::take};
+use std::{collections::VecDeque, default, mem::take};
 
 use crate::{
     big_numbers::{
@@ -24,6 +24,7 @@ pub enum JsonToken {
     ErrorToken(ErrorType),
     BigInt(BigInt),
     Id(String),
+    NewLine,
 }
 
 #[derive(Debug, PartialEq)]
@@ -50,6 +51,7 @@ enum TokenizerState {
     ParseExpSign(ExpState),
     ParseExp(ExpState),
     ParseBigInt(IntegerState),
+    ParseNewLine,
 }
 
 impl Default for TokenizerState {
@@ -74,6 +76,7 @@ impl TokenizerState {
             TokenizerState::ParseExpBegin(s) => tokenize_exp_begin(s, c),
             TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(s, c),
             TokenizerState::ParseBigInt(s) => tokenize_big_int(s, c),
+            TokenizerState::ParseNewLine => tokenize_new_line(c),
         }
     }
 
@@ -85,7 +88,7 @@ impl TokenizerState {
 
     fn end(self) -> Vec<JsonToken> {
         match self {
-            TokenizerState::Initial => default(),
+            TokenizerState::Initial | TokenizerState::ParseNewLine => default(),
             TokenizerState::ParseId(s) => [JsonToken::Id(s)].cast(),
             TokenizerState::ParseString(_)
             | TokenizerState::ParseEscapeChar(_)
@@ -274,6 +277,13 @@ const CP_0: u32 = 0x30;
 const CP_SMALL_A: u32 = 0x61;
 const CP_CAPITAL_A: u32 = 0x41;
 
+const fn is_new_line(c: char) -> bool {
+    match c {
+        '\t' | '\r' => true,
+        _ => false,
+    }
+}
+
 const fn is_white_space(c: char) -> bool {
     match c {
         ' ' | '\n' | '\t' | '\r' => true,
@@ -344,6 +354,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         '0' => (default(), TokenizerState::ParseZero(Sign::Positive)),
         '-' => (default(), TokenizerState::ParseMinus),
         c if is_id_start(c) => (default(), TokenizerState::ParseId(c.to_string())),
+        c if is_new_line(c) => (default(), TokenizerState::ParseNewLine),
         c if is_white_space(c) => (default(), TokenizerState::Initial),
         _ => (
             [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
@@ -550,6 +561,13 @@ fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
         TokenizerState::Initial,
         c,
     )
+}
+
+fn tokenize_new_line(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        c if is_white_space(c) => (default(), TokenizerState::ParseNewLine),
+        _ => transfer_state([JsonToken::NewLine].cast(), TokenizerState::Initial, c),
+    }
 }
 
 pub fn tokenize(input: String) -> Vec<JsonToken> {
