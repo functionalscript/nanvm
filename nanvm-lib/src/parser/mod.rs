@@ -469,7 +469,14 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_djs() {
-        let json_str = include_str!("../../test/test-djs.djs");
+        let json_str = include_str!("../../test/test-djs.d.cjs");
+        let tokens = tokenize(json_str.to_owned());
+        let local = Local::default();
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Djs);
+
+        let json_str = include_str!("../../test/test-djs.d.mjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
         let result = parse(&local, tokens.into_iter());
