@@ -435,7 +435,7 @@ mod test {
         js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
         parser::DataType,
-        tokenizer::{ErrorType, JsonToken},
+        tokenizer::{tokenize, ErrorType, JsonToken},
     };
 
     use super::parse;
@@ -450,6 +450,28 @@ mod test {
             let global = GLOBAL;
             parse(global, [].into_iter())
         };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_json() {
+        let json_str = include_str!("../../test/test-json.json");
+        let tokens = tokenize(json_str.to_owned());
+        let local = Local::default();
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Json);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_djs() {
+        let json_str = include_str!("../../test/test-djs.djs");
+        let tokens = tokenize(json_str.to_owned());
+        let local = Local::default();
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Djs);
     }
 
     #[test]
