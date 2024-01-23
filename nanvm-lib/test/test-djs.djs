@@ -1,3 +1,3 @@
 module.exports = {
-    null
+    id: null
 }
