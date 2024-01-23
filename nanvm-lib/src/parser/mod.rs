@@ -385,6 +385,9 @@ impl<M: Manager> ParseState<M> {
 
 impl<M: Manager> JsonState<M> {
     fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
+        if token == JsonToken::NewLine {
+            return self;
+        }
         match self {
             JsonState::Initial(data_type) => data_type.initial_parse(manager, token),
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
