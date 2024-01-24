@@ -49,6 +49,12 @@ pub struct ParseAnyState<M: Manager> {
     pub consts: BTreeMap<String, Any<M::Dealloc>>,
 }
 
+pub enum ParseAnyResult<M: Manager> {
+    Continue(ParseAnyState<M>),
+    Result(Any<M::Dealloc>),
+    Error(ParseError),
+}
+
 #[derive(Debug)]
 pub enum ParseError {
     UnexpectedToken,
@@ -56,10 +62,16 @@ pub enum ParseError {
     WrongExportStatement,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum DataType {
     Json,
     Djs,
+}
+
+impl Default for DataType {
+    fn default() -> Self {
+        DataType::Json
+    }
 }
 
 pub struct ParseResult<M: Manager> {
@@ -149,29 +161,41 @@ impl DataType {
     }
 }
 
-impl <M: Manager> ParseModule<M> {
+impl<M: Manager> ParseModule<M> {
     fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self.status {
             ParseModuleStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "default" => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::Value, state: self.state }),
+                    "default" => JsonState::ParseModule(ParseModule {
+                        status: ParseModuleStatus::Value,
+                        state: self.state,
+                    }),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
             ParseModuleStatus::Module => match token {
-                JsonToken::Dot => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::ModuleDot, state: self.state }),
+                JsonToken::Dot => JsonState::ParseModule(ParseModule {
+                    status: ParseModuleStatus::ModuleDot,
+                    state: self.state,
+                }),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
             ParseModuleStatus::ModuleDot => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "exports" => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::ModuleDotExports, state: self.state }),
+                    "exports" => JsonState::ParseModule(ParseModule {
+                        status: ParseModuleStatus::ModuleDotExports,
+                        state: self.state,
+                    }),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
             ParseModuleStatus::ModuleDotExports => match token {
-                JsonToken::Equals => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::Value, state: self.state }),
+                JsonToken::Equals => JsonState::ParseModule(ParseModule {
+                    status: ParseModuleStatus::Value,
+                    state: self.state,
+                }),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
             ParseModuleStatus::Value => todo!(),
