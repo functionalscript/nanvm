@@ -34,11 +34,19 @@ pub enum ParseStatus {
     ObjectComma,
 }
 
-pub struct ParseState<M: Manager> {
+impl Default for ParseStatus {
+    fn default() -> Self {
+        ParseStatus::Initial
+    }
+}
+
+#[derive(Default)]
+pub struct ParseAnyState<M: Manager> {
     pub data_type: DataType,
     pub status: ParseStatus,
     pub top: Option<JsonStackElement<M::Dealloc>>,
     pub stack: Vec<JsonStackElement<M::Dealloc>>,
+    pub consts: BTreeMap<String, Any<M::Dealloc>>,
 }
 
 #[derive(Debug)]
@@ -48,7 +56,7 @@ pub enum ParseError {
     WrongExportStatement,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub enum DataType {
     Json,
     Djs,
@@ -59,19 +67,36 @@ pub struct ParseResult<M: Manager> {
     pub any: Any<M::Dealloc>,
 }
 
-pub enum ParseExport {
+pub enum ParseModuleStatus {
     Export,
     Module,
     ModuleDot,
     ModuleDotExports,
+    Value,
+}
+
+pub struct ParseModule<M: Manager> {
+    status: ParseModuleStatus,
+    state: ParseAnyState<M>,
+}
+
+pub enum ParseConstStatus {
+    Const,
+    ConstEquals,
+    Value,
+}
+
+pub struct ParseConst<M: Manager> {
+    status: ParseConstStatus,
+    state: ParseAnyState<M>,
 }
 
 pub enum JsonState<M: Manager> {
-    Initial(DataType),
-    Parse(ParseState<M>),
+    Initial(ParseAnyState<M>),
+    ParseConst(ParseConst<M>),
+    ParseModule(ParseModule<M>),
     Result(ParseResult<M>),
     Error(ParseError),
-    ParseExport(ParseExport),
 }
 
 fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
@@ -105,7 +130,7 @@ impl DataType {
         }
         match token {
             JsonToken::Id(s) => match s.as_ref() {
-                "export" => JsonState::ParseExport(ParseExport::Export),
+                "export" => JsonState::ParseModule(ParseExport::Export),
                 "module" => JsonState::ParseExport(ParseExport::Module),
                 _ => self.initial_parse_value(manager, JsonToken::Id(s)),
             },
@@ -114,7 +139,7 @@ impl DataType {
     }
 
     fn initial_parse_value<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
-        let parse_state = ParseState {
+        let parse_state = ParseAnyState {
             data_type: self,
             status: ParseStatus::Initial,
             top: None,
@@ -124,36 +149,37 @@ impl DataType {
     }
 }
 
-impl ParseExport {
-    fn parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
-        match self {
-            ParseExport::Export => match token {
+impl <M: Manager> ParseModule<M> {
+    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+        match self.status {
+            ParseModuleStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "default" => JsonState::Initial(DataType::Djs),
+                    "default" => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::Value, state: self.state }),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
-            ParseExport::Module => match token {
-                JsonToken::Dot => JsonState::ParseExport(ParseExport::ModuleDot),
+            ParseModuleStatus::Module => match token {
+                JsonToken::Dot => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::ModuleDot, state: self.state }),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
-            ParseExport::ModuleDot => match token {
+            ParseModuleStatus::ModuleDot => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "exports" => JsonState::ParseExport(ParseExport::ModuleDotExports),
+                    "exports" => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::ModuleDotExports, state: self.state }),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
-            ParseExport::ModuleDotExports => match token {
-                JsonToken::Equals => JsonState::Initial(DataType::Djs),
+            ParseModuleStatus::ModuleDotExports => match token {
+                JsonToken::Equals => JsonState::ParseModule( ParseModule { status: ParseModuleStatus::Value, state: self.state }),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
+            ParseModuleStatus::Value => todo!(),
         }
     }
 }
 
-impl<M: Manager> ParseState<M> {
+impl<M: Manager> ParseAnyState<M> {
     fn push_value(self, value: Any<M::Dealloc>) -> JsonState<M> {
         match self.top {
             None => JsonState::Result(ParseResult {
@@ -163,7 +189,7 @@ impl<M: Manager> ParseState<M> {
             Some(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
-                    JsonState::Parse(ParseState {
+                    JsonState::ParseModule(ParseAnyState {
                         data_type: self.data_type,
                         status: ParseStatus::ArrayValue,
                         top: Option::Some(JsonStackElement::Array(arr)),
@@ -176,7 +202,7 @@ impl<M: Manager> ParseState<M> {
                         map: stack_obj.map,
                         key: String::default(),
                     };
-                    JsonState::Parse(ParseState {
+                    JsonState::ParseModule(ParseAnyState {
                         data_type: self.data_type,
                         status: ParseStatus::ObjectValue,
                         top: Option::Some(JsonStackElement::Object(new_stack_obj)),
@@ -194,7 +220,7 @@ impl<M: Manager> ParseState<M> {
                     map: stack_obj.map,
                     key: s,
                 };
-                JsonState::Parse(ParseState {
+                JsonState::ParseModule(ParseAnyState {
                     data_type: self.data_type,
                     status: ParseStatus::ObjectKey,
                     top: Option::Some(JsonStackElement::Object(new_stack_obj)),
@@ -213,7 +239,7 @@ impl<M: Manager> ParseState<M> {
             }
             None => {}
         }
-        JsonState::Parse(ParseState {
+        JsonState::ParseModule(ParseAnyState {
             data_type: self.data_type,
             status: ParseStatus::ArrayStart,
             top: Some(new_top),
@@ -226,7 +252,7 @@ impl<M: Manager> ParseState<M> {
             Some(top) => match top {
                 JsonStackElement::Array(array) => {
                     let js_array = new_array(manager, array.into_iter()).to_ref();
-                    let new_state = ParseState {
+                    let new_state = ParseAnyState {
                         data_type: self.data_type,
                         status: ParseStatus::ArrayStart,
                         top: self.stack.pop(),
@@ -252,7 +278,7 @@ impl<M: Manager> ParseState<M> {
             }
             None => {}
         }
-        JsonState::Parse(ParseState {
+        JsonState::ParseModule(ParseAnyState {
             data_type: self.data_type,
             status: ParseStatus::ObjectStart,
             top: Some(new_top),
@@ -270,7 +296,7 @@ impl<M: Manager> ParseState<M> {
                         .map(|kv| (to_js_string(manager, kv.0), kv.1))
                         .collect::<Vec<_>>();
                     let js_object = new_object(manager, vec.into_iter()).to_ref();
-                    let new_state = ParseState {
+                    let new_state = ParseAnyState {
                         data_type: self.data_type,
                         status: ParseStatus::ArrayStart,
                         top: self.stack.pop(),
@@ -331,7 +357,7 @@ impl<M: Manager> ParseState<M> {
     fn parse_array_value(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
-            JsonToken::Comma => JsonState::Parse(ParseState {
+            JsonToken::Comma => JsonState::ParseModule(ParseAnyState {
                 data_type: self.data_type,
                 status: ParseStatus::ArrayComma,
                 top: self.top,
@@ -352,7 +378,7 @@ impl<M: Manager> ParseState<M> {
 
     fn parse_object_key(self, token: JsonToken) -> JsonState<M> {
         match token {
-            JsonToken::Colon => JsonState::Parse(ParseState {
+            JsonToken::Colon => JsonState::ParseModule(ParseAnyState {
                 data_type: self.data_type,
                 status: ParseStatus::ObjectColon,
                 top: self.top,
@@ -365,7 +391,7 @@ impl<M: Manager> ParseState<M> {
     fn parse_object_next(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
-            JsonToken::Comma => JsonState::Parse(ParseState {
+            JsonToken::Comma => JsonState::ParseModule(ParseAnyState {
                 data_type: self.data_type,
                 status: ParseStatus::ObjectComma,
                 top: self.top,
@@ -391,7 +417,7 @@ impl<M: Manager> JsonState<M> {
         match self {
             JsonState::Initial(data_type) => data_type.initial_parse(manager, token),
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
-            JsonState::Parse(parse_state) => match token {
+            JsonState::ParseModule(parse_state) => match token {
                 _ => match parse_state.status {
                     ParseStatus::Initial | ParseStatus::ObjectColon => {
                         parse_state.parse_value(manager, token)
