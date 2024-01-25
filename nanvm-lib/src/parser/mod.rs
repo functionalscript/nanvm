@@ -74,11 +74,13 @@ pub enum JsonState<M: Manager> {
     ParseExport(ParseExport),
 }
 
+#[allow(dead_code)]
 fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
     new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
 }
 
-fn try_id_to_any<M: Manager>(s: &str, manager: M) -> Option<Any<M::Dealloc>> {
+#[allow(dead_code)]
+fn try_id_to_any<M: Manager>(s: &str, _manager: M) -> Option<Any<M::Dealloc>> {
     match s {
         "null" => Some(Any::move_from(Null())),
         "true" => Some(Any::move_from(true)),
@@ -88,6 +90,7 @@ fn try_id_to_any<M: Manager>(s: &str, manager: M) -> Option<Any<M::Dealloc>> {
 }
 
 impl JsonToken {
+    #[allow(dead_code)]
     fn try_to_any<M: Manager>(self, manager: M) -> Option<Any<M::Dealloc>> {
         match self {
             JsonToken::Number(f) => Some(Any::move_from(f)),
@@ -99,6 +102,7 @@ impl JsonToken {
 }
 
 impl DataType {
+    #[allow(dead_code)]
     fn initial_parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
         if self == DataType::Djs {
             return self.initial_parse_value(manager, token);
@@ -125,7 +129,8 @@ impl DataType {
 }
 
 impl ParseExport {
-    fn parse<M: Manager>(self, manager: M, token: JsonToken) -> JsonState<M> {
+    #[allow(dead_code)]
+    fn parse<M: Manager>(self, _manager: M, token: JsonToken) -> JsonState<M> {
         match self {
             ParseExport::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -154,6 +159,7 @@ impl ParseExport {
 }
 
 impl<M: Manager> ParseState<M> {
+    #[allow(dead_code)]
     fn push_value(self, value: Any<M::Dealloc>) -> JsonState<M> {
         match self.top {
             None => JsonState::Result(ParseResult {
@@ -187,9 +193,10 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn push_key(self, s: String) -> JsonState<M> {
         match self.top {
-            Some(JsonStackElement::Object(mut stack_obj)) => {
+            Some(JsonStackElement::Object(stack_obj)) => {
                 let new_stack_obj = JsonStackObject {
                     map: stack_obj.map,
                     key: s,
@@ -205,6 +212,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn start_array(mut self) -> JsonState<M> {
         let new_top = JsonStackElement::Array(Vec::default());
         match self.top {
@@ -221,6 +229,7 @@ impl<M: Manager> ParseState<M> {
         })
     }
 
+    #[allow(dead_code)]
     fn end_array(mut self, manager: M) -> JsonState<M> {
         match self.top {
             Some(top) => match top {
@@ -240,6 +249,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn start_object(mut self) -> JsonState<M> {
         let new_top: JsonStackElement<<M as Manager>::Dealloc> =
             JsonStackElement::Object(JsonStackObject {
@@ -260,6 +270,7 @@ impl<M: Manager> ParseState<M> {
         })
     }
 
+    #[allow(dead_code)]
     fn end_object(mut self, manager: M) -> JsonState<M> {
         match self.top {
             Some(top) => match top {
@@ -284,6 +295,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_value(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
@@ -298,6 +310,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_array_comma(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
@@ -313,6 +326,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_array_start(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
@@ -328,6 +342,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_array_value(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
@@ -341,6 +356,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_object_start(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
@@ -350,6 +366,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_object_key(self, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::Colon => JsonState::Parse(ParseState {
@@ -362,6 +379,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_object_next(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
@@ -375,6 +393,7 @@ impl<M: Manager> ParseState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_object_comma(self, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
@@ -384,6 +403,7 @@ impl<M: Manager> ParseState<M> {
 }
 
 impl<M: Manager> JsonState<M> {
+    #[allow(dead_code)]
     fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
         if token == JsonToken::NewLine {
             return self;
@@ -410,6 +430,7 @@ impl<M: Manager> JsonState<M> {
         }
     }
 
+    #[allow(dead_code)]
     fn end(self) -> Result<ParseResult<M>, ParseError> {
         match self {
             JsonState::Result(result) => Ok(result),
@@ -419,6 +440,7 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
+#[allow(dead_code)]
 fn parse<M: Manager>(
     manager: M,
     iter: impl Iterator<Item = JsonToken>,

@@ -14,6 +14,7 @@ struct Arena<'a> {
 }
 
 impl<'a> Arena<'a> {
+    #[allow(dead_code)]
     pub fn new(buffer: &'a mut [u8]) -> Self {
         let range = buffer.as_mut_ptr_range();
         Self {
