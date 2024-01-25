@@ -231,7 +231,7 @@ impl<M: Manager> ParseAnyState<M> {
                 state,
             }),
             ParseAnyResult::Result(state) => JsonState::Result(state),
-            _ => todo!(),
+            ParseAnyResult::Error(error) => JsonState::Error(error),
         }
     }
 
