@@ -147,7 +147,17 @@ impl JsonToken {
     }
 }
 
-impl<M: Manager> ParseAnyState<M> {}
+impl<M: Manager> ParseAnyState<M> {
+    fn default(data_type: DataType) -> Self {
+        ParseAnyState {
+            data_type,
+            status: ParseStatus::Initial,
+            top: None,
+            stack: [].cast(),
+            consts: default(),
+        }
+    }
+}
 
 impl<M: Manager> ParseModule<M> {
     fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
@@ -210,11 +220,11 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::Id(s) => match s.as_ref() {
                 "export" => JsonState::ParseModule(ParseModule {
                     status: ParseModuleStatus::Export,
-                    state: default(),
+                    state: ParseAnyState::default(DataType::Djs),
                 }),
                 "module" => JsonState::ParseModule(ParseModule {
                     status: ParseModuleStatus::Module,
-                    state: default(),
+                    state: ParseAnyState::default(DataType::Djs),
                 }),
                 _ => self.initial_parse_value(manager, JsonToken::Id(s)),
             },
@@ -223,8 +233,7 @@ impl<M: Manager> ParseAnyState<M> {
     }
 
     fn initial_parse_value(self, manager: M, token: JsonToken) -> JsonState<M> {
-        let parse_state: ParseAnyState<_> = default();
-        let result = parse_state.parse_value(manager, token);
+        let result = self.parse_value(manager, token);
         match result {
             ParseAnyResult::Continue(state) => JsonState::ParseModule(ParseModule {
                 status: ParseModuleStatus::Value,
