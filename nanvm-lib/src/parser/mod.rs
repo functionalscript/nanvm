@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, default};
+use std::collections::BTreeMap;
 
 use crate::{
     common::{cast::Cast, default::default},
@@ -127,7 +127,7 @@ fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
     new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
 }
 
-fn try_id_to_any<M: Manager>(s: &str, manager: M) -> Option<Any<M::Dealloc>> {
+fn try_id_to_any<M: Manager>(s: &str, _manager: M) -> Option<Any<M::Dealloc>> {
     match s {
         "null" => Some(Any::move_from(Null())),
         "true" => Some(Any::move_from(true)),
@@ -296,7 +296,7 @@ impl<M: Manager> ParseAnyState<M> {
 
     fn push_key(self, s: String) -> ParseAnyResult<M> {
         match self.top {
-            Some(JsonStackElement::Object(mut stack_obj)) => {
+            Some(JsonStackElement::Object(stack_obj)) => {
                 let new_stack_obj = JsonStackObject {
                     map: stack_obj.map,
                     key: s,

@@ -49,8 +49,8 @@ impl<const BASE: u32> BigFloat<BASE> {
             if self.significand.value < max_significand {
                 break;
             }
-            let lastBit = self.significand.value.get_last_bit();
-            if lastBit == 1 {
+            let last_bit = self.significand.value.get_last_bit();
+            if last_bit == 1 {
                 self.non_zero_reminder = true;
             }
             self.significand.value = &self.significand.value >> &BigUint::one();
