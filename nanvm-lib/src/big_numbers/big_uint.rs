@@ -21,13 +21,8 @@ impl BigUint {
     }
 
     pub fn normalize(&mut self) {
-        loop {
-            match self.value.last() {
-                Some(&last) if last == 0 => {
-                    self.value.pop();
-                }
-                _ => break,
-            }
+        while let Some(&0) = self.value.last() {
+            self.value.pop();
         }
     }
 
@@ -35,12 +30,12 @@ impl BigUint {
         self.len() == 1 && self.value[0] == 1
     }
 
-    pub fn is_zero(&self) -> bool {
-        self.len() == 0
-    }
-
     pub fn len(&self) -> usize {
         self.value.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn from_u64(n: u64) -> Self {
@@ -52,15 +47,15 @@ impl BigUint {
             return BigUint::one();
         }
 
-        if self.is_zero() {
-            return if exp.is_zero() {
+        if self.is_empty() {
+            return if exp.is_empty() {
                 BigUint::one()
             } else {
                 BigUint::ZERO
             };
         }
 
-        if exp.is_zero() {
+        if exp.is_empty() {
             return BigUint::one();
         }
 
@@ -81,13 +76,13 @@ impl BigUint {
             if exp & 1 > 0 {
                 res = &res * &b;
             }
-            exp = exp >> 1;
+            exp >>= 1;
             b = &b * &b;
         }
     }
 
     pub fn get_last_bit(&self) -> u64 {
-        if self.is_zero() {
+        if self.is_empty() {
             return 0;
         }
 
@@ -99,18 +94,18 @@ impl BigUint {
     }
 
     pub fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
-        if b.is_zero() {
+        if b.is_empty() {
             panic!("attempt to divide by zero");
         }
 
-        match self.cmp(&b) {
+        match self.cmp(b) {
             Ordering::Less => (default(), self.clone()),
             Ordering::Equal => (BigUint { value: [1].cast() }, default()),
             Ordering::Greater => {
                 let mut a = self.clone();
                 let mut result = BigUint::ZERO;
                 loop {
-                    if a.cmp(&b) == Ordering::Less {
+                    if a.cmp(b) == Ordering::Less {
                         return (result, a);
                     }
                     let a_high_digit = a.len() - 1;
@@ -238,7 +233,7 @@ impl Mul for &BigUint {
     type Output = BigUint;
 
     fn mul(self, other: Self) -> Self::Output {
-        if self.is_zero() || other.is_zero() {
+        if self.is_empty() || other.is_empty() {
             return BigUint::ZERO;
         }
 
@@ -267,7 +262,7 @@ impl Div for &BigUint {
     type Output = BigUint;
 
     fn div(self, b: Self) -> Self::Output {
-        if b.is_zero() {
+        if b.is_empty() {
             panic!("attempt to divide by zero");
         }
 
@@ -280,7 +275,7 @@ impl Shl for &BigUint {
     type Output = BigUint;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        if self.is_zero() | rhs.is_zero() {
+        if self.is_empty() | rhs.is_empty() {
             return self.clone();
         }
 
@@ -318,7 +313,7 @@ impl Shr for &BigUint {
     type Output = BigUint;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        if self.is_zero() | rhs.is_zero() {
+        if self.is_empty() | rhs.is_empty() {
             return self.clone();
         }
 

@@ -21,7 +21,7 @@ impl<const BASE: u32> BigFloat<BASE> {
             return;
         }
 
-        let min_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
+        let min_significand = &BigUint::one() << &BigUint::from_u64(precision);
         self.increase_significand_to(&min_significand);
     }
 
@@ -35,7 +35,7 @@ impl<const BASE: u32> BigFloat<BASE> {
                 return;
             }
             self.significand.value = &self.significand.value << &BigUint::one();
-            self.exp = self.exp - 1;
+            self.exp -= 1;
         }
     }
 
@@ -44,7 +44,7 @@ impl<const BASE: u32> BigFloat<BASE> {
             return;
         }
 
-        let max_significand = &BigUint::one() << &BigUint::from_u64(precision as u64);
+        let max_significand = &BigUint::one() << &BigUint::from_u64(precision);
         loop {
             if self.significand.value < max_significand {
                 break;
@@ -54,7 +54,7 @@ impl<const BASE: u32> BigFloat<BASE> {
                 self.non_zero_reminder = true;
             }
             self.significand.value = &self.significand.value >> &BigUint::one();
-            self.exp = self.exp + 1;
+            self.exp += 1;
         }
     }
 }
@@ -115,7 +115,7 @@ impl BigFloat<2> {
         }
 
         if last_bit == 1 {
-            frac = frac + 1;
+            frac += 1;
         }
 
         frac
@@ -133,7 +133,7 @@ impl BigFloat<2> {
 
         let mut bits: u64 = 0;
         if self.significand.sign == Sign::Negative {
-            bits = bits | 1 << 63;
+            bits |= 1 << 63;
         }
 
         if self.significand.is_zero() {
@@ -149,16 +149,16 @@ impl BigFloat<2> {
             -1022..=1023 => {
                 let mut frac = value.get_frac_round();
                 if frac == MAX_FRAC {
-                    frac = frac >> 1;
-                    f64_exp = f64_exp + 1;
+                    frac >>= 1;
+                    f64_exp += 1;
                     //if f64_exp equals 1024, then exp_bits will be all ones and frac_bits will be all zeros
                     //it is an infinity by the f64 standard
                 }
 
                 let exp_bits = (f64_exp + 1023) as u64;
-                bits = bits | exp_bits << 52;
+                bits |= exp_bits << 52;
                 let frac_bits = frac & FRAC_MASK;
-                bits = bits | frac_bits;
+                bits |= frac_bits;
                 bits
             }
             -1074..=-1023 => {
@@ -167,11 +167,11 @@ impl BigFloat<2> {
                 let frac = value.get_frac_round();
                 //if frac equals 1 << 53, then exp_bits will be 1 and frac_bits will be all zeros
                 //it is a normal number by the f64 standard and it is the correct number
-                bits = bits | frac;
+                bits |= frac;
                 bits
             }
             exp if exp > 1023 => {
-                bits = bits | INF_BITS;
+                bits |= INF_BITS;
                 bits
             }
             _ => bits,
