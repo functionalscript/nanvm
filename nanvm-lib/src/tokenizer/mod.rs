@@ -275,17 +275,11 @@ const CP_SMALL_A: u32 = 0x61;
 const CP_CAPITAL_A: u32 = 0x41;
 
 const fn is_new_line(c: char) -> bool {
-    match c {
-        '\t' | '\r' => true,
-        _ => false,
-    }
+    matches!(c, '\t' | '\r')
 }
 
 const fn is_white_space(c: char) -> bool {
-    match c {
-        ' ' | '\n' | '\t' | '\r' => true,
-        _ => false,
-    }
+    matches!(c, ' ' | '\n' | '\t' | '\r')
 }
 
 fn is_operator(c: char) -> bool {
@@ -308,10 +302,7 @@ const fn to_operator(c: char) -> Option<JsonToken> {
 }
 
 const fn is_id_start(c: char) -> bool {
-    match c {
-        'a'..='z' | 'A'..='Z' | '_' | '$' => true,
-        _ => false,
-    }
+    matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
 }
 
 const fn is_id_char(c: char) -> bool {
