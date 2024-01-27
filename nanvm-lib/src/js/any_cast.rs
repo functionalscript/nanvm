@@ -26,7 +26,7 @@ where
     }
     #[inline(always)]
     unsafe fn move_to_any_internal(self) -> u64 {
-        T::SUBSET.with_value_typed(self)
+        T::SUBSET.typed_value_to_subset_value(self)
     }
     #[inline(always)]
     unsafe fn from_any_internal(any_internal: u64) -> Self {
@@ -41,7 +41,7 @@ impl<D: Dealloc, T: RefCast<D>> AnyCast<D> for Ref<T, D> {
     }
     #[inline(always)]
     unsafe fn move_to_any_internal(self) -> u64 {
-        T::REF_SUBSET.with_value_typed(self.move_to_internal())
+        T::REF_SUBSET.typed_value_to_subset_value(self.move_to_internal())
     }
     #[inline(always)]
     unsafe fn from_any_internal(any_internal: u64) -> Self {
