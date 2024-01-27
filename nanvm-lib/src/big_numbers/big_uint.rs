@@ -34,7 +34,13 @@ impl BigUint {
         self.value.len()
     }
 
+    // Clippy wants is_zero as soon as it sees len.
+    // We want to use is_zero instead, but let's be respectful to Clippy anyway.
     pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn is_zero(&self) -> bool {
         self.len() == 0
     }
 
@@ -47,15 +53,15 @@ impl BigUint {
             return BigUint::one();
         }
 
-        if self.is_empty() {
-            return if exp.is_empty() {
+        if self.is_zero() {
+            return if exp.is_zero() {
                 BigUint::one()
             } else {
                 BigUint::ZERO
             };
         }
 
-        if exp.is_empty() {
+        if exp.is_zero() {
             return BigUint::one();
         }
 
@@ -82,7 +88,7 @@ impl BigUint {
     }
 
     pub fn get_last_bit(&self) -> u64 {
-        if self.is_empty() {
+        if self.is_zero() {
             return 0;
         }
 
@@ -94,7 +100,7 @@ impl BigUint {
     }
 
     pub fn div_mod(&self, b: &Self) -> (BigUint, BigUint) {
-        if b.is_empty() {
+        if b.is_zero() {
             panic!("attempt to divide by zero");
         }
 
@@ -233,7 +239,7 @@ impl Mul for &BigUint {
     type Output = BigUint;
 
     fn mul(self, other: Self) -> Self::Output {
-        if self.is_empty() || other.is_empty() {
+        if self.is_zero() || other.is_zero() {
             return BigUint::ZERO;
         }
 
@@ -262,7 +268,7 @@ impl Div for &BigUint {
     type Output = BigUint;
 
     fn div(self, b: Self) -> Self::Output {
-        if b.is_empty() {
+        if b.is_zero() {
             panic!("attempt to divide by zero");
         }
 
@@ -275,7 +281,7 @@ impl Shl for &BigUint {
     type Output = BigUint;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        if self.is_empty() | rhs.is_empty() {
+        if self.is_zero() | rhs.is_zero() {
             return self.clone();
         }
 
@@ -313,7 +319,7 @@ impl Shr for &BigUint {
     type Output = BigUint;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        if self.is_empty() | rhs.is_empty() {
+        if self.is_zero() | rhs.is_zero() {
             return self.clone();
         }
 

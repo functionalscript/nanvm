@@ -33,13 +33,13 @@ impl BigInt {
 
     fn normalize(&mut self) {
         self.value.normalize();
-        if self.value.is_empty() {
+        if self.value.is_zero() {
             self.sign = Sign::Positive;
         }
     }
 
     pub fn is_zero(&self) -> bool {
-        self.value.is_empty()
+        self.value.is_zero()
     }
 
     pub fn new(sign: Sign, value: BigUint) -> BigInt {
@@ -128,7 +128,7 @@ impl Neg for BigInt {
     type Output = BigInt;
 
     fn neg(mut self) -> Self::Output {
-        if self.value.is_empty() {
+        if self.value.is_zero() {
             return self;
         }
         self.sign = if self.sign == Sign::Positive {
