@@ -332,7 +332,7 @@ impl Shr for &BigUint {
         let shift_mod = rhs.value[0] & ((1 << 6) - 1);
         if shift_mod > 0 {
             let len = value.len();
-            let mask = 1 << shift_mod - 1;
+            let mask = 1 << (shift_mod - 1);
             let mut i = 0;
             loop {
                 value[i] = value[i] >> shift_mod;
@@ -340,7 +340,7 @@ impl Shr for &BigUint {
                 if i == len {
                     break;
                 }
-                value[i - 1] = value[i - 1] | (value[i] & mask) << 64 - shift_mod;
+                value[i - 1] = value[i - 1] | (value[i] & mask) << (64 - shift_mod);
             }
         }
 

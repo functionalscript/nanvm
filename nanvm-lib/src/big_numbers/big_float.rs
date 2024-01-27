@@ -694,7 +694,7 @@ mod test {
             non_zero_reminder: false,
         };
         let res = a.to_f64();
-        assert_eq!(res, -2.0f64.powf(-1023.0));
+        assert_eq!(res, -(2.0f64.powf(-1023.0)));
         assert!(res.is_subnormal());
 
         let a = BigFloat {

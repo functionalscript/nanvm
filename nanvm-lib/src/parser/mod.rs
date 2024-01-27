@@ -23,7 +23,9 @@ pub struct JsonStackObject<D: Dealloc> {
     pub key: String,
 }
 
+#[derive(Default)]
 pub enum ParseStatus {
+    #[default]
     Initial,
     ArrayStart,
     ArrayValue,
@@ -33,12 +35,6 @@ pub enum ParseStatus {
     ObjectColon,
     ObjectValue,
     ObjectComma,
-}
-
-impl Default for ParseStatus {
-    fn default() -> Self {
-        ParseStatus::Initial
-    }
 }
 
 pub struct ParseAnyState<M: Manager> {
@@ -74,16 +70,11 @@ pub enum ParseError {
     WrongExportStatement,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub enum DataType {
+    #[default]
     Json,
     Djs,
-}
-
-impl Default for DataType {
-    fn default() -> Self {
-        DataType::Json
-    }
 }
 
 pub struct ParseResult<M: Manager> {
@@ -245,17 +236,15 @@ impl<M: Manager> ParseAnyState<M> {
     }
 
     fn parse(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
-        match token {
-            _ => match self.status {
-                ParseStatus::Initial | ParseStatus::ObjectColon => self.parse_value(manager, token),
-                ParseStatus::ArrayStart => self.parse_array_start(manager, token),
-                ParseStatus::ArrayValue => self.parse_array_value(manager, token),
-                ParseStatus::ArrayComma => self.parse_array_comma(manager, token),
-                ParseStatus::ObjectStart => self.parse_object_start(manager, token),
-                ParseStatus::ObjectKey => self.parse_object_key(token),
-                ParseStatus::ObjectValue => self.parse_object_next(manager, token),
-                ParseStatus::ObjectComma => self.parse_object_comma(token),
-            },
+        match self.status {
+            ParseStatus::Initial | ParseStatus::ObjectColon => self.parse_value(manager, token),
+            ParseStatus::ArrayStart => self.parse_array_start(manager, token),
+            ParseStatus::ArrayValue => self.parse_array_value(manager, token),
+            ParseStatus::ArrayComma => self.parse_array_comma(manager, token),
+            ParseStatus::ObjectStart => self.parse_object_start(manager, token),
+            ParseStatus::ObjectKey => self.parse_object_key(token),
+            ParseStatus::ObjectValue => self.parse_object_next(manager, token),
+            ParseStatus::ObjectComma => self.parse_object_comma(token),
         }
     }
 
@@ -315,11 +304,8 @@ impl<M: Manager> ParseAnyState<M> {
 
     fn start_array(mut self) -> ParseAnyResult<M> {
         let new_top = JsonStackElement::Array(Vec::default());
-        match self.top {
-            Some(top) => {
-                self.stack.push(top);
-            }
-            None => {}
+        if let Some(top) = self.top {
+            self.stack.push(top);
         }
         ParseAnyResult::Continue(ParseAnyState {
             data_type: self.data_type,
@@ -332,19 +318,16 @@ impl<M: Manager> ParseAnyState<M> {
 
     fn end_array(mut self, manager: M) -> ParseAnyResult<M> {
         match self.top {
-            Some(top) => match top {
-                JsonStackElement::Array(array) => {
-                    let js_array = new_array(manager, array.into_iter()).to_ref();
-                    let new_state = ParseAnyState {
-                        data_type: self.data_type,
-                        status: ParseStatus::ArrayStart,
-                        top: self.stack.pop(),
-                        stack: self.stack,
-                        consts: self.consts,
-                    };
-                    return new_state.push_value(Any::move_from(js_array));
-                }
-                _ => unreachable!(),
+            Some(JsonStackElement::Array(array)) => {
+                let js_array = new_array(manager, array.into_iter()).to_ref();
+                let new_state = ParseAnyState {
+                    data_type: self.data_type,
+                    status: ParseStatus::ArrayStart,
+                    top: self.stack.pop(),
+                    stack: self.stack,
+                    consts: self.consts,
+                };
+                new_state.push_value(Any::move_from(js_array))
             },
             _ => unreachable!(),
         }
@@ -356,11 +339,8 @@ impl<M: Manager> ParseAnyState<M> {
                 map: BTreeMap::default(),
                 key: String::default(),
             });
-        match self.top {
-            Some(top) => {
-                self.stack.push(top);
-            }
-            None => {}
+        if let Some(top) = self.top {
+            self.stack.push(top)
         }
         ParseAnyResult::Continue(ParseAnyState {
             data_type: self.data_type,
@@ -373,24 +353,21 @@ impl<M: Manager> ParseAnyState<M> {
 
     fn end_object(mut self, manager: M) -> ParseAnyResult<M> {
         match self.top {
-            Some(top) => match top {
-                JsonStackElement::Object(object) => {
-                    let vec = object
-                        .map
-                        .into_iter()
-                        .map(|kv| (to_js_string(manager, kv.0), kv.1))
-                        .collect::<Vec<_>>();
-                    let js_object = new_object(manager, vec.into_iter()).to_ref();
-                    let new_state = ParseAnyState {
-                        data_type: self.data_type,
-                        status: ParseStatus::ArrayStart,
-                        top: self.stack.pop(),
-                        stack: self.stack,
-                        consts: self.consts,
-                    };
-                    return new_state.push_value(Any::move_from(js_object));
-                }
-                _ => unreachable!(),
+            Some(JsonStackElement::Object(object)) => {
+                let vec = object
+                    .map
+                    .into_iter()
+                    .map(|kv| (to_js_string(manager, kv.0), kv.1))
+                    .collect::<Vec<_>>();
+                let js_object = new_object(manager, vec.into_iter()).to_ref();
+                let new_state = ParseAnyState {
+                    data_type: self.data_type,
+                    status: ParseStatus::ArrayStart,
+                    top: self.stack.pop(),
+                    stack: self.stack,
+                    consts: self.consts,
+                };
+                new_state.push_value(Any::move_from(js_object))
             },
             _ => unreachable!(),
         }

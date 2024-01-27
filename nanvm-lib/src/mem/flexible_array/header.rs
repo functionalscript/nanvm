@@ -3,7 +3,9 @@ use super::constructor::FlexibleArrayConstructor;
 pub trait FlexibleArrayHeader: Sized {
     // required
     fn len(&self) -> usize;
-    //
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     #[inline(always)]
     fn constructor<I: Iterator>(self, items: I) -> FlexibleArrayConstructor<Self, I> {
         FlexibleArrayConstructor::new(self, items)

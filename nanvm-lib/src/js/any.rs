@@ -55,14 +55,12 @@ impl<D: Dealloc> Any<D> {
                 0b10 => Type::Array,
                 _ => unreachable!(),
             }
+        } else if self.is::<f64>() {
+            Type::Number
+        } else if self.is::<Null>() {
+            Type::Null
         } else {
-            if self.is::<f64>() {
-                Type::Number
-            } else if self.is::<Null>() {
-                Type::Null
-            } else {
-                Type::Bool
-            }
+            Type::Bool
         }
     }
     /// `T` should have the same allocator as `Any`.
@@ -104,7 +102,7 @@ mod test {
             js_string::{new_string, JsString, JsStringRef},
             null::Null,
         },
-        mem::{global::Global, manager::Manager},
+        mem::{global::Global},
     };
 
     use super::*;

@@ -13,6 +13,7 @@ use super::{manager::Dealloc, ref_::Ref};
 pub struct MutRef<T: Object, D: Dealloc>(*mut Block<T, D>);
 
 impl<T: Object, D: Dealloc> MutRef<T, D> {
+    
     #[inline(always)]
     pub const unsafe fn new(v: *mut Block<T, D>) -> Self {
         Self(v)
@@ -28,7 +29,7 @@ impl<T: Object, D: Dealloc> MutRef<T, D> {
 impl<T: Object, D: Dealloc> Drop for MutRef<T, D> {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe { (&mut *self.0).delete() }
+        unsafe { (*self.0).delete() }
     }
 }
 

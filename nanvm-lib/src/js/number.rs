@@ -49,7 +49,7 @@ pub mod test {
         assert!(is_valid(INFINITY));
         assert!(is_valid(NAN));
         assert!(is_valid(NEG_INFINITY));
-        assert_eq!((0.0f64 / 0.0).to_bits(), NAN);
+        assert_eq!(f64::NAN.to_bits(), NAN);
     }
 
     #[test]
