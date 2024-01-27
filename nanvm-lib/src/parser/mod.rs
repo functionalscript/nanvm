@@ -151,7 +151,7 @@ impl<M: Manager> ParseAnyState<M> {
 }
 
 impl<M: Manager> RootState<M> {
-    fn initial_parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self.status {
             RootStatus::Initial => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -472,7 +472,7 @@ impl<M: Manager> JsonState<M> {
             return self;
         }
         match self {
-            JsonState::ParseRoot(state) => state.initial_parse(manager, token),
+            JsonState::ParseRoot(state) => state.parse(manager, token),
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
             JsonState::ParseModule(state) => state.parse_for_module(manager, token),
             _ => self,
