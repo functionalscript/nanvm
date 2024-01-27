@@ -34,7 +34,7 @@ impl BigUint {
         self.value.len()
     }
 
-    // Clippy wants is_zero as soon as it sees len.
+    // Clippy wants is_empty as soon as it sees len.
     // We want to use is_zero instead, but let's be respectful to Clippy anyway.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
