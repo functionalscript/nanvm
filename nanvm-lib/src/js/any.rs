@@ -40,6 +40,7 @@ impl<D: Dealloc> Any<D> {
     pub fn move_from<T: AnyCast<D>>(t: T) -> Self {
         t.move_to_any()
     }
+    #[allow(clippy::result_unit_err)]
     pub fn try_move<T: AnyCast<D>>(self) -> Result<T, ()> {
         if self.is::<T>() {
             return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
@@ -78,6 +79,7 @@ impl<D: Dealloc> Any<D> {
     ///     a.try_move().unwrap()
     /// }
     /// ```
+    #[allow(clippy::result_unit_err)]
     #[inline(always)]
     pub fn try_ref<T: RefCast<D>>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };

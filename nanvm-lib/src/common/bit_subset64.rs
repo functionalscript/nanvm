@@ -41,13 +41,7 @@ where
     u64: Cast<T>,
 {
     #[inline(always)]
-    fn clone(&self) -> Self {
-        Self {
-            tag: self.tag,
-            mask: self.mask,
-            _0: PhantomData,
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<T: Cast<u64>> Copy for BitSubset64<T> where u64: Cast<T> {}
@@ -134,12 +128,12 @@ where
         self.superposition() & set
     }
     #[inline(always)]
-    pub const fn from_value(self, value: u64) -> u64 {
+    pub const fn with_value(self, value: u64) -> u64 {
         self.tag | value
     }
     #[inline(always)]
-    pub fn from_value_typed(self, value: T) -> u64 {
-        self.from_value(value.cast())
+    pub fn with_value_typed(self, value: T) -> u64 {
+        self.with_value(value.cast())
     }
     #[inline(always)]
     pub fn get_value_typed(self, set: u64) -> T {

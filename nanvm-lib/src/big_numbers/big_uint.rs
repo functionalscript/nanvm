@@ -131,7 +131,7 @@ impl BigUint {
                         }
                     };
                     let mut q = BigUint {
-                        value: vec![0; q_index as usize + 1],
+                        value: vec![0; q_index + 1],
                     };
                     q.value[q_index] = q_digit;
                     let mut m = b * &q;
@@ -181,7 +181,7 @@ impl Sub for &BigUint {
     type Output = BigUint;
 
     fn sub(self, other: Self) -> Self::Output {
-        match self.cmp(&other) {
+        match self.cmp(other) {
             Ordering::Less | Ordering::Equal => BigUint::ZERO,
             Ordering::Greater => {
                 let mut value: Vec<_> = default();
@@ -252,9 +252,9 @@ impl Mul for &BigUint {
             let max = if i < lhs_max { i } else { lhs_max };
             while j <= max {
                 value = add_to_vec(value, i, self.value[j] as u128 * other.value[i - j] as u128);
-                j = j + 1;
+                j += 1;
             }
-            i = i + 1;
+            i += 1;
         }
 
         let mut result = BigUint { value };
@@ -295,8 +295,8 @@ impl Shl for &BigUint {
             value.push(0); //todo: check if it is neccessary?
             for i in (0..=len - 1).rev() {
                 let mut digit = value[i] as u128;
-                digit = digit << shift_mod;
-                value[i + 1] = value[i + 1] | (digit >> 64) as u64;
+                digit <<= shift_mod;
+                value[i + 1] |= (digit >> 64) as u64;
                 value[i] = digit as u64;
             }
         }
@@ -335,12 +335,12 @@ impl Shr for &BigUint {
             let mask = 1 << (shift_mod - 1);
             let mut i = 0;
             loop {
-                value[i] = value[i] >> shift_mod;
+                value[i] >>= shift_mod;
                 i += 1;
                 if i == len {
                     break;
                 }
-                value[i - 1] = value[i - 1] | (value[i] & mask) << (64 - shift_mod);
+                value[i - 1] |= (value[i] & mask) << (64 - shift_mod);
             }
         }
 
