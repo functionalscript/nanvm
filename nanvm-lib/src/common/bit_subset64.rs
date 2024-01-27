@@ -138,7 +138,7 @@ where
         self.raw_value_to_subset_value(value.cast())
     }
     #[inline(always)]
-    pub fn get_value_typed(self, set: u64) -> T {
+    pub fn subset_value_to_typed_value(self, set: u64) -> T {
         (self.get_value(set)).cast()
     }
 }
