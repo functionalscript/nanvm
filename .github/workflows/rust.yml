@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v4
     - run: cargo fmt --check
 
-  clippy-check:
+  clippy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
