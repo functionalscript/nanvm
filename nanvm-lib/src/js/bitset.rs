@@ -19,8 +19,8 @@ pub const SIMPLE_SPLIT: (BitSubset64, BitSubset64) = SIMPLE.split(0x0002_0000_00
 
 pub const BOOL: BitSubset64<bool> = SIMPLE_SPLIT.0.cast();
 
-pub const FALSE: u64 = BOOL.value_to_subset_value(false as u64);
-pub const TRUE: u64 = BOOL.value_to_subset_value(true as u64);
+pub const FALSE: u64 = BOOL.subset_value_to_typed_value(false as u64);
+pub const TRUE: u64 = BOOL.subset_value_to_typed_value(true as u64);
 
 // NULL: 1111_1111_1111_1.0.1
 
