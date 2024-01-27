@@ -40,6 +40,7 @@ impl<D: Dealloc> Any<D> {
     pub fn move_from<T: AnyCast<D>>(t: T) -> Self {
         t.move_to_any()
     }
+    #[allow(clippy::result_unit_err)]
     pub fn try_move<T: AnyCast<D>>(self) -> Result<T, ()> {
         if self.is::<T>() {
             return Ok(unsafe { T::from_any_internal(self.move_to_internal().0) });
@@ -55,14 +56,12 @@ impl<D: Dealloc> Any<D> {
                 0b10 => Type::Array,
                 _ => unreachable!(),
             }
+        } else if self.is::<f64>() {
+            Type::Number
+        } else if self.is::<Null>() {
+            Type::Null
         } else {
-            if self.is::<f64>() {
-                Type::Number
-            } else if self.is::<Null>() {
-                Type::Null
-            } else {
-                Type::Bool
-            }
+            Type::Bool
         }
     }
     /// `T` should have the same allocator as `Any`.
@@ -80,6 +79,7 @@ impl<D: Dealloc> Any<D> {
     ///     a.try_move().unwrap()
     /// }
     /// ```
+    #[allow(clippy::result_unit_err)]
     #[inline(always)]
     pub fn try_ref<T: RefCast<D>>(&self) -> Result<&Block<T, D>, ()> {
         let v = unsafe { self.u64() };
@@ -104,7 +104,7 @@ mod test {
             js_string::{new_string, JsString, JsStringRef},
             null::Null,
         },
-        mem::{global::Global, manager::Manager},
+        mem::global::Global,
     };
 
     use super::*;

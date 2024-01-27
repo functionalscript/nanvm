@@ -82,15 +82,15 @@ mod test {
                     header: Header(0, null_mut()),
                     items: [0; 5],
                 };
-                let v = unsafe { (&mut mem).to_mut_ptr() as *mut _ };
+                let v = unsafe { mem.to_mut_ptr() as *mut _ };
                 unsafe { new.construct(v) };
                 let r = unsafe { &mut *v };
                 assert_eq!(mem.header.len(), 5);
                 assert_eq!(r.header.len(), 5);
                 assert_eq!(mem.header.0, 5);
                 assert_eq!(r.header.0, 5);
-                assert_eq!(mem.header.1, unsafe { (&mut i).to_mut_ptr() });
-                assert_eq!(r.header.1, unsafe { (&mut i).to_mut_ptr() });
+                assert_eq!(mem.header.1, unsafe { i.to_mut_ptr() });
+                assert_eq!(r.header.1, unsafe { i.to_mut_ptr() });
                 assert_eq!(r.object_size(), size_of::<usize>() * 2 + 5);
                 assert_eq!(mem.items, [42, 43, 44, 45, 46]);
                 assert_eq!(r.items_mut(), &[42, 43, 44, 45, 46]);

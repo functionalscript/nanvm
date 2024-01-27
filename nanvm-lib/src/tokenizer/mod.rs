@@ -37,7 +37,9 @@ pub enum ErrorType {
     MissingQuotes,
 }
 
+#[derive(Default)]
 enum TokenizerState {
+    #[default]
     Initial,
     ParseId(String),
     ParseString(String),
@@ -53,12 +55,6 @@ enum TokenizerState {
     ParseExp(ExpState),
     ParseBigInt(IntegerState),
     ParseNewLine,
-}
-
-impl Default for TokenizerState {
-    fn default() -> Self {
-        TokenizerState::Initial
-    }
 }
 
 impl TokenizerState {
@@ -97,10 +93,10 @@ impl TokenizerState {
                 [JsonToken::ErrorToken(ErrorType::MissingQuotes)].cast()
             }
             TokenizerState::ParseZero(_) => [JsonToken::Number(default())].cast(),
-            TokenizerState::ParseInt(s) => [s.to_token()].cast(),
-            TokenizerState::ParseFrac(s) => [s.to_token()].cast(),
-            TokenizerState::ParseExp(s) => [s.to_token()].cast(),
-            TokenizerState::ParseBigInt(s) => [s.to_big_int_token()].cast(),
+            TokenizerState::ParseInt(s) => [s.into_token()].cast(),
+            TokenizerState::ParseFrac(s) => [s.into_token()].cast(),
+            TokenizerState::ParseExp(s) => [s.into_token()].cast(),
+            TokenizerState::ParseBigInt(s) => [s.into_big_int_token()].cast(),
             TokenizerState::ParseMinus
             | TokenizerState::ParseFracBegin(_)
             | TokenizerState::ParseExpBegin(_)
@@ -119,7 +115,7 @@ struct ParseUnicodeCharState {
 
 impl ParseUnicodeCharState {
     fn push(mut self, i: u32) -> (Vec<JsonToken>, TokenizerState) {
-        let new_unicode = self.unicode | (i << (3 - self.index) * 4);
+        let new_unicode = self.unicode | (i << ((3 - self.index) * 4));
         match self.index {
             3 => {
                 let c = char::from_u32(new_unicode);
@@ -133,7 +129,7 @@ impl ParseUnicodeCharState {
             }
             0..=2 => {
                 self.unicode = new_unicode;
-                self.index = self.index + 1;
+                self.index += 1;
                 (default(), TokenizerState::ParseUnicodeChar(self))
             }
             _ => unreachable!(),
@@ -171,7 +167,7 @@ impl IntegerState {
         self
     }
 
-    fn to_float_state(self) -> FloatState {
+    fn into_float_state(self) -> FloatState {
         FloatState {
             s: self.s,
             b: self.b,
@@ -179,7 +175,7 @@ impl IntegerState {
         }
     }
 
-    fn to_exp_state(self) -> ExpState {
+    fn into_exp_state(self) -> ExpState {
         ExpState {
             s: self.s,
             b: self.b,
@@ -189,7 +185,7 @@ impl IntegerState {
         }
     }
 
-    fn to_token(self) -> JsonToken {
+    fn into_token(self) -> JsonToken {
         JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: BigInt {
                 sign: self.s,
@@ -200,7 +196,7 @@ impl IntegerState {
         }))
     }
 
-    fn to_big_int_token(self) -> JsonToken {
+    fn into_big_int_token(self) -> JsonToken {
         JsonToken::BigInt(BigInt {
             sign: self.s,
             value: self.b,
@@ -217,11 +213,11 @@ struct FloatState {
 impl FloatState {
     fn add_digit(mut self, c: char) -> FloatState {
         self.b = self.b.add_digit(c);
-        self.fe = self.fe - 1;
+        self.fe -= 1;
         self
     }
 
-    fn to_exp_state(self) -> ExpState {
+    fn into_exp_state(self) -> ExpState {
         ExpState {
             s: self.s,
             b: self.b,
@@ -231,7 +227,7 @@ impl FloatState {
         }
     }
 
-    fn to_token(self) -> JsonToken {
+    fn into_token(self) -> JsonToken {
         JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: BigInt {
                 sign: self.s,
@@ -257,7 +253,7 @@ impl ExpState {
         self
     }
 
-    fn to_token(self) -> JsonToken {
+    fn into_token(self) -> JsonToken {
         let exp = self.fe
             + match self.es {
                 Sign::Positive => self.e,
@@ -279,17 +275,11 @@ const CP_SMALL_A: u32 = 0x61;
 const CP_CAPITAL_A: u32 = 0x41;
 
 const fn is_new_line(c: char) -> bool {
-    match c {
-        '\t' | '\r' => true,
-        _ => false,
-    }
+    matches!(c, '\t' | '\r')
 }
 
 const fn is_white_space(c: char) -> bool {
-    match c {
-        ' ' | '\n' | '\t' | '\r' => true,
-        _ => false,
-    }
+    matches!(c, ' ' | '\n' | '\t' | '\r')
 }
 
 fn is_operator(c: char) -> bool {
@@ -312,10 +302,7 @@ const fn to_operator(c: char) -> Option<JsonToken> {
 }
 
 const fn is_id_start(c: char) -> bool {
-    match c {
-        'a'..='z' | 'A'..='Z' | '_' | '$' => true,
-        _ => false,
-    }
+    matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
 }
 
 const fn is_id_char(c: char) -> bool {
@@ -482,10 +469,10 @@ fn tokenize_integer(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState
     match c {
         '0'..='9' => (default(), TokenizerState::ParseInt(s.add_digit(c))),
         '.' => (default(), TokenizerState::ParseFracBegin(s)),
-        'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
+        'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.into_exp_state())),
         'n' => (default(), TokenizerState::ParseBigInt(s)),
         c if is_terminal_for_number(c) => {
-            transfer_state([s.to_token()].cast(), TokenizerState::Initial, c)
+            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
         }
         _ => tokenize_invalid_number(c),
     }
@@ -495,7 +482,7 @@ fn tokenize_frac_begin(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerSt
     match c {
         '0'..='9' => (
             default(),
-            TokenizerState::ParseFrac(s.to_float_state().add_digit(c)),
+            TokenizerState::ParseFrac(s.into_float_state().add_digit(c)),
         ),
         _ => tokenize_invalid_number(c),
     }
@@ -504,9 +491,9 @@ fn tokenize_frac_begin(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerSt
 fn tokenize_frac(s: FloatState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseFrac(s.add_digit(c))),
-        'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.to_exp_state())),
+        'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.into_exp_state())),
         c if is_terminal_for_number(c) => {
-            transfer_state([s.to_token()].cast(), TokenizerState::Initial, c)
+            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
         }
         _ => tokenize_invalid_number(c),
     }
@@ -532,7 +519,7 @@ fn tokenize_exp_begin(mut s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerSta
             TokenizerState::ParseExpSign(s)
         }),
         c if is_terminal_for_number(c) => {
-            transfer_state([s.to_token()].cast(), TokenizerState::Initial, c)
+            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
         }
         _ => tokenize_invalid_number(c),
     }
@@ -542,7 +529,7 @@ fn tokenize_exp(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
         c if is_terminal_for_number(c) => {
-            transfer_state([s.to_token()].cast(), TokenizerState::Initial, c)
+            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
         }
         _ => tokenize_invalid_number(c),
     }
@@ -551,7 +538,7 @@ fn tokenize_exp(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
 fn tokenize_big_int(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         c if is_terminal_for_number(c) => {
-            transfer_state([s.to_big_int_token()].cast(), TokenizerState::Initial, c)
+            transfer_state([s.into_big_int_token()].cast(), TokenizerState::Initial, c)
         }
         _ => tokenize_invalid_number(c),
     }

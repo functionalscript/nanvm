@@ -20,9 +20,11 @@ pub trait Dealloc {
 pub trait Manager: Sized + Copy {
     // required:
     type Dealloc: Dealloc;
+
     unsafe fn alloc(self, layout: Layout) -> *mut u8;
     // optional:
     /// Allocate a block of memory for a new T object and initialize the object with the `new_in_place`.
+    #[allow(clippy::wrong_self_convention)]
     fn new<N: Constructor>(self, new_in_place: N) -> MutRef<N::Result, Self::Dealloc> {
         unsafe {
             let p = self.alloc(Block::<N::Result, Self::Dealloc>::block_layout(

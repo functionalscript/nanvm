@@ -21,13 +21,8 @@ impl BigUint {
     }
 
     pub fn normalize(&mut self) {
-        loop {
-            match self.value.last() {
-                Some(&last) if last == 0 => {
-                    self.value.pop();
-                }
-                _ => break,
-            }
+        while let Some(&0) = self.value.last() {
+            self.value.pop();
         }
     }
 
@@ -35,12 +30,18 @@ impl BigUint {
         self.len() == 1 && self.value[0] == 1
     }
 
-    pub fn is_zero(&self) -> bool {
+    pub fn len(&self) -> usize {
+        self.value.len()
+    }
+
+    // Clippy wants is_empty as soon as it sees len.
+    // We want to use is_zero instead, but let's be respectful to Clippy anyway.
+    pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    pub fn len(&self) -> usize {
-        self.value.len()
+    pub fn is_zero(&self) -> bool {
+        self.is_empty()
     }
 
     pub fn from_u64(n: u64) -> Self {
@@ -81,7 +82,7 @@ impl BigUint {
             if exp & 1 > 0 {
                 res = &res * &b;
             }
-            exp = exp >> 1;
+            exp >>= 1;
             b = &b * &b;
         }
     }
@@ -103,14 +104,14 @@ impl BigUint {
             panic!("attempt to divide by zero");
         }
 
-        match self.cmp(&b) {
+        match self.cmp(b) {
             Ordering::Less => (default(), self.clone()),
             Ordering::Equal => (BigUint { value: [1].cast() }, default()),
             Ordering::Greater => {
                 let mut a = self.clone();
                 let mut result = BigUint::ZERO;
                 loop {
-                    if a.cmp(&b) == Ordering::Less {
+                    if a.cmp(b) == Ordering::Less {
                         return (result, a);
                     }
                     let a_high_digit = a.len() - 1;
@@ -131,7 +132,7 @@ impl BigUint {
                         }
                     };
                     let mut q = BigUint {
-                        value: vec![0; q_index as usize + 1],
+                        value: vec![0; q_index + 1],
                     };
                     q.value[q_index] = q_digit;
                     let mut m = b * &q;
@@ -181,7 +182,7 @@ impl Sub for &BigUint {
     type Output = BigUint;
 
     fn sub(self, other: Self) -> Self::Output {
-        match self.cmp(&other) {
+        match self.cmp(other) {
             Ordering::Less | Ordering::Equal => BigUint::ZERO,
             Ordering::Greater => {
                 let mut value: Vec<_> = default();
@@ -252,9 +253,9 @@ impl Mul for &BigUint {
             let max = if i < lhs_max { i } else { lhs_max };
             while j <= max {
                 value = add_to_vec(value, i, self.value[j] as u128 * other.value[i - j] as u128);
-                j = j + 1;
+                j += 1;
             }
-            i = i + 1;
+            i += 1;
         }
 
         let mut result = BigUint { value };
@@ -295,8 +296,8 @@ impl Shl for &BigUint {
             value.push(0); //todo: check if it is neccessary?
             for i in (0..=len - 1).rev() {
                 let mut digit = value[i] as u128;
-                digit = digit << shift_mod;
-                value[i + 1] = value[i + 1] | (digit >> 64) as u64;
+                digit <<= shift_mod;
+                value[i + 1] |= (digit >> 64) as u64;
                 value[i] = digit as u64;
             }
         }
@@ -332,15 +333,15 @@ impl Shr for &BigUint {
         let shift_mod = rhs.value[0] & ((1 << 6) - 1);
         if shift_mod > 0 {
             let len = value.len();
-            let mask = 1 << shift_mod - 1;
+            let mask = 1 << (shift_mod - 1);
             let mut i = 0;
             loop {
-                value[i] = value[i] >> shift_mod;
+                value[i] >>= shift_mod;
                 i += 1;
                 if i == len {
                     break;
                 }
-                value[i - 1] = value[i - 1] | (value[i] & mask) << 64 - shift_mod;
+                value[i - 1] |= (value[i] & mask) << (64 - shift_mod);
             }
         }
 

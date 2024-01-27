@@ -32,11 +32,12 @@ impl<T, A> FieldLayout<T, A> {
         unsafe { (r as *const T).byte_add(self.size) as *const _ }
     }
     #[inline(always)]
-    pub unsafe fn to_adjacent_mut(&self, r: &mut T) -> *mut A {
+    pub unsafe fn into_adjacent_mut(self, r: &mut T) -> *mut A {
         unsafe { (r as *mut T).byte_add(self.size) as *mut _ }
     }
+    #[allow(clippy::wrong_self_convention)]
     #[inline(always)]
-    pub unsafe fn from_adjacent_mut(&self, r: &mut A) -> *mut T {
+    pub unsafe fn from_adjacent_mut(self, r: &mut A) -> *mut T {
         unsafe { (r as *mut A).byte_sub(self.size) as *mut _ }
     }
     #[inline(always)]

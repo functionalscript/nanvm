@@ -42,11 +42,7 @@ where
 {
     #[inline(always)]
     fn clone(&self) -> Self {
-        Self {
-            tag: self.tag,
-            mask: self.mask,
-            _0: PhantomData,
-        }
+        *self
     }
 }
 
@@ -134,15 +130,15 @@ where
         self.superposition() & set
     }
     #[inline(always)]
-    pub const fn from_value(self, value: u64) -> u64 {
+    pub const fn raw_value_to_subset_value(self, value: u64) -> u64 {
         self.tag | value
     }
     #[inline(always)]
-    pub fn from_value_typed(self, value: T) -> u64 {
-        self.from_value(value.cast())
+    pub fn with_value_typed(self, value: T) -> u64 {
+        self.raw_value_to_subset_value(value.cast())
     }
     #[inline(always)]
-    pub fn get_value_typed(self, set: u64) -> T {
+    pub fn subset_value_to_typed_value(self, set: u64) -> T {
         (self.get_value(set)).cast()
     }
 }
