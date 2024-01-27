@@ -72,6 +72,7 @@ pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
     WrongExportStatement,
+    WrongConstStatement,
 }
 
 #[derive(Debug, PartialEq)]
@@ -98,7 +99,8 @@ pub enum RootStatus {
     ModuleDot,
     ModuleDotExports,
     Const,
-    ConstEquals,
+    ConstId(String),
+    ConstEquals(String),
 }
 
 pub struct RootState<M: Manager> {
@@ -199,6 +201,17 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Equals => JsonState::ParseModule(self.state),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
+            RootStatus::Const => match token {
+                JsonToken::Id(s) => JsonState::ParseRoot(RootState {
+                    status: RootStatus::ConstId(s),
+                    state: self.state,
+                }),
+                _ => JsonState::Error(ParseError::WrongConstStatement),
+            },
+            RootStatus::ConstId(s) => match token {
+                JsonToken::Equals => JsonState::ParseConst(self.state),
+                _ => JsonState::Error(ParseError::WrongConstStatement),
+            },
             _ => todo!(),
         }
     }
@@ -219,13 +232,18 @@ impl<M: Manager> ParseAnyState<M> {
         let result = self.parse(manager, token);
         match result {
             ParseAnyResult::Continue(state) => JsonState::ParseModule(state),
-            ParseAnyResult::Result(state) => JsonState::Result(state),
+            ParseAnyResult::Result(result) => JsonState::Result(result),
             ParseAnyResult::Error(error) => JsonState::Error(error),
         }
     }
 
     fn parse_for_const(self, manager: M, token: JsonToken) -> JsonState<M> {
-        todo!()
+        let result = self.parse(manager, token);
+        match result {
+            ParseAnyResult::Continue(state) => JsonState::ParseConst(state),
+            ParseAnyResult::Result(result) => todo!(),
+            ParseAnyResult::Error(error) => JsonState::Error(error),
+        }
     }
 
     fn parse(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
