@@ -41,7 +41,7 @@ impl BigUint {
     }
 
     pub fn is_zero(&self) -> bool {
-        self.len() == 0
+        self.is_empty()
     }
 
     pub fn from_u64(n: u64) -> Self {
