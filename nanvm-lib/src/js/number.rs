@@ -43,6 +43,7 @@ pub mod test {
 
     #[test]
     #[wasm_bindgen_test]
+    #[allow(clippy::zero_divided_by_zero)]
     fn test_check() {
         assert!(is_valid(0));
         assert!(is_valid(1));
@@ -50,6 +51,7 @@ pub mod test {
         assert!(is_valid(NAN));
         assert!(is_valid(NEG_INFINITY));
         assert_eq!(f64::NAN.to_bits(), NAN);
+        assert_eq!((0.0f64 / 0.0).to_bits(), NAN);
     }
 
     #[test]
