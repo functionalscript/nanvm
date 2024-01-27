@@ -41,7 +41,9 @@ where
     u64: Cast<T>,
 {
     #[inline(always)]
-    fn clone(&self) -> Self { *self }
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 impl<T: Cast<u64>> Copy for BitSubset64<T> where u64: Cast<T> {}

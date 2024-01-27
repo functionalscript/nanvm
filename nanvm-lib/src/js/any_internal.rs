@@ -19,7 +19,9 @@ pub struct AnyInternal<D: Dealloc = Global>(pub u64, PhantomData<D>);
 
 impl<D: Dealloc> Clone for AnyInternal<D> {
     #[inline(always)]
-    fn clone(&self) -> Self { *self }
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 impl<D: Dealloc> Copy for AnyInternal<D> {}

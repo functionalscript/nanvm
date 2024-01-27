@@ -328,7 +328,7 @@ impl<M: Manager> ParseAnyState<M> {
                     consts: self.consts,
                 };
                 new_state.push_value(Any::move_from(js_array))
-            },
+            }
             _ => unreachable!(),
         }
     }
@@ -368,7 +368,7 @@ impl<M: Manager> ParseAnyState<M> {
                     consts: self.consts,
                 };
                 new_state.push_value(Any::move_from(js_object))
-            },
+            }
             _ => unreachable!(),
         }
     }
