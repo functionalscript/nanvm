@@ -130,12 +130,12 @@ where
         self.superposition() & set
     }
     #[inline(always)]
-    pub const fn with_value(self, value: u64) -> u64 {
+    pub const fn value_to_subset_value(self, value: u64) -> u64 {
         self.tag | value
     }
     #[inline(always)]
     pub fn with_value_typed(self, value: T) -> u64 {
-        self.with_value(value.cast())
+        self.value_to_subset_value(value.cast())
     }
     #[inline(always)]
     pub fn get_value_typed(self, set: u64) -> T {
