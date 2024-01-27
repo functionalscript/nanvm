@@ -49,9 +49,14 @@ pub struct ParseAnyState<M: Manager> {
     pub consts: BTreeMap<String, Any<M::Dealloc>>,
 }
 
+pub struct ParseAnySuccess<M: Manager> {
+    pub state: ParseAnyState<M>,
+    pub value: Any<M::Dealloc>,
+}
+
 pub enum ParseAnyResult<M: Manager> {
     Continue(ParseAnyState<M>),
-    Result(ParseResult<M>),
+    Success(ParseAnySuccess<M>),
     Error(ParseError),
 }
 
@@ -100,7 +105,6 @@ pub enum RootStatus {
     ModuleDotExports,
     Const,
     ConstId(String),
-    ConstEquals(String),
 }
 
 pub struct RootState<M: Manager> {
@@ -108,9 +112,14 @@ pub struct RootState<M: Manager> {
     pub state: ParseAnyState<M>,
 }
 
+pub struct ParseConstState<M: Manager> {
+    pub key: String,
+    pub state: ParseAnyState<M>,
+}
+
 pub enum JsonState<M: Manager> {
     ParseRoot(RootState<M>),
-    ParseConst(ParseAnyState<M>),
+    ParseConst(ParseConstState<M>),
     ParseModule(ParseAnyState<M>),
     Result(ParseResult<M>),
     Error(ParseError),
@@ -209,10 +218,32 @@ impl<M: Manager> RootState<M> {
                 _ => JsonState::Error(ParseError::WrongConstStatement),
             },
             RootStatus::ConstId(s) => match token {
-                JsonToken::Equals => JsonState::ParseConst(self.state),
+                JsonToken::Equals => JsonState::ParseConst(ParseConstState {
+                    key: s,
+                    state: self.state,
+                }),
                 _ => JsonState::Error(ParseError::WrongConstStatement),
             },
-            _ => todo!(),
+        }
+    }
+}
+
+impl<M: Manager> ParseConstState<M> {
+    fn parse_for_const(self, manager: M, token: JsonToken) -> JsonState<M> {
+        let result = self.state.parse(manager, token);
+        match result {
+            ParseAnyResult::Continue(state) => JsonState::ParseConst(ParseConstState {
+                key: self.key,
+                state,
+            }),
+            ParseAnyResult::Success(mut success) => {
+                success.state.consts.insert(self.key, success.value);
+                JsonState::ParseRoot(RootState {
+                    status: RootStatus::Initial,
+                    state: success.state,
+                })
+            }
+            ParseAnyResult::Error(error) => JsonState::Error(error),
         }
     }
 }
@@ -232,16 +263,10 @@ impl<M: Manager> ParseAnyState<M> {
         let result = self.parse(manager, token);
         match result {
             ParseAnyResult::Continue(state) => JsonState::ParseModule(state),
-            ParseAnyResult::Result(result) => JsonState::Result(result),
-            ParseAnyResult::Error(error) => JsonState::Error(error),
-        }
-    }
-
-    fn parse_for_const(self, manager: M, token: JsonToken) -> JsonState<M> {
-        let result = self.parse(manager, token);
-        match result {
-            ParseAnyResult::Continue(state) => JsonState::ParseConst(state),
-            ParseAnyResult::Result(result) => todo!(),
+            ParseAnyResult::Success(success) => JsonState::Result(ParseResult {
+                data_type: success.state.data_type,
+                any: success.value,
+            }),
             ParseAnyResult::Error(error) => JsonState::Error(error),
         }
     }
@@ -263,10 +288,7 @@ impl<M: Manager> ParseAnyState<M> {
 
     fn push_value(self, value: Any<M::Dealloc>) -> ParseAnyResult<M> {
         match self.top {
-            None => ParseAnyResult::Result(ParseResult {
-                data_type: self.data_type,
-                any: value,
-            }),
+            None => ParseAnyResult::Success(ParseAnySuccess { state: self, value }),
             Some(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
