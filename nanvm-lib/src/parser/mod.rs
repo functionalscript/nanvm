@@ -629,6 +629,11 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(2.0));
+
+        let json_str = include_str!("../../test/test-const-error.d.cjs");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
     }
 
     #[test]
