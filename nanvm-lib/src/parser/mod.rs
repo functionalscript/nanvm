@@ -72,7 +72,6 @@ impl<M: Manager> Default for ParseAnyState<M> {
 pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
-    UknownIdentifier,
     WrongExportStatement,
     WrongConstStatement,
 }
