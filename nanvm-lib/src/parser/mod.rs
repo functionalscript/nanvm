@@ -72,6 +72,7 @@ impl<M: Manager> Default for ParseAnyState<M> {
 pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
+    UknownIdentifier,
     WrongExportStatement,
     WrongConstStatement,
 }
@@ -120,21 +121,30 @@ fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
     new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
 }
 
-fn try_id_to_any<M: Manager>(s: &str, _manager: M) -> Option<Any<M::Dealloc>> {
+fn try_id_to_any<M: Manager>(
+    s: &str,
+    _manager: M,
+    consts: &BTreeMap<String, Any<M::Dealloc>>,
+) -> Option<Any<M::Dealloc>> {
     match s {
         "null" => Some(Any::move_from(Null())),
         "true" => Some(Any::move_from(true)),
         "false" => Some(Any::move_from(false)),
+        s if consts.contains_key(s) => Some(consts.get(s).unwrap().clone()),
         _ => None,
     }
 }
 
 impl JsonToken {
-    fn try_to_any<M: Manager>(self, manager: M) -> Option<Any<M::Dealloc>> {
+    fn try_to_any<M: Manager>(
+        self,
+        manager: M,
+        consts: &BTreeMap<String, Any<M::Dealloc>>,
+    ) -> Option<Any<M::Dealloc>> {
         match self {
             JsonToken::Number(f) => Some(Any::move_from(f)),
             JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
-            JsonToken::Id(s) => try_id_to_any(&s, manager),
+            JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
             _ => None,
         }
     }
@@ -411,7 +421,7 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ObjectBegin => self.start_object(),
             _ => {
-                let option_any = token.try_to_any(manager);
+                let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
                     None => ParseAnyResult::Error(ParseError::UnexpectedToken),
@@ -426,7 +436,7 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::ObjectBegin => self.start_object(),
             JsonToken::ArrayEnd => self.end_array(manager),
             _ => {
-                let option_any = token.try_to_any(manager);
+                let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
                     None => ParseAnyResult::Error(ParseError::UnexpectedToken),
@@ -441,7 +451,7 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::ArrayEnd => self.end_array(manager),
             JsonToken::ObjectBegin => self.start_object(),
             _ => {
-                let option_any = token.try_to_any(manager);
+                let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
                     None => ParseAnyResult::Error(ParseError::UnexpectedToken),
