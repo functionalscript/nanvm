@@ -612,12 +612,23 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_const() {
+        let local = Local::default();
+        test_const_with_manager(&local);
+    }
+
+    fn test_const_with_manager<M: Manager>(manager: M) {
         let json_str = include_str!("../../test/test-const.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let local = Local::default();
-        let result = parse(&local, tokens.into_iter());
+        let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(2.0));
     }
 
     #[test]
