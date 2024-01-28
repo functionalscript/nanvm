@@ -32,7 +32,7 @@ impl<I, T: FlexibleArrayHeader> FlexibleArray<I, T> {
     pub fn items_mut(&mut self) -> &mut [I] {
         unsafe {
             from_raw_parts_mut(
-                Self::FLEXIBLE_HEADER_LAYOUT.to_adjacent_mut(&mut self.header),
+                Self::FLEXIBLE_HEADER_LAYOUT.into_adjacent_mut(&mut self.header),
                 self.header.len(),
             )
         }

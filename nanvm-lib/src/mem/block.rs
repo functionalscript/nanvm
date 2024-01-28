@@ -27,7 +27,7 @@ impl<T: Object, D: Dealloc> Block<T, D> {
     }
     #[inline(always)]
     pub fn object_mut(&mut self) -> &mut T {
-        unsafe { &mut *Self::BLOCK_HEADER_LAYOUT.to_adjacent_mut(&mut self.header) }
+        unsafe { &mut *Self::BLOCK_HEADER_LAYOUT.into_adjacent_mut(&mut self.header) }
     }
 }
 
@@ -81,16 +81,16 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         #[derive(Default)]
-        struct XBH(Cell<isize>);
+        struct Xbh(Cell<isize>);
 
         struct D();
 
         impl Dealloc for D {
-            type BlockHeader = XBH;
+            type BlockHeader = Xbh;
             unsafe fn dealloc(_: *mut u8, _: Layout) {}
         }
 
-        impl BlockHeader for XBH {
+        impl BlockHeader for Xbh {
             unsafe fn ref_counter_update(&self, i: RefCounterUpdate) -> isize {
                 let result = self.0.get();
                 self.0.set(result + i as isize);
@@ -99,7 +99,7 @@ mod test {
         }
 
         let mut x = Block::<Fixed<()>, D> {
-            header: XBH::default(),
+            header: Xbh::default(),
             _0: PhantomData,
         };
         let p = unsafe { x.header.block::<Fixed<()>, D>() };

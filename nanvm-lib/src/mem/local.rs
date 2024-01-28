@@ -64,7 +64,7 @@ impl Manager for &Local {
         self.size.set(self.size.get() + layout.size());
         let p = GLOBAL.alloc(layout) as *mut Header;
         *p = self;
-        header_layout.to_adjacent(&mut *p) as *mut u8
+        header_layout.to_adjacent(&*p) as *mut u8
     }
 }
 

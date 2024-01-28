@@ -28,7 +28,7 @@ impl<T: Object, D: Dealloc> MutRef<T, D> {
 impl<T: Object, D: Dealloc> Drop for MutRef<T, D> {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe { (&mut *self.0).delete() }
+        unsafe { (*self.0).delete() }
     }
 }
 
