@@ -153,7 +153,7 @@ impl<M: Manager> ParseAnyState<M> {
 }
 
 impl<M: Manager> RootState<M> {
-    fn parse(mut self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self.status {
             RootStatus::Initial => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -240,7 +240,7 @@ impl<M: Manager> ParseConstState<M> {
 }
 
 impl<M: Manager> ParseAnyState<M> {
-    fn set_djs(mut self) -> Self {
+    fn set_djs(self) -> Self {
         ParseAnyState {
             data_type: DataType::Djs,
             status: self.status,
