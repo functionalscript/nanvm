@@ -231,7 +231,7 @@ impl<M: Manager> RootState<M> {
 impl<M: Manager> ParseConstState<M> {
     fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
-            JsonToken::Semicolon => self.end(manager, token),
+            JsonToken::Semicolon => todo!(),
             _ => {
                 let result = self.state.parse(manager, token);
                 match result {
@@ -250,10 +250,6 @@ impl<M: Manager> ParseConstState<M> {
                 }
             }
         }
-    }
-
-    fn end(self, manager: M, token: JsonToken) -> JsonState<M> {
-        todo!()
     }
 }
 
