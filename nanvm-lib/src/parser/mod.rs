@@ -220,22 +220,31 @@ impl<M: Manager> RootState<M> {
 }
 
 impl<M: Manager> ParseConstState<M> {
-    fn parse_for_const(self, manager: M, token: JsonToken) -> JsonState<M> {
-        let result = self.state.parse(manager, token);
-        match result {
-            ParseAnyResult::Continue(state) => JsonState::ParseConst(ParseConstState {
-                key: self.key,
-                state,
-            }),
-            ParseAnyResult::Success(mut success) => {
-                success.state.consts.insert(self.key, success.value);
-                JsonState::ParseRoot(RootState {
-                    status: RootStatus::Initial,
-                    state: success.state,
-                })
+    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+        match token {
+            JsonToken::Semicolon => self.end(manager, token),
+            _ => {
+                let result = self.state.parse(manager, token);
+                match result {
+                    ParseAnyResult::Continue(state) => JsonState::ParseConst(ParseConstState {
+                        key: self.key,
+                        state,
+                    }),
+                    ParseAnyResult::Success(mut success) => {
+                        success.state.consts.insert(self.key, success.value);
+                        JsonState::ParseRoot(RootState {
+                            status: RootStatus::Initial,
+                            state: success.state,
+                        })
+                    }
+                    ParseAnyResult::Error(error) => JsonState::Error(error),
+                }
             }
-            ParseAnyResult::Error(error) => JsonState::Error(error),
         }
+    }
+
+    fn end(self, manager: M, token: JsonToken) -> JsonState<M> {
+        todo!()
     }
 }
 
@@ -508,6 +517,7 @@ impl<M: Manager> JsonState<M> {
             JsonState::ParseRoot(state) => state.parse(manager, token),
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
             JsonState::ParseModule(state) => state.parse_for_module(manager, token),
+            JsonState::ParseConst(state) => state.parse(manager, token),
             _ => self,
         }
     }
@@ -582,6 +592,17 @@ mod test {
         assert_eq!(result.unwrap().data_type, DataType::Djs);
 
         let json_str = include_str!("../../test/test-djs.d.mjs");
+        let tokens = tokenize(json_str.to_owned());
+        let local = Local::default();
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().data_type, DataType::Djs);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_const() {
+        let json_str = include_str!("../../test/test-const.d.cjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
         let result = parse(&local, tokens.into_iter());
