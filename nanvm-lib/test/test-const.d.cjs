@@ -1,4 +1,2 @@
-const a = 2;
-module.exports = {
-    id: null
-}
+const a = 2
+module.exports = [a]

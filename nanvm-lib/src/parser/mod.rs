@@ -45,9 +45,14 @@ pub struct ParseAnyState<M: Manager> {
     pub consts: BTreeMap<String, Any<M::Dealloc>>,
 }
 
+pub struct ParseAnySuccess<M: Manager> {
+    pub state: ParseAnyState<M>,
+    pub value: Any<M::Dealloc>,
+}
+
 pub enum ParseAnyResult<M: Manager> {
     Continue(ParseAnyState<M>),
-    Result(ParseResult<M>),
+    Success(ParseAnySuccess<M>),
     Error(ParseError),
 }
 
@@ -68,6 +73,7 @@ pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
     WrongExportStatement,
+    WrongConstStatement,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -82,34 +88,30 @@ pub struct ParseResult<M: Manager> {
     pub any: Any<M::Dealloc>,
 }
 
-pub enum ParseModuleStatus {
+pub enum RootStatus {
+    Initial,
     Export,
     Module,
     ModuleDot,
     ModuleDotExports,
-    Value,
-}
-
-pub struct ParseModule<M: Manager> {
-    status: ParseModuleStatus,
-    state: ParseAnyState<M>,
-}
-
-pub enum ParseConstStatus {
     Const,
-    ConstEquals,
-    Value,
+    ConstId(String),
 }
 
-pub struct ParseConst<M: Manager> {
-    status: ParseConstStatus,
-    state: ParseAnyState<M>,
+pub struct RootState<M: Manager> {
+    pub status: RootStatus,
+    pub state: ParseAnyState<M>,
+}
+
+pub struct ParseConstState<M: Manager> {
+    pub key: String,
+    pub state: ParseAnyState<M>,
 }
 
 pub enum JsonState<M: Manager> {
-    Initial(ParseAnyState<M>),
-    ParseConst(ParseConst<M>),
-    ParseModule(ParseModule<M>),
+    ParseRoot(RootState<M>),
+    ParseConst(ParseConstState<M>),
+    ParseModule(ParseAnyState<M>),
     Result(ParseResult<M>),
     Error(ParseError),
 }
@@ -118,21 +120,30 @@ fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
     new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
 }
 
-fn try_id_to_any<M: Manager>(s: &str, _manager: M) -> Option<Any<M::Dealloc>> {
+fn try_id_to_any<M: Manager>(
+    s: &str,
+    _manager: M,
+    consts: &BTreeMap<String, Any<M::Dealloc>>,
+) -> Option<Any<M::Dealloc>> {
     match s {
         "null" => Some(Any::move_from(Null())),
         "true" => Some(Any::move_from(true)),
         "false" => Some(Any::move_from(false)),
+        s if consts.contains_key(s) => Some(consts.get(s).unwrap().clone()),
         _ => None,
     }
 }
 
 impl JsonToken {
-    fn try_to_any<M: Manager>(self, manager: M) -> Option<Any<M::Dealloc>> {
+    fn try_to_any<M: Manager>(
+        self,
+        manager: M,
+        consts: &BTreeMap<String, Any<M::Dealloc>>,
+    ) -> Option<Any<M::Dealloc>> {
         match self {
             JsonToken::Number(f) => Some(Any::move_from(f)),
             JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
-            JsonToken::Id(s) => try_id_to_any(&s, manager),
+            JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
             _ => None,
         }
     }
@@ -150,52 +161,92 @@ impl<M: Manager> ParseAnyState<M> {
     }
 }
 
-impl<M: Manager> ParseModule<M> {
+impl<M: Manager> RootState<M> {
     fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match self.status {
-            ParseModuleStatus::Export => match token {
+            RootStatus::Initial => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "default" => JsonState::ParseModule(ParseModule {
-                        status: ParseModuleStatus::Value,
+                    "const" => JsonState::ParseRoot(RootState {
+                        status: RootStatus::Const,
+                        state: self.state.set_djs(),
+                    }),
+                    "export" => JsonState::ParseRoot(RootState {
+                        status: RootStatus::Export,
+                        state: self.state.set_djs(),
+                    }),
+                    "module" => JsonState::ParseRoot(RootState {
+                        status: RootStatus::Module,
+                        state: self.state.set_djs(),
+                    }),
+                    _ => self.state.parse_for_module(manager, JsonToken::Id(s)),
+                },
+                _ => self.state.parse_for_module(manager, token),
+            },
+            RootStatus::Export => match token {
+                JsonToken::Id(s) => match s.as_ref() {
+                    "default" => JsonState::ParseModule(self.state),
+                    _ => JsonState::Error(ParseError::WrongExportStatement),
+                },
+                _ => JsonState::Error(ParseError::WrongExportStatement),
+            },
+            RootStatus::Module => match token {
+                JsonToken::Dot => JsonState::ParseRoot(RootState {
+                    status: RootStatus::ModuleDot,
+                    state: self.state,
+                }),
+                _ => JsonState::Error(ParseError::WrongExportStatement),
+            },
+            RootStatus::ModuleDot => match token {
+                JsonToken::Id(s) => match s.as_ref() {
+                    "exports" => JsonState::ParseRoot(RootState {
+                        status: RootStatus::ModuleDotExports,
                         state: self.state,
                     }),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
-            ParseModuleStatus::Module => match token {
-                JsonToken::Dot => JsonState::ParseModule(ParseModule {
-                    status: ParseModuleStatus::ModuleDot,
+            RootStatus::ModuleDotExports => match token {
+                JsonToken::Equals => JsonState::ParseModule(self.state),
+                _ => JsonState::Error(ParseError::WrongExportStatement),
+            },
+            RootStatus::Const => match token {
+                JsonToken::Id(s) => JsonState::ParseRoot(RootState {
+                    status: RootStatus::ConstId(s),
                     state: self.state,
                 }),
-                _ => JsonState::Error(ParseError::WrongExportStatement),
+                _ => JsonState::Error(ParseError::WrongConstStatement),
             },
-            ParseModuleStatus::ModuleDot => match token {
-                JsonToken::Id(s) => match s.as_ref() {
-                    "exports" => JsonState::ParseModule(ParseModule {
-                        status: ParseModuleStatus::ModuleDotExports,
-                        state: self.state,
-                    }),
-                    _ => JsonState::Error(ParseError::WrongExportStatement),
-                },
-                _ => JsonState::Error(ParseError::WrongExportStatement),
-            },
-            ParseModuleStatus::ModuleDotExports => match token {
-                JsonToken::Equals => JsonState::ParseModule(ParseModule {
-                    status: ParseModuleStatus::Value,
+            RootStatus::ConstId(s) => match token {
+                JsonToken::Equals => JsonState::ParseConst(ParseConstState {
+                    key: s,
                     state: self.state,
                 }),
-                _ => JsonState::Error(ParseError::WrongExportStatement),
+                _ => JsonState::Error(ParseError::WrongConstStatement),
             },
-            ParseModuleStatus::Value => {
+        }
+    }
+}
+
+impl<M: Manager> ParseConstState<M> {
+    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+        match token {
+            JsonToken::Semicolon => todo!(),
+            _ => {
                 let result = self.state.parse(manager, token);
                 match result {
-                    ParseAnyResult::Continue(state) => JsonState::ParseModule(ParseModule {
-                        status: ParseModuleStatus::Value,
+                    ParseAnyResult::Continue(state) => JsonState::ParseConst(ParseConstState {
+                        key: self.key,
                         state,
                     }),
+                    ParseAnyResult::Success(mut success) => {
+                        success.state.consts.insert(self.key, success.value);
+                        JsonState::ParseRoot(RootState {
+                            status: RootStatus::Initial,
+                            state: success.state,
+                        })
+                    }
                     ParseAnyResult::Error(error) => JsonState::Error(error),
-                    ParseAnyResult::Result(result) => JsonState::Result(result),
                 }
             }
         }
@@ -203,34 +254,24 @@ impl<M: Manager> ParseModule<M> {
 }
 
 impl<M: Manager> ParseAnyState<M> {
-    fn initial_parse(self, manager: M, token: JsonToken) -> JsonState<M> {
-        if self.data_type == DataType::Djs {
-            return self.initial_parse_value(manager, token);
-        }
-        match token {
-            JsonToken::Id(s) => match s.as_ref() {
-                "export" => JsonState::ParseModule(ParseModule {
-                    status: ParseModuleStatus::Export,
-                    state: ParseAnyState::default(DataType::Djs),
-                }),
-                "module" => JsonState::ParseModule(ParseModule {
-                    status: ParseModuleStatus::Module,
-                    state: ParseAnyState::default(DataType::Djs),
-                }),
-                _ => self.initial_parse_value(manager, JsonToken::Id(s)),
-            },
-            _ => self.initial_parse_value(manager, token),
+    fn set_djs(self) -> Self {
+        ParseAnyState {
+            data_type: DataType::Djs,
+            status: self.status,
+            top: self.top,
+            stack: self.stack,
+            consts: self.consts,
         }
     }
 
-    fn initial_parse_value(self, manager: M, token: JsonToken) -> JsonState<M> {
-        let result = self.parse_value(manager, token);
+    fn parse_for_module(self, manager: M, token: JsonToken) -> JsonState<M> {
+        let result = self.parse(manager, token);
         match result {
-            ParseAnyResult::Continue(state) => JsonState::ParseModule(ParseModule {
-                status: ParseModuleStatus::Value,
-                state,
+            ParseAnyResult::Continue(state) => JsonState::ParseModule(state),
+            ParseAnyResult::Success(success) => JsonState::Result(ParseResult {
+                data_type: success.state.data_type,
+                any: success.value,
             }),
-            ParseAnyResult::Result(state) => JsonState::Result(state),
             ParseAnyResult::Error(error) => JsonState::Error(error),
         }
     }
@@ -250,10 +291,7 @@ impl<M: Manager> ParseAnyState<M> {
 
     fn push_value(self, value: Any<M::Dealloc>) -> ParseAnyResult<M> {
         match self.top {
-            None => ParseAnyResult::Result(ParseResult {
-                data_type: self.data_type,
-                any: value,
-            }),
+            None => ParseAnyResult::Success(ParseAnySuccess { state: self, value }),
             Some(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
@@ -378,7 +416,7 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ObjectBegin => self.start_object(),
             _ => {
-                let option_any = token.try_to_any(manager);
+                let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
                     None => ParseAnyResult::Error(ParseError::UnexpectedToken),
@@ -393,7 +431,7 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::ObjectBegin => self.start_object(),
             JsonToken::ArrayEnd => self.end_array(manager),
             _ => {
-                let option_any = token.try_to_any(manager);
+                let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
                     None => ParseAnyResult::Error(ParseError::UnexpectedToken),
@@ -408,7 +446,7 @@ impl<M: Manager> ParseAnyState<M> {
             JsonToken::ArrayEnd => self.end_array(manager),
             JsonToken::ObjectBegin => self.start_object(),
             _ => {
-                let option_any = token.try_to_any(manager);
+                let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
                     None => ParseAnyResult::Error(ParseError::UnexpectedToken),
@@ -481,9 +519,10 @@ impl<M: Manager> JsonState<M> {
             return self;
         }
         match self {
-            JsonState::Initial(state) => state.initial_parse(manager, token),
+            JsonState::ParseRoot(state) => state.parse(manager, token),
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
-            JsonState::ParseModule(parse_state) => parse_state.parse(manager, token),
+            JsonState::ParseModule(state) => state.parse_for_module(manager, token),
+            JsonState::ParseConst(state) => state.parse(manager, token),
             _ => self,
         }
     }
@@ -501,7 +540,10 @@ fn parse<M: Manager>(
     manager: M,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
-    let mut state: JsonState<M> = JsonState::Initial(default());
+    let mut state: JsonState<M> = JsonState::ParseRoot(RootState {
+        status: RootStatus::Initial,
+        state: default(),
+    });
     for token in iter {
         state = state.push(manager, token);
     }
@@ -560,6 +602,33 @@ mod test {
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Djs);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_const() {
+        let local = Local::default();
+        test_const_with_manager(&local);
+    }
+
+    fn test_const_with_manager<M: Manager>(manager: M) {
+        let json_str = include_str!("../../test/test-const.d.cjs");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(2.0));
+
+        let json_str = include_str!("../../test/test-const-error.d.cjs.txt");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_err());
     }
 
     #[test]
