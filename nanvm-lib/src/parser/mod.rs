@@ -80,7 +80,8 @@ pub enum ParseError {
 pub enum DataType {
     #[default]
     Json,
-    Djs,
+    Cjs,
+    Mjs,
 }
 
 pub struct ParseResult<M: Manager> {
@@ -168,15 +169,15 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Id(s) => match s.as_ref() {
                     "const" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Const,
-                        state: self.state.set_djs(),
+                        state: self.state.set_data_type(DataType::Cjs),
                     }),
                     "export" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Export,
-                        state: self.state.set_djs(),
+                        state: self.state.set_data_type(DataType::Mjs),
                     }),
                     "module" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Module,
-                        state: self.state.set_djs(),
+                        state: self.state.set_data_type(DataType::Cjs),
                     }),
                     _ => self.state.parse_for_module(manager, JsonToken::Id(s)),
                 },
@@ -254,9 +255,9 @@ impl<M: Manager> ConstState<M> {
 }
 
 impl<M: Manager> AnyState<M> {
-    fn set_djs(self) -> Self {
+    fn set_data_type(self, data_type: DataType) -> Self {
         AnyState {
-            data_type: DataType::Djs,
+            data_type,
             status: self.status,
             top: self.top,
             stack: self.stack,
@@ -472,7 +473,10 @@ impl<M: Manager> AnyState<M> {
     fn parse_object_start(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
-            JsonToken::Id(s) if self.data_type == DataType::Djs => self.push_key(s),
+            JsonToken::Id(s) => match self.data_type {
+                DataType::Cjs | DataType::Mjs => self.push_key(s),
+                _ => AnyResult::Error(ParseError::UnexpectedToken),
+            },
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
@@ -594,14 +598,14 @@ mod test {
         let local = Local::default();
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Cjs);
 
         let json_str = include_str!("../../test/test-djs.d.mjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Mjs);
     }
 
     #[test]
@@ -697,7 +701,7 @@ mod test {
         ];
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Mjs);
 
         let local = Local::default();
         let tokens = [
@@ -709,7 +713,7 @@ mod test {
         ];
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Cjs);
     }
 
     #[test]
