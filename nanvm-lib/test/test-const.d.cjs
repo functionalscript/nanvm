@@ -1,2 +1,3 @@
 const a = 2
-module.exports = [a]
+const b = [a, a]
+module.exports = b

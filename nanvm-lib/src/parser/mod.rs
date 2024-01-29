@@ -24,7 +24,7 @@ pub struct JsonStackObject<D: Dealloc> {
 }
 
 #[derive(Default)]
-pub enum ParseStatus {
+pub enum ParsingStatus {
     #[default]
     Initial,
     ArrayStart,
@@ -37,30 +37,30 @@ pub enum ParseStatus {
     ObjectComma,
 }
 
-pub struct ParseAnyState<M: Manager> {
+pub struct AnyState<M: Manager> {
     pub data_type: DataType,
-    pub status: ParseStatus,
+    pub status: ParsingStatus,
     pub top: Option<JsonStackElement<M::Dealloc>>,
     pub stack: Vec<JsonStackElement<M::Dealloc>>,
     pub consts: BTreeMap<String, Any<M::Dealloc>>,
 }
 
-pub struct ParseAnySuccess<M: Manager> {
-    pub state: ParseAnyState<M>,
+pub struct AnySuccess<M: Manager> {
+    pub state: AnyState<M>,
     pub value: Any<M::Dealloc>,
 }
 
-pub enum ParseAnyResult<M: Manager> {
-    Continue(ParseAnyState<M>),
-    Success(ParseAnySuccess<M>),
+pub enum AnyResult<M: Manager> {
+    Continue(AnyState<M>),
+    Success(AnySuccess<M>),
     Error(ParseError),
 }
 
-impl<M: Manager> Default for ParseAnyState<M> {
+impl<M: Manager> Default for AnyState<M> {
     fn default() -> Self {
-        ParseAnyState {
+        AnyState {
             data_type: default(),
-            status: ParseStatus::Initial,
+            status: ParsingStatus::Initial,
             top: None,
             stack: [].cast(),
             consts: default(),
@@ -80,7 +80,8 @@ pub enum ParseError {
 pub enum DataType {
     #[default]
     Json,
-    Djs,
+    Cjs,
+    Mjs,
 }
 
 pub struct ParseResult<M: Manager> {
@@ -100,18 +101,18 @@ pub enum RootStatus {
 
 pub struct RootState<M: Manager> {
     pub status: RootStatus,
-    pub state: ParseAnyState<M>,
+    pub state: AnyState<M>,
 }
 
-pub struct ParseConstState<M: Manager> {
+pub struct ConstState<M: Manager> {
     pub key: String,
-    pub state: ParseAnyState<M>,
+    pub state: AnyState<M>,
 }
 
 pub enum JsonState<M: Manager> {
     ParseRoot(RootState<M>),
-    ParseConst(ParseConstState<M>),
-    ParseModule(ParseAnyState<M>),
+    ParseConst(ConstState<M>),
+    ParseModule(AnyState<M>),
     Result(ParseResult<M>),
     Error(ParseError),
 }
@@ -149,11 +150,11 @@ impl JsonToken {
     }
 }
 
-impl<M: Manager> ParseAnyState<M> {
+impl<M: Manager> AnyState<M> {
     fn default(data_type: DataType) -> Self {
-        ParseAnyState {
+        AnyState {
             data_type,
-            status: ParseStatus::Initial,
+            status: ParsingStatus::Initial,
             top: None,
             stack: [].cast(),
             consts: default(),
@@ -168,15 +169,15 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Id(s) => match s.as_ref() {
                     "const" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Const,
-                        state: self.state.set_djs(),
+                        state: self.state.set_data_type(DataType::Cjs),
                     }),
                     "export" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Export,
-                        state: self.state.set_djs(),
+                        state: self.state.set_data_type(DataType::Mjs),
                     }),
                     "module" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Module,
-                        state: self.state.set_djs(),
+                        state: self.state.set_data_type(DataType::Cjs),
                     }),
                     _ => self.state.parse_for_module(manager, JsonToken::Id(s)),
                 },
@@ -218,7 +219,7 @@ impl<M: Manager> RootState<M> {
                 _ => JsonState::Error(ParseError::WrongConstStatement),
             },
             RootStatus::ConstId(s) => match token {
-                JsonToken::Equals => JsonState::ParseConst(ParseConstState {
+                JsonToken::Equals => JsonState::ParseConst(ConstState {
                     key: s,
                     state: self.state,
                 }),
@@ -228,35 +229,35 @@ impl<M: Manager> RootState<M> {
     }
 }
 
-impl<M: Manager> ParseConstState<M> {
+impl<M: Manager> ConstState<M> {
     fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::Semicolon => todo!(),
             _ => {
                 let result = self.state.parse(manager, token);
                 match result {
-                    ParseAnyResult::Continue(state) => JsonState::ParseConst(ParseConstState {
+                    AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
                         key: self.key,
                         state,
                     }),
-                    ParseAnyResult::Success(mut success) => {
+                    AnyResult::Success(mut success) => {
                         success.state.consts.insert(self.key, success.value);
                         JsonState::ParseRoot(RootState {
                             status: RootStatus::Initial,
                             state: success.state,
                         })
                     }
-                    ParseAnyResult::Error(error) => JsonState::Error(error),
+                    AnyResult::Error(error) => JsonState::Error(error),
                 }
             }
         }
     }
 }
 
-impl<M: Manager> ParseAnyState<M> {
-    fn set_djs(self) -> Self {
-        ParseAnyState {
-            data_type: DataType::Djs,
+impl<M: Manager> AnyState<M> {
+    fn set_data_type(self, data_type: DataType) -> Self {
+        AnyState {
+            data_type,
             status: self.status,
             top: self.top,
             stack: self.stack,
@@ -267,37 +268,37 @@ impl<M: Manager> ParseAnyState<M> {
     fn parse_for_module(self, manager: M, token: JsonToken) -> JsonState<M> {
         let result = self.parse(manager, token);
         match result {
-            ParseAnyResult::Continue(state) => JsonState::ParseModule(state),
-            ParseAnyResult::Success(success) => JsonState::Result(ParseResult {
+            AnyResult::Continue(state) => JsonState::ParseModule(state),
+            AnyResult::Success(success) => JsonState::Result(ParseResult {
                 data_type: success.state.data_type,
                 any: success.value,
             }),
-            ParseAnyResult::Error(error) => JsonState::Error(error),
+            AnyResult::Error(error) => JsonState::Error(error),
         }
     }
 
-    fn parse(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match self.status {
-            ParseStatus::Initial | ParseStatus::ObjectColon => self.parse_value(manager, token),
-            ParseStatus::ArrayStart => self.parse_array_start(manager, token),
-            ParseStatus::ArrayValue => self.parse_array_value(manager, token),
-            ParseStatus::ArrayComma => self.parse_array_comma(manager, token),
-            ParseStatus::ObjectStart => self.parse_object_start(manager, token),
-            ParseStatus::ObjectKey => self.parse_object_key(token),
-            ParseStatus::ObjectValue => self.parse_object_next(manager, token),
-            ParseStatus::ObjectComma => self.parse_object_comma(token),
+            ParsingStatus::Initial | ParsingStatus::ObjectColon => self.parse_value(manager, token),
+            ParsingStatus::ArrayStart => self.parse_array_start(manager, token),
+            ParsingStatus::ArrayValue => self.parse_array_value(manager, token),
+            ParsingStatus::ArrayComma => self.parse_array_comma(manager, token),
+            ParsingStatus::ObjectStart => self.parse_object_start(manager, token),
+            ParsingStatus::ObjectKey => self.parse_object_key(token),
+            ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
+            ParsingStatus::ObjectComma => self.parse_object_comma(token),
         }
     }
 
-    fn push_value(self, value: Any<M::Dealloc>) -> ParseAnyResult<M> {
+    fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M> {
         match self.top {
-            None => ParseAnyResult::Success(ParseAnySuccess { state: self, value }),
+            None => AnyResult::Success(AnySuccess { state: self, value }),
             Some(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
-                    ParseAnyResult::Continue(ParseAnyState {
+                    AnyResult::Continue(AnyState {
                         data_type: self.data_type,
-                        status: ParseStatus::ArrayValue,
+                        status: ParsingStatus::ArrayValue,
                         top: Option::Some(JsonStackElement::Array(arr)),
                         stack: self.stack,
                         consts: self.consts,
@@ -309,9 +310,9 @@ impl<M: Manager> ParseAnyState<M> {
                         map: stack_obj.map,
                         key: String::default(),
                     };
-                    ParseAnyResult::Continue(ParseAnyState {
+                    AnyResult::Continue(AnyState {
                         data_type: self.data_type,
-                        status: ParseStatus::ObjectValue,
+                        status: ParsingStatus::ObjectValue,
                         top: Option::Some(JsonStackElement::Object(new_stack_obj)),
                         stack: self.stack,
                         consts: self.consts,
@@ -321,46 +322,46 @@ impl<M: Manager> ParseAnyState<M> {
         }
     }
 
-    fn push_key(self, s: String) -> ParseAnyResult<M> {
+    fn push_key(self, s: String) -> AnyResult<M> {
         match self.top {
             Some(JsonStackElement::Object(stack_obj)) => {
                 let new_stack_obj = JsonStackObject {
                     map: stack_obj.map,
                     key: s,
                 };
-                ParseAnyResult::Continue(ParseAnyState {
+                AnyResult::Continue(AnyState {
                     data_type: self.data_type,
-                    status: ParseStatus::ObjectKey,
+                    status: ParsingStatus::ObjectKey,
                     top: Option::Some(JsonStackElement::Object(new_stack_obj)),
                     stack: self.stack,
                     consts: self.consts,
                 })
             }
-            _ => ParseAnyResult::Error(ParseError::UnexpectedToken),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 
-    fn start_array(mut self) -> ParseAnyResult<M> {
+    fn start_array(mut self) -> AnyResult<M> {
         let new_top = JsonStackElement::Array(Vec::default());
         if let Some(top) = self.top {
             self.stack.push(top);
         }
-        ParseAnyResult::Continue(ParseAnyState {
+        AnyResult::Continue(AnyState {
             data_type: self.data_type,
-            status: ParseStatus::ArrayStart,
+            status: ParsingStatus::ArrayStart,
             top: Some(new_top),
             stack: self.stack,
             consts: self.consts,
         })
     }
 
-    fn end_array(mut self, manager: M) -> ParseAnyResult<M> {
+    fn end_array(mut self, manager: M) -> AnyResult<M> {
         match self.top {
             Some(JsonStackElement::Array(array)) => {
                 let js_array = new_array(manager, array.into_iter()).to_ref();
-                let new_state = ParseAnyState {
+                let new_state = AnyState {
                     data_type: self.data_type,
-                    status: ParseStatus::ArrayStart,
+                    status: ParsingStatus::ArrayStart,
                     top: self.stack.pop(),
                     stack: self.stack,
                     consts: self.consts,
@@ -371,7 +372,7 @@ impl<M: Manager> ParseAnyState<M> {
         }
     }
 
-    fn start_object(mut self) -> ParseAnyResult<M> {
+    fn start_object(mut self) -> AnyResult<M> {
         let new_top: JsonStackElement<<M as Manager>::Dealloc> =
             JsonStackElement::Object(JsonStackObject {
                 map: BTreeMap::default(),
@@ -380,16 +381,16 @@ impl<M: Manager> ParseAnyState<M> {
         if let Some(top) = self.top {
             self.stack.push(top)
         }
-        ParseAnyResult::Continue(ParseAnyState {
+        AnyResult::Continue(AnyState {
             data_type: self.data_type,
-            status: ParseStatus::ObjectStart,
+            status: ParsingStatus::ObjectStart,
             top: Some(new_top),
             stack: self.stack,
             consts: self.consts,
         })
     }
 
-    fn end_object(mut self, manager: M) -> ParseAnyResult<M> {
+    fn end_object(mut self, manager: M) -> AnyResult<M> {
         match self.top {
             Some(JsonStackElement::Object(object)) => {
                 let vec = object
@@ -398,9 +399,9 @@ impl<M: Manager> ParseAnyState<M> {
                     .map(|kv| (to_js_string(manager, kv.0), kv.1))
                     .collect::<Vec<_>>();
                 let js_object = new_object(manager, vec.into_iter()).to_ref();
-                let new_state = ParseAnyState {
+                let new_state = AnyState {
                     data_type: self.data_type,
-                    status: ParseStatus::ArrayStart,
+                    status: ParsingStatus::ArrayStart,
                     top: self.stack.pop(),
                     stack: self.stack,
                     consts: self.consts,
@@ -411,7 +412,7 @@ impl<M: Manager> ParseAnyState<M> {
         }
     }
 
-    fn parse_value(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ObjectBegin => self.start_object(),
@@ -419,13 +420,13 @@ impl<M: Manager> ParseAnyState<M> {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
-                    None => ParseAnyResult::Error(ParseError::UnexpectedToken),
+                    None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
         }
     }
 
-    fn parse_array_comma(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ObjectBegin => self.start_object(),
@@ -434,13 +435,13 @@ impl<M: Manager> ParseAnyState<M> {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
-                    None => ParseAnyResult::Error(ParseError::UnexpectedToken),
+                    None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
         }
     }
 
-    fn parse_array_start(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_array_start(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ArrayBegin => self.start_array(),
             JsonToken::ArrayEnd => self.end_array(manager),
@@ -449,66 +450,69 @@ impl<M: Manager> ParseAnyState<M> {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
                     Some(any) => self.push_value(any),
-                    None => ParseAnyResult::Error(ParseError::UnexpectedToken),
+                    None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
         }
     }
 
-    fn parse_array_value(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
-            JsonToken::Comma => ParseAnyResult::Continue(ParseAnyState {
+            JsonToken::Comma => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
-                status: ParseStatus::ArrayComma,
+                status: ParsingStatus::ArrayComma,
                 top: self.top,
                 stack: self.stack,
                 consts: self.consts,
             }),
-            _ => ParseAnyResult::Error(ParseError::UnexpectedToken),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 
-    fn parse_object_start(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_object_start(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
-            JsonToken::Id(s) if self.data_type == DataType::Djs => self.push_key(s),
+            JsonToken::Id(s) => match self.data_type {
+                DataType::Cjs | DataType::Mjs => self.push_key(s),
+                _ => AnyResult::Error(ParseError::UnexpectedToken),
+            },
             JsonToken::ObjectEnd => self.end_object(manager),
-            _ => ParseAnyResult::Error(ParseError::UnexpectedToken),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 
-    fn parse_object_key(self, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_object_key(self, token: JsonToken) -> AnyResult<M> {
         match token {
-            JsonToken::Colon => ParseAnyResult::Continue(ParseAnyState {
+            JsonToken::Colon => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
-                status: ParseStatus::ObjectColon,
+                status: ParsingStatus::ObjectColon,
                 top: self.top,
                 stack: self.stack,
                 consts: self.consts,
             }),
-            _ => ParseAnyResult::Error(ParseError::UnexpectedToken),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 
-    fn parse_object_next(self, manager: M, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
-            JsonToken::Comma => ParseAnyResult::Continue(ParseAnyState {
+            JsonToken::Comma => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
-                status: ParseStatus::ObjectComma,
+                status: ParsingStatus::ObjectComma,
                 top: self.top,
                 stack: self.stack,
                 consts: self.consts,
             }),
-            _ => ParseAnyResult::Error(ParseError::UnexpectedToken),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 
-    fn parse_object_comma(self, token: JsonToken) -> ParseAnyResult<M> {
+    fn parse_object_comma(self, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
-            _ => ParseAnyResult::Error(ParseError::UnexpectedToken),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 }
@@ -594,14 +598,14 @@ mod test {
         let local = Local::default();
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Cjs);
 
         let json_str = include_str!("../../test/test-djs.d.mjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Mjs);
     }
 
     #[test]
@@ -624,6 +628,8 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(2.0));
+        let item1 = items[1].clone();
+        assert_eq!(item1.try_move(), Ok(2.0));
 
         let json_str = include_str!("../../test/test-const-error.d.cjs.txt");
         let tokens = tokenize(json_str.to_owned());
@@ -697,7 +703,7 @@ mod test {
         ];
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Mjs);
 
         let local = Local::default();
         let tokens = [
@@ -709,7 +715,7 @@ mod test {
         ];
         let result = parse(&local, tokens.into_iter());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().data_type, DataType::Djs);
+        assert_eq!(result.unwrap().data_type, DataType::Cjs);
     }
 
     #[test]
