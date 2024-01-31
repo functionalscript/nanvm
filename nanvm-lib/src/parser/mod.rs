@@ -727,6 +727,36 @@ mod test {
         assert!(result.is_err());
     }
 
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_stack() {
+        let local = Local::default();
+        test_stack_with_manager(&local);
+    }
+
+    fn test_stack_with_manager<M: Manager>(manager: M) {
+        let json_str = include_str!("../../test/test-stack.d.cjs");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        let result_unwrap = item0.try_move::<JsObjectRef<M::Dealloc>>().unwrap();
+        let items = result_unwrap.items();
+        let (key0, value0) = items[0].clone();
+        let key0_items = key0.items();
+        assert_eq!(key0_items, [0x61]);
+        let result_unwrap = value0.try_move::<JsArrayRef<M::Dealloc>>().unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.get_type(), Type::Null);
+    }
+
     // #[test]
     // #[wasm_bindgen_test]
     // fn test_import() {
