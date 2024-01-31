@@ -13,6 +13,12 @@ use crate::{
     tokenizer::JsonToken,
 };
 
+pub enum JsonElement<D: Dealloc> {
+    None,
+    Stack(JsonStackElement<D>),
+    Any(Any<D>),
+}
+
 pub enum JsonStackElement<D: Dealloc> {
     Object(JsonStackObject<D>),
     Array(Vec<Any<D>>),
@@ -35,12 +41,15 @@ pub enum ParsingStatus {
     ObjectColon,
     ObjectValue,
     ObjectComma,
+    RequireBegin,
+    RequireValue,
+    RequireEnd,
 }
 
 pub struct AnyState<M: Manager> {
     pub data_type: DataType,
     pub status: ParsingStatus,
-    pub top: Option<JsonStackElement<M::Dealloc>>,
+    pub current: JsonElement<M::Dealloc>,
     pub stack: Vec<JsonStackElement<M::Dealloc>>,
     pub consts: BTreeMap<String, Any<M::Dealloc>>,
 }
@@ -61,7 +70,7 @@ impl<M: Manager> Default for AnyState<M> {
         AnyState {
             data_type: default(),
             status: ParsingStatus::Initial,
-            top: None,
+            current: JsonElement::None,
             stack: [].cast(),
             consts: default(),
         }
@@ -74,6 +83,7 @@ pub enum ParseError {
     UnexpectedEnd,
     WrongExportStatement,
     WrongConstStatement,
+    WrongRequireStatement,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -155,7 +165,7 @@ impl<M: Manager> AnyState<M> {
         AnyState {
             data_type,
             status: ParsingStatus::Initial,
-            top: None,
+            current: JsonElement::None,
             stack: [].cast(),
             consts: default(),
         }
@@ -259,7 +269,7 @@ impl<M: Manager> AnyState<M> {
         AnyState {
             data_type,
             status: self.status,
-            top: self.top,
+            current: self.current,
             stack: self.stack,
             consts: self.consts,
         }
@@ -277,6 +287,39 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
+    fn parse_require_begin(self, token: JsonToken) -> AnyResult<M> {
+        match token {
+            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
+                data_type: self.data_type,
+                status: ParsingStatus::RequireValue,
+                current: self.current,
+                stack: self.stack,
+                consts: self.consts,
+            }),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+        }
+    }
+
+    fn parse_require_value(self, token: JsonToken) -> AnyResult<M> {
+        match token {
+            JsonToken::String(s) => AnyResult::Continue(AnyState {
+                data_type: self.data_type,
+                status: ParsingStatus::RequireEnd,
+                current: JsonElement::Any(Any::move_from(Null())), //todo: null is temporary, parse module
+                stack: self.stack,
+                consts: self.consts,
+            }),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+        }
+    }
+
+    fn parse_require_end(self, token: JsonToken) -> AnyResult<M> {
+        match token {
+            JsonToken::ClosingParenthesis => todo!(),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+        }
+    }
+
     fn parse(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => self.parse_value(manager, token),
@@ -287,19 +330,22 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ObjectKey => self.parse_object_key(token),
             ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(token),
+            ParsingStatus::RequireBegin => self.parse_require_begin(token),
+            ParsingStatus::RequireValue => self.parse_require_value(token),
+            ParsingStatus::RequireEnd => self.parse_require_end(token),
         }
     }
 
     fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M> {
-        match self.top {
-            None => AnyResult::Success(AnySuccess { state: self, value }),
-            Some(top) => match top {
+        match self.current {
+            JsonElement::None => AnyResult::Success(AnySuccess { state: self, value }),
+            JsonElement::Stack(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
                     AnyResult::Continue(AnyState {
                         data_type: self.data_type,
                         status: ParsingStatus::ArrayValue,
-                        top: Option::Some(JsonStackElement::Array(arr)),
+                        current: JsonElement::Stack(JsonStackElement::Array(arr)),
                         stack: self.stack,
                         consts: self.consts,
                     })
@@ -313,18 +359,19 @@ impl<M: Manager> AnyState<M> {
                     AnyResult::Continue(AnyState {
                         data_type: self.data_type,
                         status: ParsingStatus::ObjectValue,
-                        top: Option::Some(JsonStackElement::Object(new_stack_obj)),
+                        current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
                         stack: self.stack,
                         consts: self.consts,
                     })
                 }
             },
+            _ => todo!(),
         }
     }
 
     fn push_key(self, s: String) -> AnyResult<M> {
-        match self.top {
-            Some(JsonStackElement::Object(stack_obj)) => {
+        match self.current {
+            JsonElement::Stack(JsonStackElement::Object(stack_obj)) => {
                 let new_stack_obj = JsonStackObject {
                     map: stack_obj.map,
                     key: s,
@@ -332,7 +379,7 @@ impl<M: Manager> AnyState<M> {
                 AnyResult::Continue(AnyState {
                     data_type: self.data_type,
                     status: ParsingStatus::ObjectKey,
-                    top: Option::Some(JsonStackElement::Object(new_stack_obj)),
+                    current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
                     stack: self.stack,
                     consts: self.consts,
                 })
@@ -343,26 +390,29 @@ impl<M: Manager> AnyState<M> {
 
     fn begin_array(mut self) -> AnyResult<M> {
         let new_top = JsonStackElement::Array(Vec::default());
-        if let Some(top) = self.top {
+        if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
         AnyResult::Continue(AnyState {
             data_type: self.data_type,
             status: ParsingStatus::ArrayBegin,
-            top: Some(new_top),
+            current: JsonElement::Stack(new_top),
             stack: self.stack,
             consts: self.consts,
         })
     }
 
     fn end_array(mut self, manager: M) -> AnyResult<M> {
-        match self.top {
-            Some(JsonStackElement::Array(array)) => {
+        match self.current {
+            JsonElement::Stack(JsonStackElement::Array(array)) => {
                 let js_array = new_array(manager, array.into_iter()).to_ref();
                 let new_state = AnyState {
                     data_type: self.data_type,
                     status: ParsingStatus::ArrayBegin,
-                    top: self.stack.pop(),
+                    current: match self.stack.pop() {
+                        Some(element) => JsonElement::Stack(element),
+                        None => JsonElement::None,
+                    },
                     stack: self.stack,
                     consts: self.consts,
                 };
@@ -378,21 +428,21 @@ impl<M: Manager> AnyState<M> {
                 map: BTreeMap::default(),
                 key: String::default(),
             });
-        if let Some(top) = self.top {
+        if let JsonElement::Stack(top) = self.current {
             self.stack.push(top)
         }
         AnyResult::Continue(AnyState {
             data_type: self.data_type,
             status: ParsingStatus::ObjectBegin,
-            top: Some(new_top),
+            current: JsonElement::Stack(new_top),
             stack: self.stack,
             consts: self.consts,
         })
     }
 
     fn end_object(mut self, manager: M) -> AnyResult<M> {
-        match self.top {
-            Some(JsonStackElement::Object(object)) => {
+        match self.current {
+            JsonElement::Stack(JsonStackElement::Object(object)) => {
                 let vec = object
                     .map
                     .into_iter()
@@ -402,7 +452,10 @@ impl<M: Manager> AnyState<M> {
                 let new_state = AnyState {
                     data_type: self.data_type,
                     status: ParsingStatus::ArrayBegin,
-                    top: self.stack.pop(),
+                    current: match self.stack.pop() {
+                        Some(element) => JsonElement::Stack(element),
+                        None => JsonElement::None,
+                    },
                     stack: self.stack,
                     consts: self.consts,
                 };
@@ -416,6 +469,15 @@ impl<M: Manager> AnyState<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::OpeningParenthesis if self.data_type == DataType::Cjs => {
+                AnyResult::Continue(AnyState {
+                    data_type: self.data_type,
+                    status: ParsingStatus::RequireBegin,
+                    current: self.current,
+                    stack: self.stack,
+                    consts: self.consts,
+                })
+            }
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
@@ -462,7 +524,7 @@ impl<M: Manager> AnyState<M> {
             JsonToken::Comma => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
                 status: ParsingStatus::ArrayComma,
-                top: self.top,
+                current: self.current,
                 stack: self.stack,
                 consts: self.consts,
             }),
@@ -487,7 +549,7 @@ impl<M: Manager> AnyState<M> {
             JsonToken::Colon => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
                 status: ParsingStatus::ObjectColon,
-                top: self.top,
+                current: self.current,
                 stack: self.stack,
                 consts: self.consts,
             }),
@@ -501,7 +563,7 @@ impl<M: Manager> AnyState<M> {
             JsonToken::Comma => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
                 status: ParsingStatus::ObjectComma,
-                top: self.top,
+                current: self.current,
                 stack: self.stack,
                 consts: self.consts,
             }),
