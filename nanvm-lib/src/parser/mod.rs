@@ -41,9 +41,9 @@ pub enum ParsingStatus {
     ObjectColon,
     ObjectValue,
     ObjectComma,
-    RequireBegin,
-    RequireValue,
-    RequireEnd,
+    ImportBegin,
+    ImportValue,
+    ImportEnd,
 }
 
 pub struct AnyState<M: Manager> {
@@ -289,13 +289,7 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_require_begin(self, token: JsonToken) -> AnyResult<M> {
         match token {
-            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
-                data_type: self.data_type,
-                status: ParsingStatus::RequireValue,
-                current: self.current,
-                stack: self.stack,
-                consts: self.consts,
-            }),
+            JsonToken::OpeningParenthesis => self.begin_import(),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
@@ -304,7 +298,7 @@ impl<M: Manager> AnyState<M> {
         match token {
             JsonToken::String(s) => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
-                status: ParsingStatus::RequireEnd,
+                status: ParsingStatus::ImportEnd,
                 current: JsonElement::Any(Any::move_from(Null())), //todo: null is temporary, parse module
                 stack: self.stack,
                 consts: self.consts,
@@ -315,7 +309,7 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_require_end(self, token: JsonToken) -> AnyResult<M> {
         match token {
-            JsonToken::ClosingParenthesis => todo!(),
+            JsonToken::ClosingParenthesis => self.end_import(),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
@@ -330,9 +324,49 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ObjectKey => self.parse_object_key(token),
             ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(token),
-            ParsingStatus::RequireBegin => self.parse_require_begin(token),
-            ParsingStatus::RequireValue => self.parse_require_value(token),
-            ParsingStatus::RequireEnd => self.parse_require_end(token),
+            ParsingStatus::ImportBegin => self.parse_require_begin(token),
+            ParsingStatus::ImportValue => self.parse_require_value(token),
+            ParsingStatus::ImportEnd => self.parse_require_end(token),
+        }
+    }
+
+    fn begin_import(mut self) -> AnyResult<M> {
+        if let JsonElement::Stack(top) = self.current {
+            self.stack.push(top);
+        }
+        AnyResult::Continue(AnyState {
+            data_type: self.data_type,
+            status: ParsingStatus::ImportBegin,
+            current: JsonElement::None,
+            stack: self.stack,
+            consts: self.consts,
+        })
+    }
+
+    fn end_import(mut self) -> AnyResult<M> {
+        match self.current {
+            JsonElement::Any(any) => {
+                let current = match self.stack.pop() {
+                    Some(element) => JsonElement::Stack(element),
+                    None => JsonElement::None,
+                };
+                let status = match &current {
+                    JsonElement::Stack(element) => match element {
+                        JsonStackElement::Array(_) => ParsingStatus::ArrayValue,
+                        JsonStackElement::Object(_) => ParsingStatus::ObjectValue,
+                    },
+                    _ => ParsingStatus::Initial,
+                };
+                let new_state = AnyState {
+                    data_type: self.data_type,
+                    status,
+                    current,
+                    stack: self.stack,
+                    consts: self.consts,
+                };
+                new_state.push_value(any)
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -469,14 +503,8 @@ impl<M: Manager> AnyState<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => self.begin_object(),
-            JsonToken::OpeningParenthesis if self.data_type == DataType::Cjs => {
-                AnyResult::Continue(AnyState {
-                    data_type: self.data_type,
-                    status: ParsingStatus::RequireBegin,
-                    current: self.current,
-                    stack: self.stack,
-                    consts: self.consts,
-                })
+            JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
+                self.begin_import()
             }
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
@@ -698,6 +726,20 @@ mod test {
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_err());
     }
+
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn test_import() {
+    //     let local = Local::default();
+    //     test_import_with_manager(&local);
+    // }
+
+    // fn test_import_with_manager<M: Manager>(manager: M) {
+    //     let json_str = include_str!("../../test/test-import-main.d.cjs");
+    //     let tokens = tokenize(json_str.to_owned());
+    //     let result = parse(manager, tokens.into_iter());
+    //     assert!(result.is_ok());
+    // }
 
     #[test]
     #[wasm_bindgen_test]
