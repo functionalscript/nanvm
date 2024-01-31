@@ -289,7 +289,13 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_require_begin(self, token: JsonToken) -> AnyResult<M> {
         match token {
-            JsonToken::OpeningParenthesis => self.begin_import(),
+            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
+                data_type: self.data_type,
+                status: ParsingStatus::ImportValue,
+                current: self.current,
+                stack: self.stack,
+                consts: self.consts,
+            }),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
@@ -331,6 +337,7 @@ impl<M: Manager> AnyState<M> {
     }
 
     fn begin_import(mut self) -> AnyResult<M> {
+        println!("begin_import");
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
@@ -350,16 +357,9 @@ impl<M: Manager> AnyState<M> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let status = match &current {
-                    JsonElement::Stack(element) => match element {
-                        JsonStackElement::Array(_) => ParsingStatus::ArrayValue,
-                        JsonStackElement::Object(_) => ParsingStatus::ObjectValue,
-                    },
-                    _ => ParsingStatus::Initial,
-                };
                 let new_state = AnyState {
                     data_type: self.data_type,
-                    status,
+                    status: ParsingStatus::Initial,
                     current,
                     stack: self.stack,
                     consts: self.consts,
@@ -442,7 +442,7 @@ impl<M: Manager> AnyState<M> {
                 let js_array = new_array(manager, array.into_iter()).to_ref();
                 let new_state = AnyState {
                     data_type: self.data_type,
-                    status: ParsingStatus::ArrayBegin,
+                    status: ParsingStatus::Initial,
                     current: match self.stack.pop() {
                         Some(element) => JsonElement::Stack(element),
                         None => JsonElement::None,
@@ -485,7 +485,7 @@ impl<M: Manager> AnyState<M> {
                 let js_object = new_object(manager, vec.into_iter()).to_ref();
                 let new_state = AnyState {
                     data_type: self.data_type,
-                    status: ParsingStatus::ArrayBegin,
+                    status: ParsingStatus::Initial,
                     current: match self.stack.pop() {
                         Some(element) => JsonElement::Stack(element),
                         None => JsonElement::None,
@@ -520,6 +520,9 @@ impl<M: Manager> AnyState<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
+                self.begin_import()
+            }
             JsonToken::ArrayEnd => self.end_array(manager),
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
@@ -757,19 +760,19 @@ mod test {
         assert_eq!(item0.get_type(), Type::Null);
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_import() {
-    //     let local = Local::default();
-    //     test_import_with_manager(&local);
-    // }
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_import() {
+        let local = Local::default();
+        test_import_with_manager(&local);
+    }
 
-    // fn test_import_with_manager<M: Manager>(manager: M) {
-    //     let json_str = include_str!("../../test/test-import-main.d.cjs");
-    //     let tokens = tokenize(json_str.to_owned());
-    //     let result = parse(manager, tokens.into_iter());
-    //     assert!(result.is_ok());
-    // }
+    fn test_import_with_manager<M: Manager>(manager: M) {
+        let json_str = include_str!("../../test/test-import-main.d.cjs");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse(manager, tokens.into_iter());
+        assert!(result.is_ok());
+    }
 
     #[test]
     #[wasm_bindgen_test]
