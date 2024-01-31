@@ -26,6 +26,8 @@ pub enum JsonToken {
     Id(String),
     NewLine,
     Semicolon,
+    OpeningParenthesis,
+    ClosingParenthesis,
 }
 
 #[derive(Debug, PartialEq)]
@@ -297,6 +299,8 @@ const fn to_operator(c: char) -> Option<JsonToken> {
         '=' => Some(JsonToken::Equals),
         '.' => Some(JsonToken::Dot),
         ';' => Some(JsonToken::Semicolon),
+        '(' => Some(JsonToken::OpeningParenthesis),
+        ')' => Some(JsonToken::ClosingParenthesis),
         _ => None,
     }
 }
@@ -655,6 +659,12 @@ mod test {
 
         let result = tokenize(String::from(";"));
         assert_eq!(&result, &[JsonToken::Semicolon]);
+
+        let result = tokenize(String::from("()"));
+        assert_eq!(
+            &result,
+            &[JsonToken::OpeningParenthesis, JsonToken::ClosingParenthesis]
+        );
 
         let result = tokenize(String::from("[{ :, }]"));
         assert_eq!(
