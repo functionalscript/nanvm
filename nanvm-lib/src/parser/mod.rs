@@ -772,6 +772,14 @@ mod test {
         let tokens = tokenize(json_str.to_owned());
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.get_type(), Type::Null);
     }
 
     #[test]
