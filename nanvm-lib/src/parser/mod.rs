@@ -287,7 +287,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_require_begin(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_begin(self, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
@@ -300,7 +300,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_require_value(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_value(self, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
@@ -313,7 +313,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_require_end(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_end(self, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ClosingParenthesis => self.end_import(),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
@@ -330,9 +330,9 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ObjectKey => self.parse_object_key(token),
             ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(token),
-            ParsingStatus::ImportBegin => self.parse_require_begin(token),
-            ParsingStatus::ImportValue => self.parse_require_value(token),
-            ParsingStatus::ImportEnd => self.parse_require_end(token),
+            ParsingStatus::ImportBegin => self.parse_import_begin(token),
+            ParsingStatus::ImportValue => self.parse_import_value(token),
+            ParsingStatus::ImportEnd => self.parse_import_end(token),
         }
     }
 
