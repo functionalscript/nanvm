@@ -83,7 +83,7 @@ pub enum ParseError {
     UnexpectedEnd,
     WrongExportStatement,
     WrongConstStatement,
-    WrongRequireStatement,
+    WrongImportStatement,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -296,7 +296,7 @@ impl<M: Manager> AnyState<M> {
                 stack: self.stack,
                 consts: self.consts,
             }),
-            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+            _ => AnyResult::Error(ParseError::WrongImportStatement),
         }
     }
 
@@ -309,14 +309,14 @@ impl<M: Manager> AnyState<M> {
                 stack: self.stack,
                 consts: self.consts,
             }),
-            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+            _ => AnyResult::Error(ParseError::WrongImportStatement),
         }
     }
 
     fn parse_import_end(self, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ClosingParenthesis => self.end_import(),
-            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+            _ => AnyResult::Error(ParseError::WrongImportStatement),
         }
     }
 
