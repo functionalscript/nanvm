@@ -29,7 +29,7 @@ pub struct JsonStackObject<D: Dealloc> {
     pub key: String,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub enum ParsingStatus {
     #[default]
     Initial,
@@ -302,7 +302,7 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_import_value(self, token: JsonToken) -> AnyResult<M> {
         match token {
-            JsonToken::String(s) => AnyResult::Continue(AnyState {
+            JsonToken::String(_s) => AnyResult::Continue(AnyState {
                 data_type: self.data_type,
                 status: ParsingStatus::ImportEnd,
                 current: JsonElement::Any(Any::move_from(Null())), //todo: null is temporary, parse module
@@ -329,7 +329,7 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ObjectBegin => self.parse_object_begin(manager, token),
             ParsingStatus::ObjectKey => self.parse_object_key(token),
             ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
-            ParsingStatus::ObjectComma => self.parse_object_comma(token),
+            ParsingStatus::ObjectComma => self.parse_object_comma(manager, token),
             ParsingStatus::ImportBegin => self.parse_import_begin(token),
             ParsingStatus::ImportValue => self.parse_import_value(token),
             ParsingStatus::ImportEnd => self.parse_import_end(token),
@@ -337,7 +337,6 @@ impl<M: Manager> AnyState<M> {
     }
 
     fn begin_import(mut self) -> AnyResult<M> {
-        println!("begin_import");
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
@@ -440,13 +439,14 @@ impl<M: Manager> AnyState<M> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Array(array)) => {
                 let js_array = new_array(manager, array.into_iter()).to_ref();
+                let current = match self.stack.pop() {
+                    Some(element) => JsonElement::Stack(element),
+                    None => JsonElement::None,
+                };
                 let new_state = AnyState {
                     data_type: self.data_type,
-                    status: ParsingStatus::Initial,
-                    current: match self.stack.pop() {
-                        Some(element) => JsonElement::Stack(element),
-                        None => JsonElement::None,
-                    },
+                    status: self.status,
+                    current,
                     stack: self.stack,
                     consts: self.consts,
                 };
@@ -483,13 +483,14 @@ impl<M: Manager> AnyState<M> {
                     .map(|kv| (to_js_string(manager, kv.0), kv.1))
                     .collect::<Vec<_>>();
                 let js_object = new_object(manager, vec.into_iter()).to_ref();
+                let current = match self.stack.pop() {
+                    Some(element) => JsonElement::Stack(element),
+                    None => JsonElement::None,
+                };
                 let new_state = AnyState {
                     data_type: self.data_type,
-                    status: ParsingStatus::Initial,
-                    current: match self.stack.pop() {
-                        Some(element) => JsonElement::Stack(element),
-                        None => JsonElement::None,
-                    },
+                    status: self.status,
+                    current,
                     stack: self.stack,
                     consts: self.consts,
                 };
@@ -602,9 +603,10 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_object_comma(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
+            JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
@@ -780,6 +782,16 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.get_type(), Type::Null);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_trailing_comma() {
+        let local = Local::default();
+        let json_str = include_str!("../../test/test-trailing-comma.d.cjs");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse(&local, tokens.into_iter());
+        assert!(result.is_ok());
     }
 
     #[test]
