@@ -648,8 +648,8 @@ impl<M: Manager> JsonState<M> {
 
 fn parse<M: Manager>(
     manager: M,
-    io: impl Io,
-    path: String,
+    //io: impl Io,
+    //path: String,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
     let mut state: JsonState<M> = JsonState::ParseRoot(RootState {

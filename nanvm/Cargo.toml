@@ -10,3 +10,4 @@ repository.workspace = true
 
 [dependencies]
 nanvm-lib = { path = "../nanvm-lib" }
+io-impl.workspace = true
