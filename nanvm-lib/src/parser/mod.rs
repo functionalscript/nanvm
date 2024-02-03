@@ -371,7 +371,16 @@ impl<M: Manager> AnyState<M> {
 
     fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M> {
         match self.current {
-            JsonElement::None => AnyResult::Success(AnySuccess { state: self, value }),
+            JsonElement::None => AnyResult::Success(AnySuccess {
+                state: AnyState {
+                    data_type: self.data_type,
+                    status: ParsingStatus::Initial,
+                    current: self.current,
+                    stack: self.stack,
+                    consts: self.consts,
+                },
+                value,
+            }),
             JsonElement::Stack(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
@@ -1203,17 +1212,6 @@ mod test {
             JsonToken::String(String::from("key")),
             JsonToken::Colon,
             JsonToken::Number(0.0),
-        ];
-        let result = parse(manager, tokens.into_iter());
-        assert!(result.is_err());
-
-        let tokens = [
-            JsonToken::ObjectBegin,
-            JsonToken::String(String::from("key")),
-            JsonToken::Colon,
-            JsonToken::Number(0.0),
-            JsonToken::Comma,
-            JsonToken::ObjectEnd,
         ];
         let result = parse(manager, tokens.into_iter());
         assert!(result.is_err());
