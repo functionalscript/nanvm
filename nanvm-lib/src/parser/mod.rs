@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use io_trait::Io;
+
 use crate::{
     common::{cast::Cast, default::default},
     js::{
@@ -12,8 +14,6 @@ use crate::{
     mem::manager::{Dealloc, Manager},
     tokenizer::JsonToken,
 };
-
-pub mod io;
 
 pub enum JsonElement<D: Dealloc> {
     None,
@@ -648,6 +648,8 @@ impl<M: Manager> JsonState<M> {
 
 fn parse<M: Manager>(
     manager: M,
+    io: impl Io,
+    path: String,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
     let mut state: JsonState<M> = JsonState::ParseRoot(RootState {

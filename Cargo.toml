@@ -11,3 +11,4 @@ repository = "https://github.com/functionalscript/nanvm"
 
 [workspace.dependencies]
 wasm-bindgen-test = "0.3.39"
+io-trait = "0.8.0"
