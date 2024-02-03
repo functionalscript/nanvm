@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-//use io_trait::Io;
+use io_trait::Io;
 
 use crate::{
     common::{cast::Cast, default::default},
@@ -29,6 +29,12 @@ pub enum JsonStackElement<D: Dealloc> {
 pub struct JsonStackObject<D: Dealloc> {
     pub map: BTreeMap<String, Any<D>>,
     pub key: String,
+}
+
+pub struct Context<M: Manager, I: Io> {
+    manager: M,
+    io: I,
+    path: String,
 }
 
 #[derive(Default, Debug)]
@@ -646,10 +652,8 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<M: Manager>(
-    manager: M,
-    //io: impl Io,
-    //path: String,
+fn parse_with_tokens<M: Manager, I: Io>(
+    context: Context<M, I>,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
     let mut state: JsonState<M> = JsonState::ParseRoot(RootState {
@@ -657,33 +661,50 @@ fn parse<M: Manager>(
         state: default(),
     });
     for token in iter {
-        state = state.push(manager, token);
+        state = state.push(context.manager, token);
     }
     state.end()
 }
 
 #[cfg(test)]
 mod test {
+    use io_test::VirtualIo;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
+        common::default::default,
         js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
         parser::DataType,
         tokenizer::{tokenize, ErrorType, JsonToken},
     };
 
-    use super::parse;
+    use super::{parse_with_tokens, Context, ParseError, ParseResult};
+
+    fn create_test_context<M: Manager>(manager: M) -> Context<M, VirtualIo> {
+        Context {
+            manager: manager,
+            io: VirtualIo::new(&[]),
+            path: default(),
+        }
+    }
+
+    fn parse_with_virutal_io<M: Manager>(
+        manager: M,
+        iter: impl Iterator<Item = JsonToken>,
+    ) -> Result<ParseResult<M>, ParseError> {
+        parse_with_tokens(create_test_context(manager), iter)
+    }
 
     fn test_local() {
         let local = Local::default();
-        let _ = parse(&local, [].into_iter());
+        let _ = parse_with_tokens(create_test_context(&local), [].into_iter());
     }
 
     fn test_global() {
         let _ = {
             let global = GLOBAL;
-            parse(global, [].into_iter())
+            parse_with_tokens(create_test_context(global), [].into_iter())
         };
     }
 
@@ -693,7 +714,7 @@ mod test {
         let json_str = include_str!("../../test/test-json.json");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
     }
@@ -704,14 +725,14 @@ mod test {
         let json_str = include_str!("../../test/test-djs.d.cjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Cjs);
 
         let json_str = include_str!("../../test/test-djs.d.mjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Mjs);
     }
@@ -726,7 +747,7 @@ mod test {
     fn test_const_with_manager<M: Manager>(manager: M) {
         let json_str = include_str!("../../test/test-const.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -741,7 +762,7 @@ mod test {
 
         let json_str = include_str!("../../test/test-const-error.d.cjs.txt");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
     }
 
@@ -755,7 +776,7 @@ mod test {
     fn test_stack_with_manager<M: Manager>(manager: M) {
         let json_str = include_str!("../../test/test-stack.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -785,7 +806,7 @@ mod test {
     fn test_import_with_manager<M: Manager>(manager: M) {
         let json_str = include_str!("../../test/test-import-main.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -803,7 +824,7 @@ mod test {
         let local = Local::default();
         let json_str = include_str!("../../test/test-trailing-comma.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
     }
 
@@ -821,7 +842,7 @@ mod test {
                 JsonToken::ObjectEnd,
             ];
             {
-                let result = parse(&local, tokens.into_iter());
+                let result = parse_with_virutal_io(&local, tokens.into_iter());
                 assert!(result.is_ok());
                 let _result_unwrap = result.unwrap();
             }
@@ -843,7 +864,7 @@ mod test {
                 JsonToken::ObjectEnd,
             ];
             {
-                let result = parse(&local, tokens.into_iter());
+                let result = parse_with_virutal_io(&local, tokens.into_iter());
                 assert!(result.is_ok());
                 let result_unwrap = result.unwrap().any;
                 let _result_unwrap = result_unwrap.try_move::<JsObjectRef<_>>();
@@ -857,7 +878,7 @@ mod test {
     fn test_data_type() {
         let local = Local::default();
         let tokens = [JsonToken::Id(String::from("null"))];
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
     }
@@ -871,7 +892,7 @@ mod test {
             JsonToken::Id(String::from("default")),
             JsonToken::Id(String::from("null")),
         ];
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Mjs);
 
@@ -883,7 +904,7 @@ mod test {
             JsonToken::Equals,
             JsonToken::Id(String::from("null")),
         ];
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Cjs);
     }
@@ -901,7 +922,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result.unwrap().any.try_move::<JsObjectRef<_>>().unwrap();
         let items = result_unwrap.items();
@@ -918,7 +939,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(&local, tokens.into_iter());
+        let result = parse_with_virutal_io(&local, tokens.into_iter());
         assert!(result.is_err());
     }
 
@@ -936,27 +957,27 @@ mod test {
 
     fn test_valid_with_manager<M: Manager>(manager: M) {
         let tokens = [JsonToken::Id(String::from("null"))];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.get_type(), Type::Null);
 
         let tokens = [JsonToken::Id(String::from("true"))];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(true));
 
         let tokens = [JsonToken::Id(String::from("false"))];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(false));
 
         let tokens = [JsonToken::Number(0.1)];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(0.1));
 
         let tokens = [JsonToken::String(String::from("abc"))];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result = result.unwrap().any.try_move::<JsStringRef<M::Dealloc>>();
         assert!(result.is_ok());
@@ -965,7 +986,7 @@ mod test {
         assert_eq!(items, [0x61, 0x62, 0x63]);
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::ArrayEnd];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -982,7 +1003,7 @@ mod test {
             JsonToken::Id(String::from("true")),
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1003,7 +1024,7 @@ mod test {
             JsonToken::Comma,
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
 
         let tokens = [
@@ -1021,7 +1042,7 @@ mod test {
             JsonToken::Number(2.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1043,7 +1064,7 @@ mod test {
         assert_eq!(value2.try_move(), Ok(2.0));
 
         let tokens = [JsonToken::ObjectBegin, JsonToken::ObjectEnd];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1061,7 +1082,7 @@ mod test {
             JsonToken::ObjectEnd,
         ];
         {
-            let result = parse(manager, tokens.into_iter());
+            let result = parse_with_virutal_io(manager, tokens.into_iter());
             assert!(result.is_ok());
             let result_unwrap = result.unwrap();
             let result_unwrap = result_unwrap
@@ -1090,15 +1111,15 @@ mod test {
 
     fn test_invalid_with_manager<M: Manager>(manager: M) {
         let tokens = [];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ErrorToken(ErrorType::InvalidNumber)];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::Comma, JsonToken::ArrayEnd];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1107,7 +1128,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1118,7 +1139,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1126,11 +1147,11 @@ mod test {
             JsonToken::ArrayEnd,
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::String(String::default())];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1139,15 +1160,15 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::Colon, JsonToken::ArrayEnd];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayEnd];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1155,7 +1176,7 @@ mod test {
             JsonToken::Comma,
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1165,7 +1186,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1174,7 +1195,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1185,7 +1206,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1200,7 +1221,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1208,7 +1229,7 @@ mod test {
             JsonToken::ObjectEnd,
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1217,7 +1238,7 @@ mod test {
             JsonToken::Colon,
             JsonToken::Number(0.0),
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1228,11 +1249,11 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ObjectEnd];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1241,7 +1262,7 @@ mod test {
             JsonToken::ArrayEnd,
             JsonToken::ObjectEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1250,7 +1271,7 @@ mod test {
             JsonToken::ObjectEnd,
             JsonToken::ArrayEnd,
         ];
-        let result = parse(manager, tokens.into_iter());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
     }
 }
