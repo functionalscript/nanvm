@@ -12,7 +12,7 @@ use crate::{
         null::Null,
     },
     mem::manager::{Dealloc, Manager},
-    tokenizer::JsonToken,
+    tokenizer::{tokenize, JsonToken},
 };
 
 pub enum JsonElement<D: Dealloc> {
@@ -92,6 +92,7 @@ pub enum ParseError {
     WrongExportStatement,
     WrongConstStatement,
     WrongImportStatement,
+    CannotReadFile,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -649,6 +650,17 @@ impl<M: Manager> JsonState<M> {
             JsonState::Error(error) => Err(error),
             _ => Err(ParseError::UnexpectedEnd),
         }
+    }
+}
+
+fn parse<M: Manager, I: Io>(context: Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+    let read_result = context.io.read_to_string(context.path.as_str());
+    match read_result {
+        Ok(s) => {
+            let tokens = tokenize(s);
+            parse_with_tokens(context, tokens.into_iter())
+        }
+        Err(_) => Err(ParseError::CannotReadFile),
     }
 }
 
