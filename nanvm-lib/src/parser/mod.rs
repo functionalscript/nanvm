@@ -309,15 +309,28 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_import_value(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_value<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
         match token {
-            JsonToken::String(_s) => AnyResult::Continue(AnyState {
-                data_type: self.data_type,
-                status: ParsingStatus::ImportEnd,
-                current: JsonElement::Any(Any::move_from(Null())), //todo: null is temporary, parse module
-                stack: self.stack,
-                consts: self.consts,
-            }),
+            JsonToken::String(s) => {
+                let read_result = context.io.read_to_string(s.as_str()); //todo: concatnate paths
+                match read_result {
+                    Ok(s) => {
+                        let tokens = tokenize(s);
+                        let res = parse_with_tokens(context, tokens.into_iter());
+                        match res {
+                            Ok(r) => AnyResult::Continue(AnyState {
+                                data_type: self.data_type,
+                                status: ParsingStatus::ImportEnd,
+                                current: JsonElement::Any(r.any),
+                                stack: self.stack,
+                                consts: self.consts,
+                            }),
+                            Err(e) => AnyResult::Error(e),
+                        }
+                    }
+                    Err(_) => AnyResult::Error(ParseError::CannotReadFile),
+                }
+            }
             _ => AnyResult::Error(ParseError::WrongImportStatement),
         }
     }
@@ -342,7 +355,7 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ObjectValue => self.parse_object_next(context.manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
             ParsingStatus::ImportBegin => self.parse_import_begin(token),
-            ParsingStatus::ImportValue => self.parse_import_value(token),
+            ParsingStatus::ImportValue => self.parse_import_value(context, token),
             ParsingStatus::ImportEnd => self.parse_import_end(token),
         }
     }
@@ -655,7 +668,7 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<M: Manager, I: Io>(context: Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, ParseError> {
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
@@ -667,7 +680,7 @@ fn parse<M: Manager, I: Io>(context: Context<M, I>) -> Result<ParseResult<M>, Pa
 }
 
 fn parse_with_tokens<M: Manager, I: Io>(
-    context: Context<M, I>,
+    context: &Context<M, I>,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
     let mut state: JsonState<M> = JsonState::ParseRoot(RootState {
@@ -675,7 +688,7 @@ fn parse_with_tokens<M: Manager, I: Io>(
         state: default(),
     });
     for token in iter {
-        state = state.push(&context, token);
+        state = state.push(context, token);
     }
     state.end()
 }
@@ -708,18 +721,18 @@ mod test {
         manager: M,
         iter: impl Iterator<Item = JsonToken>,
     ) -> Result<ParseResult<M>, ParseError> {
-        parse_with_tokens(create_test_context(manager), iter)
+        parse_with_tokens(&create_test_context(manager), iter)
     }
 
     fn test_local() {
         let local = Local::default();
-        let _ = parse_with_tokens(create_test_context(&local), [].into_iter());
+        let _ = parse_with_tokens(&create_test_context(&local), [].into_iter());
     }
 
     fn test_global() {
         let _ = {
             let global = GLOBAL;
-            parse_with_tokens(create_test_context(global), [].into_iter())
+            parse_with_tokens(&create_test_context(global), [].into_iter())
         };
     }
 
@@ -819,18 +832,24 @@ mod test {
     }
 
     fn test_import_with_manager<M: Manager>(manager: M) {
-        let json_str = include_str!("../../test/test_import_main.d.cjs");
+        let main = include_str!("../../test/test_import_main.d.cjs");
         let io: VirtualIo = VirtualIo::new(&[]);
         //let path = "../../test/test-import-main.d.cjs";
-        let path = "test_import_main.d.cjs";
-        io.write(path, json_str.as_bytes()).unwrap();
+        let main_path = "test_import_main.d.cjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.cjs");
+        let io: VirtualIo = VirtualIo::new(&[]);
+        let module_path = "test_import_module.d.cjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
         let context = Context {
             manager,
             io,
-            path: String::from(path),
+            path: String::from(main_path),
         };
 
-        let result = parse(context);
+        let result = parse(&context);
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
