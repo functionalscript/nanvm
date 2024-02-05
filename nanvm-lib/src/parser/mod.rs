@@ -681,13 +681,14 @@ fn parse_with_tokens<M: Manager, I: Io>(
 #[cfg(test)]
 mod test {
     use io_test::VirtualIo;
+    use io_trait::Io;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
         common::default::default,
         js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
         mem::{global::GLOBAL, local::Local, manager::Manager},
-        parser::DataType,
+        parser::{parse, DataType},
         tokenizer::{tokenize, ErrorType, JsonToken},
     };
 
@@ -816,9 +817,18 @@ mod test {
     }
 
     fn test_import_with_manager<M: Manager>(manager: M) {
-        let json_str = include_str!("../../test/test-import-main.d.cjs");
-        let tokens = tokenize(json_str.to_owned());
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let json_str = include_str!("../../test/test_import_main.d.cjs");
+        let io: VirtualIo = VirtualIo::new(&[]);
+        //let path = "../../test/test-import-main.d.cjs";
+        let path = "test_import_main.d.cjs";
+        io.write(path, json_str.as_bytes()).unwrap();
+        let context = Context {
+            manager,
+            io,
+            path: String::from(path),
+        };
+
+        let result = parse(context);
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
