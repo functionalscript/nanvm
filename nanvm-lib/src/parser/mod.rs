@@ -182,7 +182,7 @@ impl<M: Manager> AnyState<M> {
 }
 
 impl<M: Manager> RootState<M> {
-    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
         match self.status {
             RootStatus::Initial => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -198,9 +198,9 @@ impl<M: Manager> RootState<M> {
                         status: RootStatus::Module,
                         state: self.state.set_data_type(DataType::Cjs),
                     }),
-                    _ => self.state.parse_for_module(manager, JsonToken::Id(s)),
+                    _ => self.state.parse_for_module(context, JsonToken::Id(s)),
                 },
-                _ => self.state.parse_for_module(manager, token),
+                _ => self.state.parse_for_module(context, token),
             },
             RootStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -249,11 +249,11 @@ impl<M: Manager> RootState<M> {
 }
 
 impl<M: Manager> ConstState<M> {
-    fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::Semicolon => todo!(),
             _ => {
-                let result = self.state.parse(manager, token);
+                let result = self.state.parse(context, token);
                 match result {
                     AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
                         key: self.key,
@@ -284,8 +284,8 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_for_module(self, manager: M, token: JsonToken) -> JsonState<M> {
-        let result = self.parse(manager, token);
+    fn parse_for_module<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
+        let result = self.parse(context, token);
         match result {
             AnyResult::Continue(state) => JsonState::ParseModule(state),
             AnyResult::Success(success) => JsonState::Result(ParseResult {
@@ -329,16 +329,18 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
         match self.status {
-            ParsingStatus::Initial | ParsingStatus::ObjectColon => self.parse_value(manager, token),
-            ParsingStatus::ArrayBegin => self.parse_array_begin(manager, token),
-            ParsingStatus::ArrayValue => self.parse_array_value(manager, token),
-            ParsingStatus::ArrayComma => self.parse_array_comma(manager, token),
-            ParsingStatus::ObjectBegin => self.parse_object_begin(manager, token),
+            ParsingStatus::Initial | ParsingStatus::ObjectColon => {
+                self.parse_value(context.manager, token)
+            }
+            ParsingStatus::ArrayBegin => self.parse_array_begin(context.manager, token),
+            ParsingStatus::ArrayValue => self.parse_array_value(context.manager, token),
+            ParsingStatus::ArrayComma => self.parse_array_comma(context.manager, token),
+            ParsingStatus::ObjectBegin => self.parse_object_begin(context.manager, token),
             ParsingStatus::ObjectKey => self.parse_object_key(token),
-            ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
-            ParsingStatus::ObjectComma => self.parse_object_comma(manager, token),
+            ParsingStatus::ObjectValue => self.parse_object_next(context.manager, token),
+            ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
             ParsingStatus::ImportBegin => self.parse_import_begin(token),
             ParsingStatus::ImportValue => self.parse_import_value(token),
             ParsingStatus::ImportEnd => self.parse_import_end(token),
@@ -631,15 +633,15 @@ impl<M: Manager> AnyState<M> {
 }
 
 impl<M: Manager> JsonState<M> {
-    fn push(self, manager: M, token: JsonToken) -> JsonState<M> {
+    fn push<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
         if token == JsonToken::NewLine {
             return self;
         }
         match self {
-            JsonState::ParseRoot(state) => state.parse(manager, token),
+            JsonState::ParseRoot(state) => state.parse(context, token),
             JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
-            JsonState::ParseModule(state) => state.parse_for_module(manager, token),
-            JsonState::ParseConst(state) => state.parse(manager, token),
+            JsonState::ParseModule(state) => state.parse_for_module(context, token),
+            JsonState::ParseConst(state) => state.parse(context, token),
             _ => self,
         }
     }
@@ -673,7 +675,7 @@ fn parse_with_tokens<M: Manager, I: Io>(
         state: default(),
     });
     for token in iter {
-        state = state.push(context.manager, token);
+        state = state.push(&context, token);
     }
     state.end()
 }
