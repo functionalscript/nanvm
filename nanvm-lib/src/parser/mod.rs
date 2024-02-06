@@ -312,7 +312,7 @@ impl<M: Manager> AnyState<M> {
     fn parse_import_value<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => {
-                let read_result = context.io.read_to_string(s.as_str()); //todo: concatnate paths
+                                let read_result = context.io.read_to_string(s.as_str()); //todo: concatnate paths
                 match read_result {
                     Ok(s) => {
                         let tokens = tokenize(s);
@@ -343,7 +343,7 @@ impl<M: Manager> AnyState<M> {
     }
 
     fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
-        match self.status {
+                match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
                 self.parse_value(context.manager, token)
             }
@@ -672,7 +672,7 @@ fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, P
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
-            let tokens = tokenize(s);
+                        let tokens = tokenize(s);
             parse_with_tokens(context, tokens.into_iter())
         }
         Err(_) => Err(ParseError::CannotReadFile),
@@ -832,14 +832,14 @@ mod test {
     }
 
     fn test_import_with_manager<M: Manager>(manager: M) {
-        let main = include_str!("../../test/test_import_main.d.cjs");
         let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_import_main.d.cjs");
         //let path = "../../test/test-import-main.d.cjs";
         let main_path = "test_import_main.d.cjs";
         io.write(main_path, main.as_bytes()).unwrap();
 
         let module = include_str!("../../test/test_import_module.d.cjs");
-        let io: VirtualIo = VirtualIo::new(&[]);
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
@@ -858,7 +858,7 @@ mod test {
             .unwrap();
         let items = result_unwrap.items();
         let item0 = items[0].clone();
-        assert_eq!(item0.get_type(), Type::Null);
+        assert_eq!(item0.try_move(), Ok(3.0));
     }
 
     #[test]
