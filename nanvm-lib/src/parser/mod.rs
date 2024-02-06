@@ -711,7 +711,7 @@ mod test {
 
     fn create_test_context<M: Manager>(manager: M) -> Context<M, VirtualIo> {
         Context {
-            manager: manager,
+            manager,
             io: VirtualIo::new(&[]),
             path: default(),
         }
