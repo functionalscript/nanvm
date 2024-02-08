@@ -109,6 +109,7 @@ pub struct ParseResult<M: Manager> {
     pub any: Any<M::Dealloc>,
 }
 
+#[derive(Debug)]
 pub enum RootStatus {
     Initial,
     Export,
