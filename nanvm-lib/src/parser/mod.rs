@@ -91,6 +91,7 @@ pub enum ParseError {
     UnexpectedEnd,
     WrongExportStatement,
     WrongConstStatement,
+    WrongRequireStatement,
     WrongImportStatement,
     CannotReadFile,
 }
@@ -108,6 +109,7 @@ pub struct ParseResult<M: Manager> {
     pub any: Any<M::Dealloc>,
 }
 
+#[derive(Debug)]
 pub enum RootStatus {
     Initial,
     Export,
@@ -116,6 +118,9 @@ pub enum RootStatus {
     ModuleDotExports,
     Const,
     ConstId(String),
+    Import,
+    ImportId(String),
+    ImportIdFrom(String),
 }
 
 pub struct RootState<M: Manager> {
@@ -182,7 +187,7 @@ impl<M: Manager> AnyState<M> {
 }
 
 impl<M: Manager> RootState<M> {
-    fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
+    fn parse<I: Io>(mut self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
         match self.status {
             RootStatus::Initial => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -196,6 +201,10 @@ impl<M: Manager> RootState<M> {
                     }),
                     "module" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Module,
+                        state: self.state.set_data_type(DataType::Cjs),
+                    }),
+                    "import" => JsonState::ParseRoot(RootState {
+                        status: RootStatus::Import,
                         state: self.state.set_data_type(DataType::Cjs),
                     }),
                     _ => self.state.parse_for_module(context, JsonToken::Id(s)),
@@ -243,6 +252,46 @@ impl<M: Manager> RootState<M> {
                     state: self.state,
                 }),
                 _ => JsonState::Error(ParseError::WrongConstStatement),
+            },
+            RootStatus::Import => match token {
+                JsonToken::Id(s) => JsonState::ParseRoot(RootState {
+                    status: RootStatus::ImportId(s),
+                    state: self.state,
+                }),
+                _ => JsonState::Error(ParseError::WrongImportStatement),
+            },
+            RootStatus::ImportId(id) => match token {
+                JsonToken::Id(s) => match s.as_ref() {
+                    "from" => JsonState::ParseRoot(RootState {
+                        status: RootStatus::ImportIdFrom(id),
+                        state: self.state,
+                    }),
+                    _ => JsonState::Error(ParseError::WrongImportStatement),
+                },
+                _ => JsonState::Error(ParseError::WrongImportStatement),
+            },
+            RootStatus::ImportIdFrom(id) => match token {
+                JsonToken::String(s) => {
+                    let read_result = context.io.read_to_string(s.as_str()); //todo: concatnate paths
+                    match read_result {
+                        Ok(s) => {
+                            let tokens = tokenize(s);
+                            let res = parse_with_tokens(context, tokens.into_iter());
+                            match res {
+                                Ok(r) => {
+                                    self.state.consts.insert(id, r.any);
+                                    JsonState::ParseRoot(RootState {
+                                        status: RootStatus::Initial,
+                                        state: self.state,
+                                    })
+                                }
+                                Err(e) => JsonState::Error(e),
+                            }
+                        }
+                        Err(_) => JsonState::Error(ParseError::CannotReadFile),
+                    }
+                }
+                _ => JsonState::Error(ParseError::WrongImportStatement),
             },
         }
     }
@@ -305,7 +354,7 @@ impl<M: Manager> AnyState<M> {
                 stack: self.stack,
                 consts: self.consts,
             }),
-            _ => AnyResult::Error(ParseError::WrongImportStatement),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
 
@@ -331,14 +380,14 @@ impl<M: Manager> AnyState<M> {
                     Err(_) => AnyResult::Error(ParseError::CannotReadFile),
                 }
             }
-            _ => AnyResult::Error(ParseError::WrongImportStatement),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
 
     fn parse_import_end(self, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::ClosingParenthesis => self.end_import(),
-            _ => AnyResult::Error(ParseError::WrongImportStatement),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
 
@@ -859,6 +908,34 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(3.0));
+
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_import_main.d.mjs");
+        //let path = "../../test/test-import-main.d.mjs";
+        let main_path = "test_import_main.d.mjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.mjs");
+        let module_path = "test_import_module.d.mjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let context = Context {
+            manager,
+            io,
+            path: String::from(main_path),
+        };
+
+        let result = parse(&context);
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(4.0));
     }
 
     #[test]
