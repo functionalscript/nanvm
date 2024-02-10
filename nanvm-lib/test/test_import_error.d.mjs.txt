@@ -1,0 +1,2 @@
+const b = require("test_import_module.d.cjs")
+export default [b]

@@ -85,7 +85,7 @@ impl<M: Manager> Default for AnyState<M> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
@@ -105,6 +105,7 @@ pub enum DataType {
     Mjs,
 }
 
+#[derive(Debug)]
 pub struct ParseResult<M: Manager> {
     pub data_type: DataType,
     pub any: Any<M::Dealloc>,
@@ -972,6 +973,57 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(4.0));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_import_error() {
+        let local = Local::default();
+        test_import_error_with_manager(&local);
+    }
+
+    fn test_import_error_with_manager<M: Manager>(manager: M) {
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_import_error.d.cjs.txt");
+        //let path = "../../test/test-import-main.d.cjs";
+        let main_path = "test_import_error.d.cjs.txt";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.mjs");
+        let module_path = "test_import_module.d.mjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let context = Context {
+            manager,
+            io,
+            path: String::from(main_path),
+        };
+
+        let result = parse(&context);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::UnexpectedToken);
+
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_import_error.d.mjs.txt");
+        //let path = "../../test/test-import-main.d.cjs";
+        let main_path = "test_import_error.d.mjs.txt";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.cjs");
+        let module_path = "test_import_module.d.cjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let context = Context {
+            manager,
+            io,
+            path: String::from(main_path),
+        };
+
+        let result = parse(&context);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::UnexpectedToken);
     }
 
     #[test]

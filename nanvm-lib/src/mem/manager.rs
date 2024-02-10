@@ -1,4 +1,5 @@
 use core::alloc::Layout;
+use core::fmt::Debug;
 
 use crate::common::ref_mut::RefMut;
 
@@ -11,13 +12,13 @@ use super::{
     mut_ref::MutRef,
 };
 
-pub trait Dealloc {
+pub trait Dealloc: Debug {
     type BlockHeader: BlockHeader;
     unsafe fn dealloc(ptr: *mut u8, layout: Layout);
 }
 
 /// Block = (Header, Object)
-pub trait Manager: Sized + Copy {
+pub trait Manager: Sized + Copy + Debug {
     // required:
     type Dealloc: Dealloc;
 

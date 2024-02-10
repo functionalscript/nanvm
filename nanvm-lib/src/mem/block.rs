@@ -44,6 +44,7 @@ mod test {
 
     use super::super::block_header::BlockHeader;
 
+    #[derive(Debug)]
     struct M();
 
     impl Dealloc for M {
@@ -83,6 +84,7 @@ mod test {
         #[derive(Default)]
         struct Xbh(Cell<isize>);
 
+        #[derive(Debug)]
         struct D();
 
         impl Dealloc for D {
