@@ -85,7 +85,7 @@ impl<M: Manager> Default for AnyState<M> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     UnexpectedToken,
     UnexpectedEnd,
@@ -100,10 +100,12 @@ pub enum ParseError {
 pub enum DataType {
     #[default]
     Json,
+    Djs,
     Cjs,
     Mjs,
 }
 
+#[derive(Debug)]
 pub struct ParseResult<M: Manager> {
     pub data_type: DataType,
     pub any: Any<M::Dealloc>,
@@ -174,6 +176,28 @@ impl JsonToken {
     }
 }
 
+impl DataType {
+    fn to_djs(&self) -> DataType {
+        match self {
+            DataType::Json | DataType::Djs => DataType::Djs,
+            DataType::Cjs => DataType::Cjs,
+            DataType::Mjs => DataType::Mjs,
+        }
+    }
+
+    fn is_djs(&self) -> bool {
+        matches!(self, DataType::Djs | DataType::Cjs | DataType::Mjs)
+    }
+
+    fn is_cjs_compatible(&self) -> bool {
+        matches!(self, DataType::Json | DataType::Djs | DataType::Cjs)
+    }
+
+    fn is_mjs_compatible(&self) -> bool {
+        matches!(self, DataType::Json | DataType::Djs | DataType::Mjs)
+    }
+}
+
 impl<M: Manager> AnyState<M> {
     fn default(data_type: DataType) -> Self {
         AnyState {
@@ -193,20 +217,26 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Id(s) => match s.as_ref() {
                     "const" => JsonState::ParseRoot(RootState {
                         status: RootStatus::Const,
-                        state: self.state.set_data_type(DataType::Cjs),
+                        state: self.state.set_djs(),
                     }),
-                    "export" => JsonState::ParseRoot(RootState {
-                        status: RootStatus::Export,
-                        state: self.state.set_data_type(DataType::Mjs),
-                    }),
-                    "module" => JsonState::ParseRoot(RootState {
-                        status: RootStatus::Module,
-                        state: self.state.set_data_type(DataType::Cjs),
-                    }),
-                    "import" => JsonState::ParseRoot(RootState {
-                        status: RootStatus::Import,
-                        state: self.state.set_data_type(DataType::Cjs),
-                    }),
+                    "export" if self.state.data_type.is_mjs_compatible() => {
+                        JsonState::ParseRoot(RootState {
+                            status: RootStatus::Export,
+                            state: self.state.set_data_type(DataType::Mjs),
+                        })
+                    }
+                    "module" if self.state.data_type.is_cjs_compatible() => {
+                        JsonState::ParseRoot(RootState {
+                            status: RootStatus::Module,
+                            state: self.state.set_data_type(DataType::Cjs),
+                        })
+                    }
+                    "import" if self.state.data_type.is_mjs_compatible() => {
+                        JsonState::ParseRoot(RootState {
+                            status: RootStatus::Import,
+                            state: self.state.set_data_type(DataType::Mjs),
+                        })
+                    }
                     _ => self.state.parse_for_module(context, JsonToken::Id(s)),
                 },
                 _ => self.state.parse_for_module(context, token),
@@ -323,6 +353,16 @@ impl<M: Manager> ConstState<M> {
 }
 
 impl<M: Manager> AnyState<M> {
+    fn set_djs(self) -> Self {
+        AnyState {
+            data_type: self.data_type.to_djs(),
+            status: self.status,
+            current: self.current,
+            stack: self.stack,
+            consts: self.consts,
+        }
+    }
+
     fn set_data_type(self, data_type: DataType) -> Self {
         AnyState {
             data_type,
@@ -414,7 +454,7 @@ impl<M: Manager> AnyState<M> {
             self.stack.push(top);
         }
         AnyResult::Continue(AnyState {
-            data_type: self.data_type,
+            data_type: DataType::Cjs,
             status: ParsingStatus::ImportBegin,
             current: JsonElement::None,
             stack: self.stack,
@@ -586,7 +626,7 @@ impl<M: Manager> AnyState<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => self.begin_object(),
-            JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
+            JsonToken::Id(s) if self.data_type.is_cjs_compatible() && s == "require" => {
                 self.begin_import()
             }
             _ => {
@@ -649,10 +689,7 @@ impl<M: Manager> AnyState<M> {
     fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
-            JsonToken::Id(s) => match self.data_type {
-                DataType::Cjs | DataType::Mjs => self.push_key(s),
-                _ => AnyResult::Error(ParseError::UnexpectedToken),
-            },
+            JsonToken::Id(s) if self.data_type.is_djs() => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
@@ -936,6 +973,57 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(4.0));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_import_error() {
+        let local = Local::default();
+        test_import_error_with_manager(&local);
+    }
+
+    fn test_import_error_with_manager<M: Manager>(manager: M) {
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_import_error.d.cjs.txt");
+        //let path = "../../test/test-import-main.d.cjs";
+        let main_path = "test_import_error.d.cjs.txt";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.mjs");
+        let module_path = "test_import_module.d.mjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let context = Context {
+            manager,
+            io,
+            path: String::from(main_path),
+        };
+
+        let result = parse(&context);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::UnexpectedToken);
+
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_import_error.d.mjs.txt");
+        //let path = "../../test/test-import-main.d.cjs";
+        let main_path = "test_import_error.d.mjs.txt";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.cjs");
+        let module_path = "test_import_module.d.cjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let context = Context {
+            manager,
+            io,
+            path: String::from(main_path),
+        };
+
+        let result = parse(&context);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::UnexpectedToken);
     }
 
     #[test]

@@ -15,6 +15,7 @@ use super::{
 };
 
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct AnyInternal<D: Dealloc = Global>(pub u64, PhantomData<D>);
 
 impl<D: Dealloc> Clone for AnyInternal<D> {

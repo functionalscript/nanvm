@@ -1,0 +1,2 @@
+import b from "test_import_module.d.mjs"
+module.exports = [b]

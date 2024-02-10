@@ -45,6 +45,7 @@ mod test {
     #[derive(Default)]
     struct BH();
 
+    #[derive(Debug)]
     struct M();
 
     impl Dealloc for M {
@@ -69,6 +70,7 @@ mod test {
         forget(y);
     }
 
+    #[derive(Debug)]
     struct M1();
 
     impl Dealloc for M1 {
