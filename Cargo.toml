@@ -10,7 +10,7 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/functionalscript/nanvm"
 
 [workspace.dependencies]
-wasm-bindgen-test = "0.3.39"
+wasm-bindgen-test = "0.3.41"
 io-trait = "0.8.0"
-io-test = "0.8.0"
-io-impl = "0.8.0"
+io-test = "0.8.1"
+io-impl = "0.8.1"
