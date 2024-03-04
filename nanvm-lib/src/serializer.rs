@@ -1,5 +1,4 @@
 use crate::{
-    common::default::default,
     js::{
         any::Any,
         js_string::JsStringRef,
@@ -36,7 +35,7 @@ fn push_list<I>(
     r.push(close);
 }
 
-pub fn to_json(any: Any<impl Dealloc>, r: &mut String) {
+pub fn push_json(any: Any<impl Dealloc>, r: &mut String) {
     match to_visitor(any) {
         Visitor::Number(n) => r.push_str(n.to_string().as_str()),
         Visitor::Null => r.push_str("null"),
@@ -50,11 +49,11 @@ pub fn to_json(any: Any<impl Dealloc>, r: &mut String) {
                 |kv, r| {
                     push_js_string(&kv.0, r);
                     r.push(':');
-                    to_json(kv.1.clone(), r);
+                    push_json(kv.1.clone(), r);
                 },
                 r,
             );
         }
-        Visitor::Array(a) => push_list('[', ']', a, |i, r| to_json(i.clone(), r), r),
+        Visitor::Array(a) => push_list('[', ']', a, |i, r| push_json(i.clone(), r), r),
     }
 }
