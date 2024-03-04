@@ -99,7 +99,7 @@ mod test {
             assert_eq!(mr.0, 44);
             assert_eq!(local.counter.get(), 2);
             assert_eq!(local.size.get(), SIZE << 1);
-            let mut mr2 = local.flexible_array_new([1, 2, 3].into_iter());
+            let mut mr2 = local.flexible_array_new([1, 2, 3]);
             assert_eq!(mr2.items_mut(), &[1, 2, 3]);
             assert_eq!(local.counter.get(), 3);
             assert_eq!(

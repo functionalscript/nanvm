@@ -25,5 +25,5 @@ pub fn new_array<M: Manager, I: ExactSizeIterator<Item = Any<M::Dealloc>>>(
     m: M,
     i: impl IntoIterator<IntoIter = I>,
 ) -> JsArrayMutRef<M::Dealloc> {
-    m.flexible_array_new(i.into_iter())
+    m.flexible_array_new(i)
 }

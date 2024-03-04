@@ -25,5 +25,5 @@ pub fn new_string<M: Manager, I: ExactSizeIterator<Item = u16>>(
     m: M,
     i: impl IntoIterator<IntoIter = I>,
 ) -> JsStringMutRef<M::Dealloc> {
-    m.flexible_array_new(i.into_iter())
+    m.flexible_array_new(i)
 }
