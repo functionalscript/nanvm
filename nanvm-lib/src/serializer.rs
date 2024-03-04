@@ -64,7 +64,9 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{any::Any, js_array::new_array, js_string::new_string, null::Null},
+        js::{
+            any::Any, js_array::new_array, js_object::new_object, js_string::new_string, null::Null,
+        },
         mem::global::{Global, GLOBAL},
         serializer::WriteJson,
     };
@@ -73,6 +75,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         type A = Any<Global>;
+        let s = new_string(GLOBAL, ['a' as u16]).to_ref();
         let a = new_array(
             GLOBAL,
             [
@@ -81,10 +84,12 @@ mod test {
                 A::move_from(Null()),
                 A::move_from(new_array(GLOBAL, []).to_ref()),
                 A::move_from(new_string(GLOBAL, []).to_ref()),
+                A::move_from(new_object(GLOBAL, []).to_ref()),
+                A::move_from(new_object(GLOBAL, [(s, A::move_from(2.0))]).to_ref()),
             ],
         );
         let mut s = String::new();
         s.write_json(A::move_from(a.to_ref())).unwrap();
-        assert_eq!(s, "[1,true,null,[],\"\"]");
+        assert_eq!(s, "[1,true,null,[],\"\",{},{\"a\":2}]");
     }
 }
