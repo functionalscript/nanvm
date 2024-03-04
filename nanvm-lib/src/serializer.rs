@@ -17,21 +17,31 @@ trait WriteJson: Write {
     fn write_hex(&mut self, v: u16) -> fmt::Result {
         self.write_char(b"0123456789ABCDEF"[v as usize & 0xF] as char)
     }
+    fn write_js_u(&mut self, c: u16) -> fmt::Result {
+        self.write_str("\\u")?;
+        self.write_hex(c >> 12)?;
+        self.write_hex(c >> 8)?;
+        self.write_hex(c >> 4)?;
+        self.write_hex(c)
+    }
+    /// See https://www.json.org/json-en.html
     fn write_js_string(&mut self, s: &JsStringRef<impl Dealloc>) -> fmt::Result {
         self.write_char('"')?;
         for &c in s.items().iter() {
-            if 0x20 <= c && c < 0x80 {
-                match c as u8 as char {
-                    '\\' => self.write_str(r#"\\"#)?,
-                    '"' => self.write_str(r#"\""#)?,
-                    c => self.write_char(c)?,
+            if c < 0x80 {
+                match c as u8 {
+                    b'\\' => self.write_str(r#"\\"#)?,
+                    b'"' => self.write_str(r#"\""#)?,
+                    8 => self.write_str(r#"\b"#)?,
+                    0xC => self.write_str(r#"\f"#)?,
+                    b'\n' => self.write_str(r#"\n"#)?,
+                    b'\r' => self.write_str(r#"\r"#)?,
+                    b'\t' => self.write_str(r#"\t"#)?,
+                    c if c < 0x20 => self.write_js_u(c as u16)?,
+                    c => self.write_char(c as char)?,
                 }
             } else {
-                self.write_str("\\u")?;
-                self.write_hex(c >> 12)?;
-                self.write_hex(c >> 8)?;
-                self.write_hex(c >> 4)?;
-                self.write_hex(c)?;
+                self.write_js_u(c)?;
             }
         }
         self.write_char('"')
