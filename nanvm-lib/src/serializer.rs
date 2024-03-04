@@ -58,17 +58,20 @@ trait WriteJson: Write {
 
 impl<T: Write> WriteJson for T {}
 
-
 #[cfg(test)]
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{js::{any::Any, js_array::new_array}, mem::global::{Global, GLOBAL}, serializer::WriteJson};
+    use crate::{
+        js::{any::Any, js_array::new_array},
+        mem::global::{Global, GLOBAL},
+        serializer::WriteJson,
+    };
 
     #[test]
     #[wasm_bindgen_test]
     fn test() {
-         type A = Any<Global>;
+        type A = Any<Global>;
         let a = new_array(GLOBAL, [].into_iter());
         let mut s = String::new();
         s.write_json(A::move_from(a.to_ref())).unwrap();
