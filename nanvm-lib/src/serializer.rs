@@ -72,7 +72,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         type A = Any<Global>;
-        let a = new_array(GLOBAL, [].into_iter());
+        let a = new_array(GLOBAL, []);
         let mut s = String::new();
         s.write_json(A::move_from(a.to_ref())).unwrap();
         assert_eq!(s, "[]");

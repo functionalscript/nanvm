@@ -560,7 +560,7 @@ impl<M: Manager> AnyState<M> {
     fn end_array(mut self, manager: M) -> AnyResult<M> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Array(array)) => {
-                let js_array = new_array(manager, array.into_iter()).to_ref();
+                let js_array = new_array(manager, array).to_ref();
                 let current = match self.stack.pop() {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,

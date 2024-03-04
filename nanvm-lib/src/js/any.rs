@@ -228,7 +228,7 @@ mod test {
         type ArrayRef = JsArrayRef<Global>;
         assert!(!A::move_from(Null()).is::<ArrayRef>());
 
-        let o: ArrayRef = new_array(Global(), [].into_iter()).to_ref();
+        let o: ArrayRef = new_array(Global(), []).to_ref();
         assert!(A::move_from(o.clone()).is::<ArrayRef>());
         let v = o.items();
         assert!(v.is_empty());
@@ -236,7 +236,7 @@ mod test {
         assert!(!A::move_from(15.0).is::<ArrayRef>());
         assert!(!A::move_from(true).is::<ArrayRef>());
 
-        let o: ArrayRef = new_array(Global(), [].into_iter()).to_ref();
+        let o: ArrayRef = new_array(Global(), []).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Array);
         {

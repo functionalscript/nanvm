@@ -21,9 +21,9 @@ impl<D: Dealloc> RefCast<D> for JsArray<D> {
     const REF_SUBSET: BitSubset64<*const Block<Self, D>> = ARRAY.cast();
 }
 
-pub fn new_array<M: Manager>(
+pub fn new_array<M: Manager, I: ExactSizeIterator<Item = Any<M::Dealloc>>>(
     m: M,
-    i: impl ExactSizeIterator<Item = Any<M::Dealloc>>,
+    i: impl IntoIterator<IntoIter = I>,
 ) -> JsArrayMutRef<M::Dealloc> {
-    m.flexible_array_new(i)
+    m.flexible_array_new(i.into_iter())
 }
