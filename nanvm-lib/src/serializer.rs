@@ -14,11 +14,25 @@ use crate::{
 use core::fmt::{self, Write};
 
 trait WriteJson: Write {
+    fn write_hex(&mut self, v: u16) -> fmt::Result {
+        self.write_char(b"0123456789ABCDEF"[v as usize & 0xF] as char)
+    }
     fn write_js_string(&mut self, s: &JsStringRef<impl Dealloc>) -> fmt::Result {
         self.write_char('"')?;
         for &c in s.items().iter() {
-            // TODO: escape
-            self.write_char(c as u8 as _)?;
+            if 0x20 <= c && c < 0x80 {
+                match c as u8 as char {
+                    '\\' => self.write_str(r#"\\"#)?,
+                    '"' => self.write_str(r#"\""#)?,
+                    c => self.write_char(c)?,
+                }
+            } else {
+                self.write_str("\\u")?;
+                self.write_hex(c >> 12)?;
+                self.write_hex(c >> 8)?;
+                self.write_hex(c >> 4)?;
+                self.write_hex(c)?;
+            }
         }
         self.write_char('"')
     }
@@ -75,7 +89,11 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         type A = Any<Global>;
-        let s = new_string(GLOBAL, ['a' as u16]).to_ref();
+        let s = new_string(
+            GLOBAL,
+            ['a' as u16, '\\' as u16, 'b' as u16, '"' as u16, 31],
+        )
+        .to_ref();
         let a = new_array(
             GLOBAL,
             [
@@ -90,6 +108,6 @@ mod test {
         );
         let mut s = String::new();
         s.write_json(A::move_from(a.to_ref())).unwrap();
-        assert_eq!(s, "[1,true,null,[],\"\",{},{\"a\":2}]");
+        assert_eq!(s, r#"[1,true,null,[],"",{},{"a\\b\"\u001F":2}]"#);
     }
 }
