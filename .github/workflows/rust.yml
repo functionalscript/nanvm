@@ -26,7 +26,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ['ubuntu-latest', 'windows-latest', 'macos-13']
+        os: ['ubuntu-latest', 'windows-latest', 'macos-14']
         type: ['', '--release']
         target: ['']
         include:
