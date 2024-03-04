@@ -43,7 +43,6 @@ pub fn to_json(any: Any<impl Dealloc>, r: &mut String) {
         Visitor::Bool(b) => r.push_str(if b { "true" } else { "false" }),
         Visitor::String(s) => push_js_string(&s, r),
         Visitor::Object(o) => {
-            let mut r = default();
             push_list(
                 '{',
                 '}',
@@ -53,7 +52,7 @@ pub fn to_json(any: Any<impl Dealloc>, r: &mut String) {
                     r.push(':');
                     to_json(kv.1.clone(), r);
                 },
-                &mut r,
+                r,
             );
         }
         Visitor::Array(a) => push_list('[', ']', a, |i, r| to_json(i.clone(), r), r),
