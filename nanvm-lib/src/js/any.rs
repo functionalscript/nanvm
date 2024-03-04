@@ -9,8 +9,6 @@ use super::{
     type_::Type,
 };
 
-// type Result<T> = result::Result<T, ()>;
-
 pub type Any<D> = OptionalRef<AnyInternal<D>>;
 
 impl<D: Dealloc> Any<D> {
