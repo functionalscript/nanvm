@@ -1,5 +1,3 @@
-use core::ops::Deref;
-
 use crate::{
     common::default::default,
     js::{
