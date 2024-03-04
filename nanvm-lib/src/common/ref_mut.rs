@@ -1,7 +1,7 @@
 pub trait RefMut {
     // a better name is `as_mut_ptr` but it's already used by `Slice`.
     unsafe fn to_mut_ptr(&mut self) -> *mut Self {
-        self as *mut Self
+        self as _
     }
     fn modify(&mut self, f: impl FnOnce(Self) -> Self)
     where
