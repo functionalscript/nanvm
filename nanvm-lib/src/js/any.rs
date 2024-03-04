@@ -203,7 +203,7 @@ mod test {
         type ObjectRef = JsObjectRef<Global>;
         assert!(!A::move_from(Null()).is::<ObjectRef>());
 
-        let o: ObjectRef = new_object(Global(), [].into_iter()).to_ref();
+        let o: ObjectRef = new_object(Global(), []).to_ref();
         assert!(A::move_from(o.clone()).is::<ObjectRef>());
         let v = o.items();
         assert!(v.is_empty());
@@ -211,7 +211,7 @@ mod test {
         assert!(!A::move_from(15.0).is::<ObjectRef>());
         assert!(!A::move_from(true).is::<ObjectRef>());
 
-        let o: ObjectRef = new_object(Global(), [].into_iter()).to_ref();
+        let o: ObjectRef = new_object(Global(), []).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Object);
         {

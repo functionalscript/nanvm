@@ -604,7 +604,7 @@ impl<M: Manager> AnyState<M> {
                     .into_iter()
                     .map(|kv| (to_js_string(manager, kv.0), kv.1))
                     .collect::<Vec<_>>();
-                let js_object = new_object(manager, vec.into_iter()).to_ref();
+                let js_object = new_object(manager, vec).to_ref();
                 let current = match self.stack.pop() {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
