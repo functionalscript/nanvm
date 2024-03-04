@@ -42,6 +42,7 @@ trait WriteJson: Write {
 
     fn write_json(&mut self, any: Any<impl Dealloc>) -> fmt::Result {
         match to_visitor(any) {
+            // TODO: replace with proper JSON number serializer.
             Visitor::Number(n) => self.write_str(n.to_string().as_str()),
             Visitor::Null => self.write_str("null"),
             Visitor::Bool(b) => self.write_str(if b { "true" } else { "false" }),
@@ -63,7 +64,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{any::Any, js_array::new_array},
+        js::{any::Any, js_array::new_array, null::Null},
         mem::global::{Global, GLOBAL},
         serializer::WriteJson,
     };
@@ -72,9 +73,17 @@ mod test {
     #[wasm_bindgen_test]
     fn test() {
         type A = Any<Global>;
-        let a = new_array(GLOBAL, []);
+        let a = new_array(
+            GLOBAL,
+            [
+                A::move_from(1.0),
+                A::move_from(true),
+                A::move_from(Null()),
+                A::move_from(new_array(GLOBAL, []).to_ref()),
+            ],
+        );
         let mut s = String::new();
         s.write_json(A::move_from(a.to_ref())).unwrap();
-        assert_eq!(s, "[]");
+        assert_eq!(s, "[1,true,null,[]]");
     }
 }
