@@ -170,7 +170,7 @@ mod test {
     fn test_string() {
         type A = Any<Global>;
         type StringRef = JsStringRef<Global>;
-        let sm = new_string(Global(), [].into_iter());
+        let sm = new_string(Global(), []);
         let s = sm.to_ref();
         assert!(A::move_from(s.clone()).is::<StringRef>());
         let v = s.items();
@@ -181,7 +181,7 @@ mod test {
         assert!(!A::move_from(true).is::<StringRef>());
         assert!(!A::move_from(Null()).is::<StringRef>());
 
-        let s = new_string(Global(), [0x20, 0x21].into_iter()).to_ref();
+        let s = new_string(Global(), [0x20, 0x21]).to_ref();
         assert!(A::move_from(s.clone()).is::<StringRef>());
         let v = s.items();
         assert_eq!(v, [0x20, 0x21]);

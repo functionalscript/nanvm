@@ -21,9 +21,9 @@ impl<D: Dealloc> RefCast<D> for JsString {
     const REF_SUBSET: BitSubset64<*const Block<JsString, D>> = STRING.cast();
 }
 
-pub fn new_string<M: Manager>(
+pub fn new_string<M: Manager, I: ExactSizeIterator<Item = u16>>(
     m: M,
-    i: impl ExactSizeIterator<Item = u16>,
+    i: impl IntoIterator<IntoIter = I>,
 ) -> JsStringMutRef<M::Dealloc> {
-    m.flexible_array_new(i)
+    m.flexible_array_new(i.into_iter())
 }

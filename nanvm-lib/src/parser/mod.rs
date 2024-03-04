@@ -144,7 +144,7 @@ pub enum JsonState<M: Manager> {
 }
 
 fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
-    new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
+    new_string(manager, s.encode_utf16().collect::<Vec<_>>()).to_ref()
 }
 
 fn try_id_to_any<M: Manager>(
