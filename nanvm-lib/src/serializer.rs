@@ -13,6 +13,9 @@ use crate::{
 
 use core::fmt::{self, Write};
 
+const ESCAPE_B: u8 = 0x08;
+const ESCAPE_F: u8 = 0x0C;
+
 trait WriteJson: Write {
     fn write_u4_hex(&mut self, v: u16) -> fmt::Result {
         self.write_char(b"0123456789ABCDEF"[v as usize & 0xF] as char)
@@ -32,8 +35,8 @@ trait WriteJson: Write {
                 match c as u8 {
                     b'\\' => self.write_str(r#"\\"#)?,
                     b'"' => self.write_str(r#"\""#)?,
-                    8 => self.write_str(r#"\b"#)?,
-                    0xC => self.write_str(r#"\f"#)?,
+                    ESCAPE_B => self.write_str(r#"\b"#)?,
+                    ESCAPE_F => self.write_str(r#"\f"#)?,
                     b'\n' => self.write_str(r#"\n"#)?,
                     b'\r' => self.write_str(r#"\r"#)?,
                     b'\t' => self.write_str(r#"\t"#)?,
