@@ -60,6 +60,6 @@ mod test {
     #[wasm_bindgen_test]
     #[test]
     fn test() {
-        let x: Any<Global> = 1.0.move_to_any();
+        let _x: Any<Global> = 1.0.move_to_any();
     }
 }
