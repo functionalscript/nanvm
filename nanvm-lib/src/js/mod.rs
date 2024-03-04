@@ -1,5 +1,5 @@
 pub mod any;
-mod any_cast;
+pub mod any_cast;
 mod any_internal;
 mod bitset;
 mod bool;

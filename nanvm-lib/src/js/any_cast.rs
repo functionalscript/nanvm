@@ -48,3 +48,18 @@ impl<D: Dealloc, T: RefCast<D>> AnyCast<D> for Ref<T, D> {
         Self::from_internal(T::REF_SUBSET.subset_value_to_typed_value(any_internal))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::{js::any::Any, mem::global::Global};
+
+    use super::AnyCast;
+
+    #[wasm_bindgen_test]
+    #[test]
+    fn test() {
+        let x: Any<Global> = 1.0.move_to_any();
+    }
+}

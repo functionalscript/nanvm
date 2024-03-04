@@ -14,15 +14,15 @@ use crate::{
 use core::fmt::{self, Write};
 
 trait WriteJson: Write {
-    fn write_hex(&mut self, v: u16) -> fmt::Result {
+    fn write_u4_hex(&mut self, v: u16) -> fmt::Result {
         self.write_char(b"0123456789ABCDEF"[v as usize & 0xF] as char)
     }
-    fn write_js_u(&mut self, c: u16) -> fmt::Result {
+    fn write_js_escape(&mut self, c: u16) -> fmt::Result {
         self.write_str("\\u")?;
-        self.write_hex(c >> 12)?;
-        self.write_hex(c >> 8)?;
-        self.write_hex(c >> 4)?;
-        self.write_hex(c)
+        self.write_u4_hex(c >> 12)?;
+        self.write_u4_hex(c >> 8)?;
+        self.write_u4_hex(c >> 4)?;
+        self.write_u4_hex(c)
     }
     /// See https://www.json.org/json-en.html
     fn write_js_string(&mut self, s: &JsStringRef<impl Dealloc>) -> fmt::Result {
@@ -37,11 +37,11 @@ trait WriteJson: Write {
                     b'\n' => self.write_str(r#"\n"#)?,
                     b'\r' => self.write_str(r#"\r"#)?,
                     b'\t' => self.write_str(r#"\t"#)?,
-                    c if c < 0x20 => self.write_js_u(c as u16)?,
+                    c if c < 0x20 => self.write_js_escape(c as u16)?,
                     c => self.write_char(c as char)?,
                 }
             } else {
-                self.write_js_u(c)?;
+                self.write_js_escape(c)?;
             }
         }
         self.write_char('"')
@@ -89,7 +89,8 @@ mod test {
 
     use crate::{
         js::{
-            any::Any, js_array::new_array, js_object::new_object, js_string::new_string, null::Null,
+            any::Any, any_cast::AnyCast, js_array::new_array, js_object::new_object,
+            js_string::new_string, null::Null,
         },
         mem::global::{Global, GLOBAL},
         serializer::WriteJson,
@@ -107,17 +108,19 @@ mod test {
         let a = new_array(
             GLOBAL,
             [
-                A::move_from(1.0),
-                A::move_from(true),
-                A::move_from(Null()),
-                A::move_from(new_array(GLOBAL, []).to_ref()),
-                A::move_from(new_string(GLOBAL, []).to_ref()),
-                A::move_from(new_object(GLOBAL, []).to_ref()),
-                A::move_from(new_object(GLOBAL, [(s, A::move_from(2.0))]).to_ref()),
+                1.0.move_to_any(),
+                true.move_to_any(),
+                Null().move_to_any(),
+                new_array(GLOBAL, []).to_ref().move_to_any(),
+                new_string(GLOBAL, []).to_ref().move_to_any(),
+                new_object(GLOBAL, []).to_ref().move_to_any(),
+                new_object(GLOBAL, [(s, 2.0.move_to_any())])
+                    .to_ref()
+                    .move_to_any(),
             ],
         );
         let mut s = String::new();
-        s.write_json(A::move_from(a.to_ref())).unwrap();
+        s.write_json(a.to_ref().move_to_any()).unwrap();
         assert_eq!(s, r#"[1,true,null,[],"",{},{"a\\b\"\u001F":2}]"#);
     }
 }
