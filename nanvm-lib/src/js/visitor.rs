@@ -1,6 +1,8 @@
 use crate::mem::manager::Dealloc;
 
-use super::{any::Any, js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type};
+use super::{
+    any::Any, js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type,
+};
 
 enum Visitor<T: Dealloc> {
     Number(f64),
