@@ -46,10 +46,10 @@ pub fn push_json(any: Any<impl Dealloc>, r: &mut String) {
                 '{',
                 '}',
                 o,
-                |kv, r| {
-                    push_js_string(&kv.0, r);
+                |(k, v), r| {
+                    push_js_string(k, r);
                     r.push(':');
-                    push_json(kv.1.clone(), r);
+                    push_json(v.clone(), r);
                 },
                 r,
             );
