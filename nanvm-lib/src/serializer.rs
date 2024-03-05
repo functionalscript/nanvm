@@ -92,8 +92,7 @@ mod test {
 
     use crate::{
         js::{
-            any::Any, any_cast::AnyCast, js_array::new_array, js_object::new_object,
-            js_string::new_string, null::Null,
+            any::Any, any_cast::AnyCast, js_array::new_array, js_object::new_object, js_string::new_string, new::New, null::Null
         },
         mem::global::{Global, GLOBAL},
         serializer::WriteJson,
@@ -108,22 +107,19 @@ mod test {
             ['a' as u16, '\\' as u16, 'b' as u16, '"' as u16, 31],
         )
         .to_ref();
-        let a = new_array(
-            GLOBAL,
+        let a = GLOBAL.new_js_array(
             [
                 1.0.move_to_any(),
                 true.move_to_any(),
                 Null().move_to_any(),
-                new_array(GLOBAL, []).to_ref().move_to_any(),
-                new_string(GLOBAL, []).to_ref().move_to_any(),
-                new_object(GLOBAL, []).to_ref().move_to_any(),
-                new_object(GLOBAL, [(s, 2.0.move_to_any())])
-                    .to_ref()
-                    .move_to_any(),
+                GLOBAL.new_js_array([]),
+                GLOBAL.new_js_string([]),
+                GLOBAL.new_js_object([]),
+                GLOBAL.new_js_object([(s, 2.0.move_to_any())]),
             ],
         );
         let mut s = String::new();
-        s.write_json(a.to_ref().move_to_any()).unwrap();
+        s.write_json(a).unwrap();
         assert_eq!(s, r#"[1,true,null,[],"",{},{"a\\b\"\u001F":2}]"#);
     }
 }

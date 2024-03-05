@@ -3,6 +3,7 @@ pub mod any_cast;
 mod any_internal;
 mod bitset;
 mod bool;
+pub mod new;
 pub mod js_array;
 pub mod js_object;
 pub mod js_string;
