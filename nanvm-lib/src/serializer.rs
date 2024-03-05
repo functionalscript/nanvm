@@ -16,7 +16,7 @@ use core::fmt::{self, Write};
 const ESCAPE_B: u8 = 0x08;
 const ESCAPE_F: u8 = 0x0C;
 
-trait WriteJson: Write {
+pub trait WriteJson: Write {
     fn write_u4_hex(&mut self, v: u16) -> fmt::Result {
         self.write_char(b"0123456789ABCDEF"[v as usize & 0xF] as char)
     }
