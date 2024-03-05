@@ -1,6 +1,12 @@
 use crate::mem::manager::Manager;
 
-use super::{any::Any, any_cast::AnyCast, js_array::new_array, js_object::new_object, js_string::{new_string, JsStringRef}};
+use super::{
+    any::Any,
+    any_cast::AnyCast,
+    js_array::new_array,
+    js_object::new_object,
+    js_string::{new_string, JsStringRef},
+};
 
 pub trait New: Manager {
     fn new_js_array(
@@ -17,7 +23,9 @@ pub trait New: Manager {
     }
     fn new_js_object(
         self,
-        i: impl IntoIterator<IntoIter = impl ExactSizeIterator<Item = (JsStringRef<Self::Dealloc>, Any<Self::Dealloc>)>>,
+        i: impl IntoIterator<
+            IntoIter = impl ExactSizeIterator<Item = (JsStringRef<Self::Dealloc>, Any<Self::Dealloc>)>,
+        >,
     ) -> Any<Self::Dealloc> {
         new_object(self, i).to_ref().move_to_any()
     }
