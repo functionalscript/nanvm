@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-use core::fmt::{self, Write};
+use core::{fmt::{self, Write}, result};
 
 const ESCAPE_B: u8 = 0x08;
 const ESCAPE_F: u8 = 0x0C;
@@ -85,6 +85,12 @@ pub trait WriteJson: Write {
 }
 
 impl<T: Write> WriteJson for T {}
+
+pub fn to_json(a: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
+    let mut s = String::default();
+    s.write_json(a)?;
+    Ok(s)
+}
 
 #[cfg(test)]
 mod test {
