@@ -91,10 +91,7 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{
-            any::Any, any_cast::AnyCast, js_array::new_array, js_object::new_object,
-            js_string::new_string, new::New, null::Null,
-        },
+        js::{any::Any, any_cast::AnyCast, js_string::new_string, new::New, null::Null},
         mem::global::{Global, GLOBAL},
         serializer::WriteJson,
     };
