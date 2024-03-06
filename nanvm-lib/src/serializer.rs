@@ -11,7 +11,10 @@ use crate::{
     },
 };
 
-use core::{fmt::{self, Write}, result};
+use core::{
+    fmt::{self, Write},
+    result,
+};
 
 const ESCAPE_B: u8 = 0x08;
 const ESCAPE_F: u8 = 0x0C;
