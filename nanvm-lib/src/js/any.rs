@@ -9,8 +9,6 @@ use super::{
     type_::Type,
 };
 
-// type Result<T> = result::Result<T, ()>;
-
 pub type Any<D> = OptionalRef<AnyInternal<D>>;
 
 impl<D: Dealloc> Any<D> {
@@ -172,7 +170,7 @@ mod test {
     fn test_string() {
         type A = Any<Global>;
         type StringRef = JsStringRef<Global>;
-        let sm = new_string(Global(), [].into_iter());
+        let sm = new_string(Global(), []);
         let s = sm.to_ref();
         assert!(A::move_from(s.clone()).is::<StringRef>());
         let v = s.items();
@@ -183,7 +181,7 @@ mod test {
         assert!(!A::move_from(true).is::<StringRef>());
         assert!(!A::move_from(Null()).is::<StringRef>());
 
-        let s = new_string(Global(), [0x20, 0x21].into_iter()).to_ref();
+        let s = new_string(Global(), [0x20, 0x21]).to_ref();
         assert!(A::move_from(s.clone()).is::<StringRef>());
         let v = s.items();
         assert_eq!(v, [0x20, 0x21]);
@@ -205,7 +203,7 @@ mod test {
         type ObjectRef = JsObjectRef<Global>;
         assert!(!A::move_from(Null()).is::<ObjectRef>());
 
-        let o: ObjectRef = new_object(Global(), [].into_iter()).to_ref();
+        let o: ObjectRef = new_object(Global(), []).to_ref();
         assert!(A::move_from(o.clone()).is::<ObjectRef>());
         let v = o.items();
         assert!(v.is_empty());
@@ -213,7 +211,7 @@ mod test {
         assert!(!A::move_from(15.0).is::<ObjectRef>());
         assert!(!A::move_from(true).is::<ObjectRef>());
 
-        let o: ObjectRef = new_object(Global(), [].into_iter()).to_ref();
+        let o: ObjectRef = new_object(Global(), []).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Object);
         {
@@ -230,7 +228,7 @@ mod test {
         type ArrayRef = JsArrayRef<Global>;
         assert!(!A::move_from(Null()).is::<ArrayRef>());
 
-        let o: ArrayRef = new_array(Global(), [].into_iter()).to_ref();
+        let o: ArrayRef = new_array(Global(), []).to_ref();
         assert!(A::move_from(o.clone()).is::<ArrayRef>());
         let v = o.items();
         assert!(v.is_empty());
@@ -238,7 +236,7 @@ mod test {
         assert!(!A::move_from(15.0).is::<ArrayRef>());
         assert!(!A::move_from(true).is::<ArrayRef>());
 
-        let o: ArrayRef = new_array(Global(), [].into_iter()).to_ref();
+        let o: ArrayRef = new_array(Global(), []).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Array);
         {

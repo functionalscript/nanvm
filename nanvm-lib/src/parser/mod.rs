@@ -144,7 +144,7 @@ pub enum JsonState<M: Manager> {
 }
 
 fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
-    new_string(manager, s.encode_utf16().collect::<Vec<_>>().into_iter()).to_ref()
+    new_string(manager, s.encode_utf16().collect::<Vec<_>>()).to_ref()
 }
 
 fn try_id_to_any<M: Manager>(
@@ -560,7 +560,7 @@ impl<M: Manager> AnyState<M> {
     fn end_array(mut self, manager: M) -> AnyResult<M> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Array(array)) => {
-                let js_array = new_array(manager, array.into_iter()).to_ref();
+                let js_array = new_array(manager, array).to_ref();
                 let current = match self.stack.pop() {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
@@ -604,7 +604,7 @@ impl<M: Manager> AnyState<M> {
                     .into_iter()
                     .map(|kv| (to_js_string(manager, kv.0), kv.1))
                     .collect::<Vec<_>>();
-                let js_object = new_object(manager, vec.into_iter()).to_ref();
+                let js_object = new_object(manager, vec).to_ref();
                 let current = match self.stack.pop() {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,

@@ -47,10 +47,10 @@ pub trait Manager: Sized + Copy + Debug {
         self.new(Fixed(value))
     }
     #[inline(always)]
-    fn flexible_array_new<I>(
+    fn flexible_array_new<I, E: ExactSizeIterator<Item = I>>(
         self,
-        items: impl ExactSizeIterator<Item = I>,
+        items: impl IntoIterator<IntoIter = E>,
     ) -> MutRef<FlexibleArray<I, usize>, Self::Dealloc> {
-        self.new(FlexibleArrayConstructor::from(items))
+        self.new(FlexibleArrayConstructor::from(items.into_iter()))
     }
 }
