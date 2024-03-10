@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.linkedProjects": [
+        ".\\nanvm-lib\\Cargo.toml"
+    ]
+}
