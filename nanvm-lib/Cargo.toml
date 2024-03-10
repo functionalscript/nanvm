@@ -12,5 +12,6 @@ description = "NaNVM library"
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
 io-test.workspace = true
+
 [dependencies]
 io-trait.workspace = true
