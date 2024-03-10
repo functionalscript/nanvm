@@ -3,14 +3,14 @@ members = ["nanvm-lib", "nanvm"]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 authors = ["Sergey Shandar", "Denys Shandar"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/functionalscript/nanvm"
 
 [workspace.dependencies]
-wasm-bindgen-test = "0.3.41"
-io-trait = "0.9.0"
-io-test = "0.9.0"
-io-impl = "0.9.0"
+wasm-bindgen-test = "0.3.42"
+io-trait = "0.10.0"
+io-test = "0.10.0"
+io-impl = "0.10.0"
