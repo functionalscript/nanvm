@@ -91,10 +91,7 @@ impl<D: Dealloc> Any<D> {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        rc::Rc,
-    };
+    use std::{collections::HashSet, rc::Rc};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
