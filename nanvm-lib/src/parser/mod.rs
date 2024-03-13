@@ -754,7 +754,7 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-pub fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, ParseError> {
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
@@ -765,7 +765,7 @@ pub fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M
     }
 }
 
-fn parse_with_tokens<M: Manager, I: Io>(
+pub fn parse_with_tokens<M: Manager, I: Io>(
     context: &Context<M, I>,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
