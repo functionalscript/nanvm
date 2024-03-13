@@ -805,10 +805,7 @@ mod test {
         VirtualIo::new(&[])
     }
 
-    fn create_test_context<'a, M: Manager>(
-        manager: M,
-        io: &'a VirtualIo,
-    ) -> Context<'a, M, VirtualIo> {
+    fn create_test_context<M: Manager>(manager: M, io: &VirtualIo) -> Context<'_, M, VirtualIo> {
         Context::new(manager, io, default())
     }
 
