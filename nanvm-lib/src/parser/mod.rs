@@ -754,7 +754,7 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+pub fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, ParseError> {
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
