@@ -37,6 +37,12 @@ pub struct Context<M: Manager, I: Io> {
     path: String,
 }
 
+impl<M: Manager, I: Io> Context<M, I> {
+    pub fn new(manager: M, io: I, path: String) -> Self {
+        Context { manager, io, path }
+    }
+}
+
 #[derive(Default, Debug)]
 pub enum ParsingStatus {
     #[default]
@@ -796,11 +802,7 @@ mod test {
     use super::{parse_with_tokens, Context, ParseError, ParseResult};
 
     fn create_test_context<M: Manager>(manager: M) -> Context<M, VirtualIo> {
-        Context {
-            manager,
-            io: VirtualIo::new(&[]),
-            path: default(),
-        }
+        Context::new(manager, VirtualIo::new(&[]), default())
     }
 
     fn parse_with_virutal_io<M: Manager>(
@@ -929,11 +931,7 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_ok());
@@ -957,11 +955,7 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_ok());
@@ -994,11 +988,7 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_err());
@@ -1015,11 +1005,7 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_err());
