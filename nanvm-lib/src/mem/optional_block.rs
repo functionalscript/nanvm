@@ -3,7 +3,9 @@ use super::{
     ref_counter_update::RefCounterUpdate,
 };
 
-pub trait OptionalBlock: Copy {
+use core::hash::Hash;
+
+pub trait OptionalBlock: Copy + PartialEq + Hash {
     type BlockHeader: BlockHeader;
     fn is_ref(self) -> bool;
     unsafe fn try_get_block_header(self) -> Option<*const Self::BlockHeader>;

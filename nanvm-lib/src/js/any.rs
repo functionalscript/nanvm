@@ -91,7 +91,7 @@ impl<D: Dealloc> Any<D> {
 
 #[cfg(test)]
 mod test {
-    use std::rc::Rc;
+    use std::{collections::HashSet, rc::Rc};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -244,5 +244,12 @@ mod test {
             let items = o.items();
             assert!(items.is_empty());
         }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_eq() {
+        let mut v = HashSet::<Any<Global>>::new();
+        v.insert(Any::move_from(1.0));
     }
 }
