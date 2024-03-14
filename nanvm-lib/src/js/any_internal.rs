@@ -1,4 +1,7 @@
-use core::marker::PhantomData;
+use core::{
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+};
 
 use crate::{
     js::bitset,
@@ -17,6 +20,20 @@ use super::{
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct AnyInternal<D: Dealloc = Global>(pub u64, PhantomData<D>);
+
+impl<D: Dealloc> PartialEq for AnyInternal<D> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<D: Dealloc> Hash for AnyInternal<D> {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
+    }
+}
 
 impl<D: Dealloc> Clone for AnyInternal<D> {
     #[inline(always)]

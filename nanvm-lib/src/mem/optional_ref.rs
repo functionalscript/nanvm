@@ -1,4 +1,7 @@
-use core::mem::forget;
+use core::{
+    hash::{Hash, Hasher},
+    mem::forget,
+};
 
 use crate::common::ref_mut::RefMut;
 
@@ -8,6 +11,22 @@ use super::{optional_block::OptionalBlock, ref_counter_update::RefCounterUpdate}
 #[repr(transparent)]
 pub struct OptionalRef<T: OptionalBlock> {
     value: T,
+}
+
+impl<T: OptionalBlock> PartialEq for OptionalRef<T> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl<T: OptionalBlock> Eq for OptionalRef<T> {}
+
+impl<T: OptionalBlock> Hash for OptionalRef<T> {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.value.hash(state)
+    }
 }
 
 impl<T: OptionalBlock> OptionalRef<T> {
