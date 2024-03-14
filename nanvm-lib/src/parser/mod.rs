@@ -31,10 +31,16 @@ pub struct JsonStackObject<D: Dealloc> {
     pub key: String,
 }
 
-pub struct Context<M: Manager, I: Io> {
+pub struct Context<'a, M: Manager, I: Io> {
     manager: M,
-    io: I,
+    io: &'a I,
     path: String,
+}
+
+impl<'a, M: Manager, I: Io> Context<'a, M, I> {
+    pub fn new(manager: M, io: &'a I, path: String) -> Self {
+        Context { manager, io, path }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -765,7 +771,7 @@ fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, P
     }
 }
 
-fn parse_with_tokens<M: Manager, I: Io>(
+pub fn parse_with_tokens<M: Manager, I: Io>(
     context: &Context<M, I>,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
@@ -795,30 +801,30 @@ mod test {
 
     use super::{parse_with_tokens, Context, ParseError, ParseResult};
 
-    fn create_test_context<M: Manager>(manager: M) -> Context<M, VirtualIo> {
-        Context {
-            manager,
-            io: VirtualIo::new(&[]),
-            path: default(),
-        }
+    fn virtual_io() -> VirtualIo {
+        VirtualIo::new(&[])
+    }
+
+    fn create_test_context<M: Manager>(manager: M, io: &VirtualIo) -> Context<'_, M, VirtualIo> {
+        Context::new(manager, io, default())
     }
 
     fn parse_with_virutal_io<M: Manager>(
         manager: M,
         iter: impl Iterator<Item = JsonToken>,
     ) -> Result<ParseResult<M>, ParseError> {
-        parse_with_tokens(&create_test_context(manager), iter)
+        parse_with_tokens(&create_test_context(manager, &virtual_io()), iter)
     }
 
     fn test_local() {
         let local = Local::default();
-        let _ = parse_with_tokens(&create_test_context(&local), [].into_iter());
+        let _ = parse_with_tokens(&create_test_context(&local, &virtual_io()), [].into_iter());
     }
 
     fn test_global() {
         let _ = {
             let global = GLOBAL;
-            parse_with_tokens(&create_test_context(global), [].into_iter())
+            parse_with_tokens(&create_test_context(global, &virtual_io()), [].into_iter())
         };
     }
 
@@ -929,11 +935,7 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, &io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_ok());
@@ -957,11 +959,7 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, &io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_ok());
@@ -994,11 +992,7 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, &io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_err());
@@ -1015,11 +1009,7 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context {
-            manager,
-            io,
-            path: String::from(main_path),
-        };
+        let context = Context::new(manager, &io, String::from(main_path));
 
         let result = parse(&context);
         assert!(result.is_err());
