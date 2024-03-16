@@ -5,17 +5,14 @@ pub fn normalize(path: &str) -> String {
         match dir {
             ".." => {
                 let last = result_split.last();
-                match last 
-                {
+                match last {
                     Some(x) if !x.eq(&"..") => {
                         result_split.pop();
-                    },
+                    }
                     _ => {
                         result_split.push(dir);
                     }
-                    
                 }
-                
             }
             _ => {
                 result_split.push(dir);
