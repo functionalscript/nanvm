@@ -1,5 +1,5 @@
 pub fn normalize(path: &str) -> String {
-    let path_split: Vec<_> = path.split("/").collect();
+    let path_split: Vec<_> = path.split('/').collect();
     let mut result_split: Vec<&str> = Vec::new();
     for &dir in path_split.iter() {
         match dir {
@@ -22,7 +22,7 @@ pub fn normalize(path: &str) -> String {
     result_split.join("/")
 }
 
-pub fn concat(a: &str, b: &str) -> String {
+pub fn concat(_a: &str, _b: &str) -> String {
     todo!()
 }
 
