@@ -15,6 +15,8 @@ use crate::{
     tokenizer::{tokenize, JsonToken},
 };
 
+pub mod path;
+
 pub enum JsonElement<D: Dealloc> {
     None,
     Stack(JsonStackElement<D>),
