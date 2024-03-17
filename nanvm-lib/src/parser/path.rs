@@ -6,7 +6,7 @@ pub fn normalize(path: &str) -> String {
             ".." => {
                 let last = result_split.last();
                 match last {
-                    Some(x) if !x.eq(&"..") => {
+                    Some(x) if x != &".." => {
                         result_split.pop();
                     }
                     _ => {
@@ -20,6 +20,10 @@ pub fn normalize(path: &str) -> String {
         }
     }
     result_split.join("/")
+}
+
+pub fn concat(a: &str, b: &str) -> String {
+    todo!()
 }
 
 #[cfg(test)]
