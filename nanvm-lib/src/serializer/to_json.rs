@@ -102,7 +102,7 @@ mod test {
     use crate::{
         js::{any::Any, any_cast::AnyCast, js_string::new_string, new::New, null::Null},
         mem::global::{Global, GLOBAL},
-        serializer::WriteJson,
+        serializer::to_json::WriteJson,
     };
 
     #[test]
