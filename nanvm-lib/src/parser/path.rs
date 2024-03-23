@@ -33,10 +33,9 @@ pub fn concat(a: &str, b: &str) -> String {
 }
 
 pub fn split(path: &str) -> (&str, &str) {
-    match path.rsplit_once('/') 
-    {
+    match path.rsplit_once('/') {
         None => (default(), path),
-        Some(t) => t
+        Some(t) => t,
     }
 }
 
