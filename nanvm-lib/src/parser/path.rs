@@ -1,3 +1,5 @@
+use crate::common::default::default;
+
 pub fn normalize(path: &str) -> String {
     let path_split: Vec<_> = path.split('/').collect();
     let mut result_split: Vec<&str> = Vec::new();
@@ -28,6 +30,14 @@ pub fn concat(a: &str, b: &str) -> String {
     concat.push('/');
     concat.push_str(b);
     normalize(&concat)
+}
+
+pub fn split(path: &str) -> (&str, &str) {
+    match path.rsplit_once('/') 
+    {
+        None => (default(), path),
+        Some(t) => t
+    }
 }
 
 #[cfg(test)]
