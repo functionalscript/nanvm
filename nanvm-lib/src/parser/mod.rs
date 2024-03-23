@@ -15,6 +15,8 @@ use crate::{
     tokenizer::{tokenize, JsonToken},
 };
 
+use self::path::{concat, split};
+
 pub mod path;
 
 pub enum JsonElement<D: Dealloc> {
@@ -310,7 +312,8 @@ impl<M: Manager> RootState<M> {
             },
             RootStatus::ImportIdFrom(id) => match token {
                 JsonToken::String(s) => {
-                    let read_result = context.io.read_to_string(s.as_str()); //todo: concatnate paths
+                    let current_path = concat(split(&context.path).0, s.as_str());
+                    let read_result = context.io.read_to_string(current_path.as_str());
                     match read_result {
                         Ok(s) => {
                             let tokens = tokenize(s);
@@ -409,7 +412,8 @@ impl<M: Manager> AnyState<M> {
     fn parse_import_value<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => {
-                let read_result = context.io.read_to_string(s.as_str()); //todo: concatnate paths
+                let current_path = concat(split(&context.path).0, s.as_str());
+                let read_result = context.io.read_to_string(current_path.as_str());
                 match read_result {
                     Ok(s) => {
                         let tokens = tokenize(s);
@@ -789,6 +793,7 @@ pub fn parse_with_tokens<M: Manager, I: Io>(
 
 #[cfg(test)]
 mod test {
+    use super::path::concat;
     use io_test::VirtualIo;
     use io_trait::Io;
     use wasm_bindgen_test::wasm_bindgen_test;
@@ -937,7 +942,11 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(manager, &io, String::from(main_path));
+        let context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+        );
 
         let result = parse(&context);
         assert!(result.is_ok());
@@ -961,7 +970,11 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(manager, &io, String::from(main_path));
+        let context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+        );
 
         let result = parse(&context);
         assert!(result.is_ok());
@@ -994,7 +1007,11 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(manager, &io, String::from(main_path));
+        let context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+        );
 
         let result = parse(&context);
         assert!(result.is_err());
@@ -1011,7 +1028,11 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(manager, &io, String::from(main_path));
+        let context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+        );
 
         let result = parse(&context);
         assert!(result.is_err());
