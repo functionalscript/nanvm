@@ -1,13 +1,23 @@
-use nanvm_lib::tokenizer::{tokenize, TokenizerStateIterator};
+use io_impl::RealIo;
+use io_trait::Io;
+use nanvm_lib::parser::parse;
+use nanvm_lib::parser::path::concat;
+use nanvm_lib::{mem::local::Local, parser::Context};
 
 fn main() {
-    let s = "[0,1";
-    let result = tokenize(s.to_string());
-    println!("{:?}", result);
-
-    let result = TokenizerStateIterator::new(s.chars());
-    let result: Vec<_> = result.collect();
-    println!("{:?}", result);
+    let local = Local::default();
+    let io = RealIo();
+    let path = "../../nanvm-lib/test/test_import_main.d.cjs";
+    let context = Context::new(
+        &local,
+        &io,
+        concat(io.current_dir().unwrap().as_str(), path),
+    );
+    let result = parse(&context);
+    match result {
+        Ok(_) => println!("ok"),
+        Err(_) => print!("err"),
+    }
 
     //todo:
     //1. read text file to string
