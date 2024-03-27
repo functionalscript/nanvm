@@ -12,3 +12,4 @@ repository.workspace = true
 [dependencies]
 nanvm-lib.workspace = true
 io-impl.workspace = true
+io-trait.workspace = true
