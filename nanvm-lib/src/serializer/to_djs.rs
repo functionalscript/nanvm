@@ -1,8 +1,5 @@
 use crate::{
-    js::{
-        any::Any,
-        visitor::{to_visitor, Visitor},
-    },
+    js::{any::Any, js_array::JsArrayRef, js_object::JsObjectRef, type_::Type},
     mem::manager::Dealloc,
 };
 
@@ -42,18 +39,16 @@ fn is_visited<D: Dealloc>(any: Any<D>, const_tracker: &mut ConstTracker<D>) -> b
     if const_tracker.to_do.contains(&any) {
         // We've visited `any`more than once before, no action needed here.
         true
+    } else if const_tracker.visited_once.contains(&any) {
+        // It's the second time we visit `any`, move it from `visited_once` to `to_do`.
+        const_tracker.visited_once.remove(&any);
+        const_tracker.to_do.insert(any);
+        true
     } else {
-        if const_tracker.visited_once.contains(&any) {
-            // It's the second time we visit `any`, move it from `visited_once` to `to_do`.
-            const_tracker.visited_once.remove(&any);
-            const_tracker.to_do.insert(any);
-            true
-        } else {
-            // It's the first time we visit `any`, add it to `visited_once` (that is the only
-            // branch where we return `false`).
-            const_tracker.visited_once.insert(any);
-            false
-        }
+        // It's the first time we visit `any`, add it to `visited_once` (that is the only
+        // branch where we return `false`).
+        const_tracker.visited_once.insert(any);
+        false
     }
 }
 
@@ -61,23 +56,30 @@ fn is_visited<D: Dealloc>(any: Any<D>, const_tracker: &mut ConstTracker<D>) -> b
 /// separately tracking visited once / multiple times objects and arrays.
 fn collect_to_do_consts<D: Dealloc>(
     any: Any<D>,
-    objects_const_tracker: &mut ConstTracker<D>,
-    arrays_const_tracker: &mut ConstTracker<D>,
+    object_const_tracker: &mut ConstTracker<D>,
+    array_const_tracker: &mut ConstTracker<D>,
 ) {
-    let clone = any.clone();
-    match to_visitor(any) {
-        Visitor::Object(o) => {
-            if !is_visited(clone, objects_const_tracker) {
-                o.items().iter().for_each(|(_k, v)| {
-                    collect_to_do_consts(v.clone(), objects_const_tracker, arrays_const_tracker);
-                });
+    match any.get_type() {
+        Type::Object => {
+            if !is_visited(any.clone(), object_const_tracker) {
+                any.try_move::<JsObjectRef<D>>()
+                    .unwrap()
+                    .items()
+                    .iter()
+                    .for_each(|(_k, v)| {
+                        collect_to_do_consts(v.clone(), object_const_tracker, array_const_tracker);
+                    });
             }
         }
-        Visitor::Array(a) => {
-            if !is_visited(clone, arrays_const_tracker) {
-                a.items().iter().for_each(|i| {
-                    collect_to_do_consts(i.clone(), objects_const_tracker, arrays_const_tracker);
-                });
+        Type::Array => {
+            if !is_visited(any.clone(), array_const_tracker) {
+                any.try_move::<JsArrayRef<D>>()
+                    .unwrap()
+                    .items()
+                    .iter()
+                    .for_each(|i| {
+                        collect_to_do_consts(i.clone(), object_const_tracker, array_const_tracker);
+                    });
             }
         }
         _ => {}
@@ -85,9 +87,9 @@ fn collect_to_do_consts<D: Dealloc>(
 }
 
 fn collect_consts<D: Dealloc>(a: Any<D>) {
-    let mut objects_const_tracker = new_const_tracker();
-    let mut arrays_const_tracker = new_const_tracker();
-    collect_to_do_consts(a, &mut objects_const_tracker, &mut arrays_const_tracker);
+    let mut object_const_tracker = new_const_tracker();
+    let mut array_const_tracker = new_const_tracker();
+    collect_to_do_consts(a, &mut object_const_tracker, &mut array_const_tracker);
 }
 
 pub fn to_djs(_a: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
