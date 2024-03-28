@@ -52,6 +52,43 @@ fn is_visited<D: Dealloc>(any: Any<D>, const_tracker: &mut ConstTracker<D>) -> b
     }
 }
 
+/// Given `any` that is either an object or an array, collects all objects and arrays referenced
+/// in its DAG (itself included) - separately tracking visited once / multiple times objects and
+/// arrays.
+fn collect_to_do_consts_for_compound<D: Dealloc>(
+    any: Any<D>,
+    is_object: bool, // otherwise `any` is an array
+    object_const_tracker: &mut ConstTracker<D>,
+    array_const_tracker: &mut ConstTracker<D>,
+) {
+    if !is_visited(
+        any.clone(),
+        if is_object {
+            object_const_tracker
+        } else {
+            array_const_tracker
+        },
+    ) {
+        if is_object {
+            any.try_move::<JsObjectRef<D>>()
+                .unwrap()
+                .items()
+                .iter()
+                .for_each(|(_k, v)| {
+                    collect_to_do_consts(v.clone(), object_const_tracker, array_const_tracker);
+                });
+        } else {
+            any.try_move::<JsArrayRef<D>>()
+                .unwrap()
+                .items()
+                .iter()
+                .for_each(|i| {
+                    collect_to_do_consts(i.clone(), object_const_tracker, array_const_tracker);
+                });
+        }
+    }
+}
+
 /// Given an `any` object, collects all the objects and arrays it references -
 /// separately tracking visited once / multiple times objects and arrays.
 fn collect_to_do_consts<D: Dealloc>(
@@ -60,28 +97,18 @@ fn collect_to_do_consts<D: Dealloc>(
     array_const_tracker: &mut ConstTracker<D>,
 ) {
     match any.get_type() {
-        Type::Object => {
-            if !is_visited(any.clone(), object_const_tracker) {
-                any.try_move::<JsObjectRef<D>>()
-                    .unwrap()
-                    .items()
-                    .iter()
-                    .for_each(|(_k, v)| {
-                        collect_to_do_consts(v.clone(), object_const_tracker, array_const_tracker);
-                    });
-            }
-        }
-        Type::Array => {
-            if !is_visited(any.clone(), array_const_tracker) {
-                any.try_move::<JsArrayRef<D>>()
-                    .unwrap()
-                    .items()
-                    .iter()
-                    .for_each(|i| {
-                        collect_to_do_consts(i.clone(), object_const_tracker, array_const_tracker);
-                    });
-            }
-        }
+        Type::Object => collect_to_do_consts_for_compound(
+            any.clone(),
+            true,
+            object_const_tracker,
+            array_const_tracker,
+        ),
+        Type::Array => collect_to_do_consts_for_compound(
+            any.clone(),
+            false,
+            object_const_tracker,
+            array_const_tracker,
+        ),
         _ => {}
     }
 }

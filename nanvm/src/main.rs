@@ -2,7 +2,7 @@ use io_impl::RealIo;
 use io_trait::Io;
 use nanvm_lib::parser::parse;
 use nanvm_lib::parser::path::concat;
-use nanvm_lib::serializer::WriteJson;
+use nanvm_lib::serializer::to_json::WriteJson;
 use nanvm_lib::{mem::local::Local, parser::Context};
 
 fn main() {
