@@ -37,7 +37,7 @@ fn new_const_tracker<D: Dealloc>() -> ConstTracker<D> {
 /// `const_tracker.to_do_consts` in this case since we are up to writing it out as a const).
 fn is_visited<D: Dealloc>(any: Any<D>, const_tracker: &mut ConstTracker<D>) -> bool {
     if const_tracker.to_do.contains(&any) {
-        // We've visited `any`more than once before, no action needed here.
+        // We've visited `any` more than once before, no action is needed here.
         true
     } else if const_tracker.visited_once.contains(&any) {
         // It's the second time we visit `any`, move it from `visited_once` to `to_do`.
@@ -52,9 +52,9 @@ fn is_visited<D: Dealloc>(any: Any<D>, const_tracker: &mut ConstTracker<D>) -> b
     }
 }
 
-/// Given `any` that is either an object or an array, collects all objects and arrays referenced
-/// in its DAG (itself included) - separately tracking visited once / multiple times objects and
-/// arrays.
+/// Traverse a DAG referred by `any` (that is an object or an array), tracking objects and arrays
+/// via devoted ConstTracker-s. Each object / array referred more than once gets tracked in `to_do`
+/// set - to be written as a const later on.
 fn collect_to_do_consts_for_compound<D: Dealloc>(
     any: Any<D>,
     is_object: bool, // otherwise `any` is an array
@@ -70,53 +70,52 @@ fn collect_to_do_consts_for_compound<D: Dealloc>(
         },
     ) {
         if is_object {
-            any.try_move::<JsObjectRef<D>>()
+            any.clone()
+                .try_move::<JsObjectRef<D>>()
                 .unwrap()
                 .items()
                 .iter()
                 .for_each(|(_k, v)| {
                     collect_to_do_consts(v.clone(), object_const_tracker, array_const_tracker);
                 });
+            object_const_tracker.visited_once.insert(any);
         } else {
-            any.try_move::<JsArrayRef<D>>()
+            any.clone()
+                .try_move::<JsArrayRef<D>>()
                 .unwrap()
                 .items()
                 .iter()
                 .for_each(|i| {
                     collect_to_do_consts(i.clone(), object_const_tracker, array_const_tracker);
                 });
+            array_const_tracker.visited_once.insert(any);
         }
     }
 }
 
-/// Given an `any` object, collects all the objects and arrays it references -
-/// separately tracking visited once / multiple times objects and arrays.
+/// Traverse a DAG referred by `any`, tracking objects and arrays via devoted ConstTracker-s.
+/// Each object / array referred more than once gets tracked in `to_do` set - to be written as
+/// a const later on.
 fn collect_to_do_consts<D: Dealloc>(
     any: Any<D>,
     object_const_tracker: &mut ConstTracker<D>,
     array_const_tracker: &mut ConstTracker<D>,
 ) {
     match any.get_type() {
-        Type::Object => collect_to_do_consts_for_compound(
-            any.clone(),
-            true,
-            object_const_tracker,
-            array_const_tracker,
-        ),
-        Type::Array => collect_to_do_consts_for_compound(
-            any.clone(),
-            false,
-            object_const_tracker,
-            array_const_tracker,
-        ),
+        Type::Object => {
+            collect_to_do_consts_for_compound(any, true, object_const_tracker, array_const_tracker)
+        }
+        Type::Array => {
+            collect_to_do_consts_for_compound(any, false, object_const_tracker, array_const_tracker)
+        }
         _ => {}
     }
 }
 
-fn collect_consts<D: Dealloc>(a: Any<D>) {
+fn collect_consts<D: Dealloc>(any: Any<D>) {
     let mut object_const_tracker = new_const_tracker();
     let mut array_const_tracker = new_const_tracker();
-    collect_to_do_consts(a, &mut object_const_tracker, &mut array_const_tracker);
+    collect_to_do_consts(any, &mut object_const_tracker, &mut array_const_tracker);
 }
 
 pub fn to_djs(_a: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
