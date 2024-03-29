@@ -109,8 +109,8 @@ fn track_consts_for_compound<D: Dealloc>(
     }
 }
 
-/// Traverse a DAG referred by `compound` (that is an object or an array), tracking objects and
-/// arrays, including `compound` itself.
+/// Traverse a DAG referred by `any` (of any js type), tracking objects and arrays, including `any`
+/// itself.
 fn track_consts_for_any<D: Dealloc>(
     any: Any<D>,
     object_const_tracker: &mut ConstTracker<D>,
@@ -127,6 +127,7 @@ fn track_consts_for_any<D: Dealloc>(
     }
 }
 
+/// Traverse a DAG referred by `any` - returning two sets of to-be consts (objects, arrays).
 fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
     let mut object_const_tracker = new_const_tracker();
     let mut array_const_tracker = new_const_tracker();
@@ -140,17 +141,9 @@ fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
 /// Given an `any` object, writes it out as a const - ensuring that all consts it depends on are
 /// written out in front of it.
 fn write_out_consts<D: Dealloc>(
-    any: Any<D>,
     _objects_visited_repeatedly: &mut HashSet<Any<D>>,
-    _arrayss_visited_repeatedly: &mut HashSet<Any<D>>,
+    _arrays_visited_repeatedly: &mut HashSet<Any<D>>,
 ) {
-    match any.get_type() {
-        Type::Object => {
-            //let opt_k_v = object_const_tracker.done.get_key_value(&any);
-            //if opt_k_v.is_some() {}
-        }
-        _ => {}
-    }
 }
 
 //collect_to_do_consts(any, &mut object_const_tracker, &mut array_const_tracker);
@@ -161,7 +154,6 @@ pub trait WriteDjs: WriteJson {
         let (mut objects_visited_repeatedly, mut arrays_visited_repeatedly) =
             track_consts(any.clone());
         write_out_consts(
-            any.clone(),
             &mut objects_visited_repeatedly,
             &mut arrays_visited_repeatedly,
         );
