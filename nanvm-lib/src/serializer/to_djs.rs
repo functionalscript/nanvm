@@ -8,6 +8,8 @@ use core::{
     result,
 };
 
+use super::to_json::WriteJson;
+
 use std::collections::{HashMap, HashSet};
 
 /// ConstTracker holds const-related data through following passes of djs serialization:
@@ -118,7 +120,32 @@ fn collect_consts<D: Dealloc>(any: Any<D>) {
     collect_to_do_consts(any, &mut object_const_tracker, &mut array_const_tracker);
 }
 
-pub fn to_djs(_a: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
-    let s = String::default();
+/// Given an `any` object, writes it out as a const - ensuring that all consts it depends on are
+/// written out in front of it.
+fn write_out_consts<D: Dealloc>(
+    any: Any<D>,
+    object_const_tracker: &mut ConstTracker<D>,
+    _array_const_tracker: &mut ConstTracker<D>,
+) {
+    match any.get_type() {
+        Type::Object => {
+            let opt_k_v = object_const_tracker.done.get_key_value(&any);
+            if opt_k_v.is_some() {}
+        }
+        _ => {}
+    }
+}
+
+pub trait WriteDjs: WriteJson {
+    fn write_djs(&mut self, any: Any<impl Dealloc>) -> fmt::Result {
+        self.write_json(any)
+    }
+}
+
+impl<T: WriteJson> WriteDjs for T {}
+
+pub fn to_djs(any: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
+    let mut s = String::default();
+    s.write_djs(any)?;
     Ok(s)
 }
