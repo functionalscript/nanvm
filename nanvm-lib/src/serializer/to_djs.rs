@@ -35,7 +35,7 @@ fn new_const_tracker<D: Dealloc>() -> ConstTracker<D> {
 /// referneces in `to_do`, moving them to `done` as we write them out one by one, with each
 /// compound written out after compounds it refers to (if any). Thus a const definition written
 /// out earlier can be used below by its name, and never above.
-struct ConstBuilder<D: Dealloc> {
+pub struct ConstBuilder<D: Dealloc> {
     to_do: HashSet<Any<D>>,
     done: HashMap<Any<D>, usize>,
 }
@@ -138,20 +138,45 @@ fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
     )
 }
 
-/// Given onbjects, arrays that needs to be written out as consts - this fn does that in the right
-/// order.
-fn write_out_consts<D: Dealloc>(
-    objects_visited_repeatedly: HashSet<Any<D>>,
-    arrays_visited_repeatedly: HashSet<Any<D>>,
-) {
-    let mut _object_const_builder = new_const_builder(objects_visited_repeatedly);
-    let mut _array_const_builder = new_const_builder(arrays_visited_repeatedly);
+fn peek_to_do<D: Dealloc>(const_builder: &ConstBuilder<D>) -> Option<&Any<D>> {
+    const_builder.to_do.iter().next()
 }
 
 pub trait WriteDjs: WriteJson {
+    /// Writes out consts objects or arrays (according to `iterate_objects` flag) in the right
+    /// order (with no forward references).
+    /// TODO make this function private, this will help to make ConstBuilder private as well.
+    fn write_compounds<D: Dealloc>(
+        &mut self,
+        iterate_objects: bool,
+        objects_const_builder: ConstBuilder<D>,
+        arrays_const_builder: ConstBuilder<D>,
+    ) -> fmt::Result {
+        match peek_to_do(&if iterate_objects {
+            objects_const_builder
+        } else {
+            arrays_const_builder
+        }) {
+            None => fmt::Result::Ok(()),
+            Some(_any) => fmt::Result::Ok(()),
+        }
+    }
+
+    /// Writes out const objects, arrays in the right order (with no forward references).
+    fn write_out_consts<D: Dealloc>(
+        &mut self,
+        objects_visited_repeatedly: HashSet<Any<D>>,
+        arrays_visited_repeatedly: HashSet<Any<D>>,
+    ) -> fmt::Result {
+        let mut _object_const_builder = new_const_builder(objects_visited_repeatedly);
+        let mut _array_const_builder = new_const_builder(arrays_visited_repeatedly);
+        fmt::Result::Ok(())
+    }
+
+    ///
     fn write_djs(&mut self, any: Any<impl Dealloc>) -> fmt::Result {
         let (objects_visited_repeatedly, arrays_visited_repeatedly) = track_consts(any.clone());
-        write_out_consts(objects_visited_repeatedly, arrays_visited_repeatedly);
+        self.write_out_consts(objects_visited_repeatedly, arrays_visited_repeatedly)?;
         self.write_json(any)
     }
 }
