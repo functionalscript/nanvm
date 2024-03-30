@@ -138,8 +138,8 @@ fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
     )
 }
 
-/// Given an `any` object, writes it out as a const - ensuring that all consts it depends on are
-/// written out in front of it.
+/// Given onbjects, arrays that needs to be written out as consts - this fn does that in the right
+/// order.
 fn write_out_consts<D: Dealloc>(
     objects_visited_repeatedly: HashSet<Any<D>>,
     arrays_visited_repeatedly: HashSet<Any<D>>,
@@ -147,9 +147,6 @@ fn write_out_consts<D: Dealloc>(
     let mut _object_const_builder = new_const_builder(objects_visited_repeatedly);
     let mut _array_const_builder = new_const_builder(arrays_visited_repeatedly);
 }
-
-//collect_to_do_consts(any, &mut object_const_tracker, &mut array_const_tracker);
-//self.write_const(object_const_tracker.visited_repeatedly, )
 
 pub trait WriteDjs: WriteJson {
     fn write_djs(&mut self, any: Any<impl Dealloc>) -> fmt::Result {
