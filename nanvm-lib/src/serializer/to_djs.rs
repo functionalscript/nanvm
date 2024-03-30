@@ -138,8 +138,14 @@ fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
     )
 }
 
-fn peek_to_do<D: Dealloc>(const_builder: &ConstBuilder<D>) -> Option<&Any<D>> {
-    const_builder.to_do.iter().next()
+fn take_from_set<D: Dealloc>(set: &mut HashSet<Any<D>>) -> Option<Any<D>> {
+    if set.is_empty() {
+        None
+    } else {
+        let any = set.iter().next()?.clone();
+        set.remove(&any);
+        Some(any)
+    }
 }
 
 pub trait WriteDjs: WriteJson {
@@ -149,14 +155,18 @@ pub trait WriteDjs: WriteJson {
     fn write_compounds<D: Dealloc>(
         &mut self,
         iterate_objects: bool,
-        objects_const_builder: ConstBuilder<D>,
-        arrays_const_builder: ConstBuilder<D>,
+        objects_const_builder: &mut ConstBuilder<D>,
+        arrays_const_builder: &mut ConstBuilder<D>,
     ) -> fmt::Result {
-        match peek_to_do(&if iterate_objects {
-            objects_const_builder
-        } else {
-            arrays_const_builder
-        }) {
+        // do the following match in a loop may be factoing out wirte_compund (single)
+        match take_from_set(
+            &mut (if iterate_objects {
+                objects_const_builder
+            } else {
+                arrays_const_builder
+            })
+            .to_do,
+        ) {
             None => fmt::Result::Ok(()),
             Some(_any) => fmt::Result::Ok(()),
         }
