@@ -14,9 +14,9 @@ use core::{
 
 use std::mem::swap;
 
-use super::to_json::WriteJson;
-
 use std::collections::{HashMap, HashSet};
+
+use super::to_json::WriteJson;
 
 /// ConstTracker holds references to js compounds (objects or arrays) in two sets:
 /// `visited_once` refers to compounds that we've seen just once so far;
@@ -38,7 +38,7 @@ fn new_const_tracker<D: Dealloc>() -> ConstTracker<D> {
 }
 
 /// ConstBuilder holds info on compounds that we write out as consts - initially having all
-/// referneces in `to_do`, moving them to `done` as we write them out one by one, with each
+/// references in `to_do`, moving them to `done` as we write them out one by one, with each
 /// compound written out after compounds it refers to (if any). Thus a const definition written
 /// out earlier can be used below by its name, and never above.
 pub struct ConstBuilder<D: Dealloc> {
@@ -56,20 +56,56 @@ fn new_const_builder<D: Dealloc>(visited_repeatedly: HashSet<Any<D>>) -> ConstBu
 /// Returns true if the `any` was visited before; updates the `const_tracker` set, tracking whether
 /// `any` was visited just once (it's in `const_tracker.visited_once`) or more than once (it's in
 /// `const_tracker.visited_repeatedly` in this case since we are up to writing it out as a const).
-fn is_visited<D: Dealloc>(any: Any<D>, const_tracker: &mut ConstTracker<D>) -> bool {
+fn is_visited<D: Dealloc>(any: &Any<D>, const_tracker: &mut ConstTracker<D>) -> bool {
     if const_tracker.visited_repeatedly.contains(&any) {
         // We've visited `any` more than once before, no action is needed here.
         true
     } else if const_tracker.visited_once.contains(&any) {
         // It's the second time we visit `any`, move it from `visited_once` to `to_do`.
         const_tracker.visited_once.remove(&any);
-        const_tracker.visited_repeatedly.insert(any);
+        const_tracker.visited_repeatedly.insert(any.clone());
         true
     } else {
         // It's the first time we visit `any`, add it to `visited_once` (that is the only
         // branch where we return `false`).
-        const_tracker.visited_once.insert(any);
+        const_tracker.visited_once.insert(any.clone());
         false
+    }
+}
+
+fn track_consts_for_object<D: Dealloc>(
+    object: &Any<D>,
+    object_const_tracker: &mut ConstTracker<D>,
+    array_const_tracker: &mut ConstTracker<D>,
+) {
+    if !is_visited(&object, object_const_tracker) {
+        object            .clone()
+            .try_move::<JsObjectRef<D>>()
+            .unwrap()
+            .items()
+            .iter()
+            .for_each(|(_k, v)| {
+                track_consts_for_any(v.clone(), object_const_tracker, array_const_tracker);
+            });
+        object_const_tracker.visited_once.insert(object.clone());
+    }
+}
+
+fn track_consts_for_array<D: Dealloc>(
+    array: &Any<D>,
+    object_const_tracker: &mut ConstTracker<D>,
+    array_const_tracker: &mut ConstTracker<D>,
+) {
+    if !is_visited(&array, array_const_tracker) {
+        array            .clone()
+            .try_move::<JsArrayRef<D>>()
+            .unwrap()
+            .items()
+            .iter()
+            .for_each(|i| {
+                track_consts_for_any(i.clone(), object_const_tracker, array_const_tracker);
+            });
+        array_const_tracker.visited_once.insert(array.clone());
     }
 }
 
@@ -82,7 +118,7 @@ fn track_consts_for_compound<D: Dealloc>(
     array_const_tracker: &mut ConstTracker<D>,
 ) {
     if !is_visited(
-        compound.clone(),
+        &compound,
         if is_object {
             object_const_tracker
         } else {
