@@ -1,5 +1,6 @@
 use io_impl::RealIo;
 use io_trait::Io;
+use nanvm_lib::common::default::default;
 use nanvm_lib::parser::parse;
 use nanvm_lib::parser::path::concat;
 use nanvm_lib::serializer::WriteJson;
@@ -9,12 +10,14 @@ fn main() {
     let local = Local::default();
     let io = RealIo();
     let path = "nanvm-lib/test/test_import_main.d.cjs";
-    let context = Context::new(
+    let mut mc = default();
+    let mut context = Context::new(
         &local,
         &io,
         concat(io.current_dir().unwrap().as_str(), path),
+        &mut mc,
     );
-    let result = parse(&context);
+    let result = parse(&mut context);
     match result {
         Ok(parse_result) => {
             let mut s = String::new();
@@ -27,12 +30,14 @@ fn main() {
     let local = Local::default();
     let io = RealIo();
     let path = "nanvm-lib/test/test_import_main.d.mjs";
-    let context = Context::new(
+    let mut mc = default();
+    let mut context = Context::new(
         &local,
         &io,
         concat(io.current_dir().unwrap().as_str(), path),
+        &mut mc,
     );
-    let result = parse(&context);
+    let result = parse(&mut context);
     match result {
         Ok(parse_result) => {
             let mut s = String::new();

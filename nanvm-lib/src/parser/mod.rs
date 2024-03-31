@@ -19,6 +19,8 @@ use self::path::{concat, split};
 
 pub mod path;
 
+type ModuleCache<D> = BTreeMap<String, Any<D>>;
+
 pub enum JsonElement<D: Dealloc> {
     None,
     Stack(JsonStackElement<D>),
@@ -39,11 +41,22 @@ pub struct Context<'a, M: Manager, I: Io> {
     manager: M,
     io: &'a I,
     path: String,
+    module_cache: &'a mut ModuleCache<M::Dealloc>,
 }
 
 impl<'a, M: Manager, I: Io> Context<'a, M, I> {
-    pub fn new(manager: M, io: &'a I, path: String) -> Self {
-        Context { manager, io, path }
+    pub fn new(
+        manager: M,
+        io: &'a I,
+        path: String,
+        module_cache: &'a mut ModuleCache<M::Dealloc>,
+    ) -> Self {
+        Context {
+            manager,
+            io,
+            path,
+            module_cache,
+        }
     }
 }
 
@@ -221,7 +234,7 @@ impl<M: Manager> AnyState<M> {
 }
 
 impl<M: Manager> RootState<M> {
-    fn parse<I: Io>(mut self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
+    fn parse<I: Io>(mut self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         match self.status {
             RootStatus::Initial => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -339,7 +352,7 @@ impl<M: Manager> RootState<M> {
 }
 
 impl<M: Manager> ConstState<M> {
-    fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
+    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::Semicolon => todo!(),
             _ => {
@@ -384,7 +397,11 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_for_module<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
+    fn parse_for_module<I: Io>(
+        self,
+        context: &mut Context<M, I>,
+        token: JsonToken,
+    ) -> JsonState<M> {
         let result = self.parse(context, token);
         match result {
             AnyResult::Continue(state) => JsonState::ParseModule(state),
@@ -409,7 +426,11 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_import_value<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_value<I: Io>(
+        self,
+        context: &mut Context<M, I>,
+        token: JsonToken,
+    ) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => {
                 let current_path = concat(split(&context.path).0, s.as_str());
@@ -419,13 +440,16 @@ impl<M: Manager> AnyState<M> {
                         let tokens = tokenize(s);
                         let res = parse_with_tokens(context, tokens.into_iter());
                         match res {
-                            Ok(r) => AnyResult::Continue(AnyState {
-                                data_type: self.data_type,
-                                status: ParsingStatus::ImportEnd,
-                                current: JsonElement::Any(r.any),
-                                stack: self.stack,
-                                consts: self.consts,
-                            }),
+                            Ok(r) => {
+                                context.module_cache.insert(current_path, r.any.clone());
+                                AnyResult::Continue(AnyState {
+                                    data_type: self.data_type,
+                                    status: ParsingStatus::ImportEnd,
+                                    current: JsonElement::Any(r.any),
+                                    stack: self.stack,
+                                    consts: self.consts,
+                                })
+                            }
                             Err(e) => AnyResult::Error(e),
                         }
                     }
@@ -443,7 +467,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> AnyResult<M> {
+    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M> {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
                 self.parse_value(context.manager, token)
@@ -744,7 +768,7 @@ impl<M: Manager> AnyState<M> {
 }
 
 impl<M: Manager> JsonState<M> {
-    fn push<I: Io>(self, context: &Context<M, I>, token: JsonToken) -> JsonState<M> {
+    fn push<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         if token == JsonToken::NewLine {
             return self;
         }
@@ -766,7 +790,7 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
-pub fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+pub fn parse<M: Manager, I: Io>(context: &mut Context<M, I>) -> Result<ParseResult<M>, ParseError> {
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
@@ -778,7 +802,7 @@ pub fn parse<M: Manager, I: Io>(context: &Context<M, I>) -> Result<ParseResult<M
 }
 
 pub fn parse_with_tokens<M: Manager, I: Io>(
-    context: &Context<M, I>,
+    context: &mut Context<M, I>,
     iter: impl Iterator<Item = JsonToken>,
 ) -> Result<ParseResult<M>, ParseError> {
     let mut state: JsonState<M> = JsonState::ParseRoot(RootState {
@@ -806,32 +830,45 @@ mod test {
         tokenizer::{tokenize, ErrorType, JsonToken},
     };
 
-    use super::{parse_with_tokens, Context, ParseError, ParseResult};
+    use super::{parse_with_tokens, Context, ModuleCache, ParseError, ParseResult};
 
     fn virtual_io() -> VirtualIo {
         VirtualIo::new(&[])
     }
 
-    fn create_test_context<M: Manager>(manager: M, io: &VirtualIo) -> Context<'_, M, VirtualIo> {
-        Context::new(manager, io, default())
+    fn create_test_context<'a, M: Manager>(
+        manager: M,
+        io: &'a VirtualIo,
+        module_cache: &'a mut ModuleCache<M::Dealloc>,
+    ) -> Context<'a, M, VirtualIo> {
+        Context::new(manager, io, default(), module_cache)
     }
 
     fn parse_with_virutal_io<M: Manager>(
         manager: M,
         iter: impl Iterator<Item = JsonToken>,
     ) -> Result<ParseResult<M>, ParseError> {
-        parse_with_tokens(&create_test_context(manager, &virtual_io()), iter)
+        parse_with_tokens(
+            &mut create_test_context(manager, &virtual_io(), &mut default()),
+            iter,
+        )
     }
 
     fn test_local() {
         let local = Local::default();
-        let _ = parse_with_tokens(&create_test_context(&local, &virtual_io()), [].into_iter());
+        let _ = parse_with_tokens(
+            &mut create_test_context(&local, &virtual_io(), &mut default()),
+            [].into_iter(),
+        );
     }
 
     fn test_global() {
         let _ = {
             let global = GLOBAL;
-            parse_with_tokens(&create_test_context(global, &virtual_io()), [].into_iter())
+            parse_with_tokens(
+                &mut create_test_context(global, &virtual_io(), &mut default()),
+                [].into_iter(),
+            )
         };
     }
 
@@ -942,13 +979,15 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(
+        let mut mc = default();
+        let mut context = Context::new(
             manager,
             &io,
             concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
         );
 
-        let result = parse(&context);
+        let result = parse(&mut context);
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -970,13 +1009,15 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(
+        let mut mc = default();
+        let mut context = Context::new(
             manager,
             &io,
             concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
         );
 
-        let result = parse(&context);
+        let result = parse(&mut context);
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1007,13 +1048,15 @@ mod test {
         let module_path = "test_import_module.d.mjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(
+        let mut mc = default();
+        let mut context = Context::new(
             manager,
             &io,
             concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
         );
 
-        let result = parse(&context);
+        let result = parse(&mut context);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ParseError::UnexpectedToken);
 
@@ -1028,13 +1071,15 @@ mod test {
         let module_path = "test_import_module.d.cjs";
         io.write(module_path, module.as_bytes()).unwrap();
 
-        let context = Context::new(
+        let mut mc = default();
+        let mut context = Context::new(
             manager,
             &io,
             concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
         );
 
-        let result = parse(&context);
+        let result = parse(&mut context);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ParseError::UnexpectedToken);
     }
