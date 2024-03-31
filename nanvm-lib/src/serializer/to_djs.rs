@@ -1,12 +1,18 @@
 use crate::{
     js::{any::Any, js_array::JsArrayRef, js_object::JsObjectRef, type_::Type},
-    mem::manager::Dealloc,
+    mem::{
+        flexible_array::{header::FlexibleArrayHeader, FlexibleArray},
+        manager::Dealloc,
+        ref_::Ref,
+    },
 };
 
 use core::{
     fmt::{self},
     result,
 };
+
+use std::mem::swap;
 
 use super::to_json::WriteJson;
 
@@ -18,7 +24,7 @@ use std::collections::{HashMap, HashSet};
 /// When djs tracking pass is done, `visited_repeatedly` refers to compounds that will be written
 /// out via const definitions.
 /// Note that we use one ConstTracker for js objects and another for js arrays, keeping them
-/// separate - to reduce set sizes.
+/// separate - to reduce set sizes and save on operations.
 struct ConstTracker<D: Dealloc> {
     visited_once: HashSet<Any<D>>,
     visited_repeatedly: HashSet<Any<D>>,
@@ -152,42 +158,120 @@ pub trait WriteDjs: WriteJson {
     /// Writes out consts objects or arrays (according to `iterate_objects` flag) in the right
     /// order (with no forward references).
     /// TODO make this function private, this will help to make ConstBuilder private as well.
-    fn write_compounds<D: Dealloc>(
-        &mut self,
-        iterate_objects: bool,
-        objects_const_builder: &mut ConstBuilder<D>,
-        arrays_const_builder: &mut ConstBuilder<D>,
-    ) -> fmt::Result {
-        // do the following match in a loop may be factoing out wirte_compund (single)
-        match take_from_set(
-            &mut (if iterate_objects {
-                objects_const_builder
-            } else {
-                arrays_const_builder
-            })
-            .to_do,
-        ) {
-            None => fmt::Result::Ok(()),
-            Some(_any) => fmt::Result::Ok(()),
-        }
-    }
+    // fn write_compounds<D: Dealloc>(
+    //     &mut self,
+    //     iterate_objects: bool,
+    //     objects_const_builder: &mut ConstBuilder<D>,
+    //     arrays_const_builder: &mut ConstBuilder<D>,
+    // ) -> fmt::Result {
+    //     while let Some(_any) = take_from_set(
+    //         &mut *(if iterate_objects {
+    //             objects_const_builder
+    //         } else {
+    //             arrays_const_builder
+    //         }).to_do) {
+
+    //     }
+    //     fmt::Result::Ok(())
+    // }
 
     /// Writes out const objects, arrays in the right order (with no forward references).
-    fn write_out_consts<D: Dealloc>(
+    fn write_consts<D: Dealloc>(
         &mut self,
-        objects_visited_repeatedly: HashSet<Any<D>>,
-        arrays_visited_repeatedly: HashSet<Any<D>>,
+        objects_to_be_cosnt: HashSet<Any<D>>,
+        arrays_to_be_const: HashSet<Any<D>>,
+        object_const_refs: &mut HashMap<Any<D>, usize>,
+        array_const_refs: &mut HashMap<Any<D>, usize>,
     ) -> fmt::Result {
-        let mut _object_const_builder = new_const_builder(objects_visited_repeatedly);
-        let mut _array_const_builder = new_const_builder(arrays_visited_repeatedly);
+        let mut object_const_builder = new_const_builder(objects_to_be_cosnt);
+        let mut array_const_builder = new_const_builder(arrays_to_be_const);
+        swap(&mut object_const_builder.done, object_const_refs);
+        swap(&mut array_const_builder.done, array_const_refs);
         fmt::Result::Ok(())
     }
 
+    fn write_list_with_const_refs<I, D: Dealloc>(
+        &mut self,
+        open: char,
+        close: char,
+        v: &Ref<FlexibleArray<I, impl FlexibleArrayHeader>, D>,
+        object_const_refs: &HashMap<Any<D>, usize>,
+        array_const_refs: &HashMap<Any<D>, usize>,
+        f: impl Fn(&mut Self, &I, &HashMap<Any<D>, usize>, &HashMap<Any<D>, usize>) -> fmt::Result,
+    ) -> fmt::Result {
+        let mut comma = "";
+        self.write_char(open)?;
+        for i in v.items().iter() {
+            self.write_str(comma)?;
+            f(self, i, &object_const_refs, &array_const_refs)?;
+            comma = ",";
+        }
+        self.write_char(close)
+    }
+
+    fn write_with_const_refs<D: Dealloc>(
+        &mut self,
+        any: Any<D>,
+        object_const_refs: &HashMap<Any<D>, usize>,
+        array_const_refs: &HashMap<Any<D>, usize>,
+    ) -> fmt::Result {
+        match any.get_type() {
+            Type::Object => {
+                if let Some(n) = object_const_refs.get(&any) {
+                    self.write_str("_")?;
+                    self.write_str(n.to_string().as_str())
+                } else {
+                    self.write_list_with_const_refs(
+                        '{',
+                        '}',
+                        &any.try_move::<JsObjectRef<D>>().unwrap(),
+                        object_const_refs,
+                        array_const_refs,
+                        |w, (k, v), object_const_refs, array_const_refs| {
+                            w.write_js_string(k)?;
+                            w.write_char(':')?;
+                            w.write_with_const_refs(
+                                v.clone(),
+                                &object_const_refs,
+                                &array_const_refs,
+                            )
+                        },
+                    )
+                }
+            }
+            Type::Array => {
+                if let Some(n) = array_const_refs.get(&any) {
+                    self.write_str("_")?;
+                    self.write_str(n.to_string().as_str())
+                } else {
+                    self.write_list_with_const_refs(
+                        '[',
+                        ']',
+                        &any.try_move::<JsArrayRef<D>>().unwrap(),
+                        object_const_refs,
+                        array_const_refs,
+                        |w, i, object_const_refs, array_const_refs| {
+                            w.write_with_const_refs(i.clone(), object_const_refs, array_const_refs)
+                        },
+                    )
+                }
+            }
+            _ => self.write_json(any),
+        }
+    }
+
     ///
-    fn write_djs(&mut self, any: Any<impl Dealloc>) -> fmt::Result {
-        let (objects_visited_repeatedly, arrays_visited_repeatedly) = track_consts(any.clone());
-        self.write_out_consts(objects_visited_repeatedly, arrays_visited_repeatedly)?;
-        self.write_json(any)
+    fn write_djs<D: Dealloc>(&mut self, any: Any<D>) -> fmt::Result {
+        let (objects_to_be_cosnt, arrays_to_be_const) = track_consts(any.clone());
+        let mut object_const_refs = HashMap::<Any<D>, usize>::new();
+        let mut array_const_refs = HashMap::<Any<D>, usize>::new();
+        self.write_consts(
+            objects_to_be_cosnt,
+            arrays_to_be_const,
+            &mut object_const_refs,
+            &mut array_const_refs,
+        )?;
+        self.write_with_const_refs(any, &object_const_refs, &array_const_refs)
     }
 }
 
