@@ -167,13 +167,21 @@ pub trait WriteDjs: WriteJson {
         for i in object.items().iter() {
             self.write_consts_for_any(&i.1, object_const_builder, array_const_builder)?;
         }
-        // TODO:
-        // If `object` is present in `object_const_builder.to_do`:
-        // 1. Remove it from `object_const_builder.to_do`;
-        // 2. Add it to `object_const_builder.done` - using sum of sizes two `done` maps as its ID;
-        // 3. Write out "const _<ID>="
-        // 4. Call write_list_with_const_refs with '{', '}', ... - needs to be factored out.
-        fmt::Result::Ok(())
+        if object_const_builder.to_do.contains(&any) {
+            object_const_builder.to_do.remove(&any);
+            let id = object_const_builder.done.len() + array_const_builder.done.len();
+            object_const_builder.done.insert(any.clone(), id);
+            self.write_str("const _")?;
+            self.write_str(id.to_string().as_str())?;
+            self.write_char('=')?;
+            self.write_with_const_refs(
+                any.clone(),
+                &object_const_builder.done,
+                &array_const_builder.done,
+            )
+        } else {
+            fmt::Result::Ok(())
+        }
     }
 
     /// Writes out a const array, ensuring that its const dependecies are written out as well
@@ -188,13 +196,21 @@ pub trait WriteDjs: WriteJson {
         for i in array.items().iter() {
             self.write_consts_for_any(i, object_const_builder, array_const_builder)?;
         }
-        // TODO:
-        // If `array` is present in `array_const_builder.to_do`:
-        // 1. Remove it from `array_const_builder.to_do`;
-        // 2. Add it to `array_const_builder.done` - using sum of sizes two `done` maps as its ID;
-        // 3. Write out "const _<ID>="
-        // 4. Call write_list_with_const_refs with '[', ']', ... - needs to be factored out.
-        fmt::Result::Ok(())
+        if array_const_builder.to_do.contains(&any) {
+            array_const_builder.to_do.remove(&any);
+            let id = object_const_builder.done.len() + array_const_builder.done.len();
+            array_const_builder.done.insert(any.clone(), id);
+            self.write_str("const _")?;
+            self.write_str(id.to_string().as_str())?;
+            self.write_char('=')?;
+            self.write_with_const_refs(
+                any.clone(),
+                &object_const_builder.done,
+                &array_const_builder.done,
+            )
+        } else {
+            fmt::Result::Ok(())
+        }
     }
 
     /// Writes out a const js entity of any type (skipping over types other than object, array),
