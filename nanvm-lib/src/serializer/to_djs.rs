@@ -155,25 +155,68 @@ fn take_from_set<D: Dealloc>(set: &mut HashSet<Any<D>>) -> Option<Any<D>> {
 }
 
 pub trait WriteDjs: WriteJson {
-    /// Writes out consts objects or arrays (according to `iterate_objects` flag) in the right
-    /// order (with no forward references).
-    /// TODO make this function private, this will help to make ConstBuilder private as well.
-    // fn write_compounds<D: Dealloc>(
-    //     &mut self,
-    //     iterate_objects: bool,
-    //     objects_const_builder: &mut ConstBuilder<D>,
-    //     arrays_const_builder: &mut ConstBuilder<D>,
-    // ) -> fmt::Result {
-    //     while let Some(_any) = take_from_set(
-    //         &mut *(if iterate_objects {
-    //             objects_const_builder
-    //         } else {
-    //             arrays_const_builder
-    //         }).to_do) {
+    /// Writes out a const object, ensuring that its const dependecies are written out as well
+    /// in the right order (with no forward references).
+    fn write_consts_for_object<D: Dealloc>(
+        &mut self,
+        any: &Any<D>,
+        object_const_builder: &mut ConstBuilder<D>,
+        array_const_builder: &mut ConstBuilder<D>,
+    ) -> fmt::Result {
+        let object = any.clone().try_move::<JsObjectRef<D>>().unwrap();
+        for i in object.items().iter() {
+            self.write_consts_for_any(&i.1, object_const_builder, array_const_builder)?;
+        }
+        // TODO:
+        // If `object` is present in `object_const_builder.to_do`:
+        // 1. Remove it from `object_const_builder.to_do`;
+        // 2. Add it to `object_const_builder.done` - using sum of sizes two `done` maps as its ID;
+        // 3. Write out "const _<ID>="
+        // 4. Call write_list_with_const_refs with '{', '}', ... - needs to be factored out.
+        fmt::Result::Ok(())
+    }
 
-    //     }
-    //     fmt::Result::Ok(())
-    // }
+    /// Writes out a const array, ensuring that its const dependecies are written out as well
+    /// in the right order (with no forward references).
+    fn write_consts_for_array<D: Dealloc>(
+        &mut self,
+        any: &Any<D>,
+        object_const_builder: &mut ConstBuilder<D>,
+        array_const_builder: &mut ConstBuilder<D>,
+    ) -> fmt::Result {
+        let array = any.clone().try_move::<JsArrayRef<D>>().unwrap();
+        for i in array.items().iter() {
+            self.write_consts_for_any(i, object_const_builder, array_const_builder)?;
+        }
+        // TODO:
+        // If `array` is present in `array_const_builder.to_do`:
+        // 1. Remove it from `array_const_builder.to_do`;
+        // 2. Add it to `array_const_builder.done` - using sum of sizes two `done` maps as its ID;
+        // 3. Write out "const _<ID>="
+        // 4. Call write_list_with_const_refs with '[', ']', ... - needs to be factored out.
+        fmt::Result::Ok(())
+    }
+
+    /// Writes out a const js entity of any type (skipping over types other than object, array),
+    /// ensuring that its const dependecies are written out as well in the right order (with no
+    /// forward references).
+    fn write_consts_for_any<D: Dealloc>(
+        &mut self,
+        any: &Any<D>,
+        object_const_tracker: &mut ConstBuilder<D>,
+        array_const_tracker: &mut ConstBuilder<D>,
+    ) -> fmt::Result {
+        match any.get_type() {
+            Type::Object => {
+                self.write_consts_for_object(&any, object_const_tracker, array_const_tracker)?;
+            }
+            Type::Array => {
+                self.write_consts_for_array(&any, object_const_tracker, array_const_tracker)?;
+            }
+            _ => {}
+        }
+        fmt::Result::Ok(())
+    }
 
     /// Writes out const objects, arrays in the right order (with no forward references).
     fn write_consts<D: Dealloc>(
@@ -185,6 +228,16 @@ pub trait WriteDjs: WriteJson {
     ) -> fmt::Result {
         let mut object_const_builder = new_const_builder(objects_to_be_cosnt);
         let mut array_const_builder = new_const_builder(arrays_to_be_const);
+        while let Some(any) = take_from_set(&mut object_const_builder.to_do) {
+            self.write_consts_for_object(
+                &any,
+                &mut object_const_builder,
+                &mut array_const_builder,
+            )?;
+        }
+        while let Some(any) = take_from_set(&mut array_const_builder.to_do) {
+            self.write_consts_for_array(&any, &mut object_const_builder, &mut array_const_builder)?;
+        }
         swap(&mut object_const_builder.done, object_const_refs);
         swap(&mut array_const_builder.done, array_const_refs);
         fmt::Result::Ok(())
