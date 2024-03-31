@@ -440,16 +440,13 @@ impl<M: Manager> AnyState<M> {
                         let tokens = tokenize(s);
                         let res = parse_with_tokens(context, tokens.into_iter());
                         match res {
-                            Ok(r) => {
-                                context.module_cache.insert(current_path, r.any.clone());
-                                AnyResult::Continue(AnyState {
-                                    data_type: self.data_type,
-                                    status: ParsingStatus::ImportEnd,
-                                    current: JsonElement::Any(r.any),
-                                    stack: self.stack,
-                                    consts: self.consts,
-                                })
-                            }
+                            Ok(r) => AnyResult::Continue(AnyState {
+                                data_type: self.data_type,
+                                status: ParsingStatus::ImportEnd,
+                                current: JsonElement::Any(r.any),
+                                stack: self.stack,
+                                consts: self.consts,
+                            }),
                             Err(e) => AnyResult::Error(e),
                         }
                     }
