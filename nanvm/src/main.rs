@@ -6,7 +6,7 @@ use nanvm_lib::parser::path::concat;
 use nanvm_lib::serializer::WriteJson;
 use nanvm_lib::{mem::local::Local, parser::Context};
 
-fn main() {
+fn parser_test() {
     let local = Local::default();
     let io = RealIo();
     let path = "nanvm-lib/test/test_import_main.d.cjs";
@@ -46,4 +46,8 @@ fn main() {
         }
         Err(err) => print!("err {:?}", err),
     }
+}
+
+fn main() {
+    parser_test();
 }
