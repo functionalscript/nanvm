@@ -73,104 +73,64 @@ fn is_visited<D: Dealloc>(any: &Any<D>, const_tracker: &mut ConstTracker<D>) -> 
     }
 }
 
+/// Traverse a DAG referred by `object` (a js object), tracking objects and arrays, including `object`
+/// itself.
 fn track_consts_for_object<D: Dealloc>(
     object: &Any<D>,
     object_const_tracker: &mut ConstTracker<D>,
     array_const_tracker: &mut ConstTracker<D>,
 ) {
     if !is_visited(&object, object_const_tracker) {
-        object            .clone()
+        object
+            .clone()
             .try_move::<JsObjectRef<D>>()
             .unwrap()
             .items()
             .iter()
             .for_each(|(_k, v)| {
-                track_consts_for_any(v.clone(), object_const_tracker, array_const_tracker);
+                track_consts_for_any(v, object_const_tracker, array_const_tracker);
             });
         object_const_tracker.visited_once.insert(object.clone());
     }
 }
 
+/// Traverse a DAG referred by `array` (a js object), tracking objects and arrays, including `array`
+/// itself.
 fn track_consts_for_array<D: Dealloc>(
     array: &Any<D>,
     object_const_tracker: &mut ConstTracker<D>,
     array_const_tracker: &mut ConstTracker<D>,
 ) {
     if !is_visited(&array, array_const_tracker) {
-        array            .clone()
+        array
+            .clone()
             .try_move::<JsArrayRef<D>>()
             .unwrap()
             .items()
             .iter()
             .for_each(|i| {
-                track_consts_for_any(i.clone(), object_const_tracker, array_const_tracker);
+                track_consts_for_any(i, object_const_tracker, array_const_tracker);
             });
         array_const_tracker.visited_once.insert(array.clone());
-    }
-}
-
-/// Traverse a DAG referred by `compound` (that is an object or an array), tracking objects and
-/// arrays, including `compound` itself.
-fn track_consts_for_compound<D: Dealloc>(
-    compound: Any<D>,
-    is_object: bool, // otherwise `any` is an array
-    object_const_tracker: &mut ConstTracker<D>,
-    array_const_tracker: &mut ConstTracker<D>,
-) {
-    if !is_visited(
-        &compound,
-        if is_object {
-            object_const_tracker
-        } else {
-            array_const_tracker
-        },
-    ) {
-        if is_object {
-            compound
-                .clone()
-                .try_move::<JsObjectRef<D>>()
-                .unwrap()
-                .items()
-                .iter()
-                .for_each(|(_k, v)| {
-                    track_consts_for_any(v.clone(), object_const_tracker, array_const_tracker);
-                });
-            object_const_tracker.visited_once.insert(compound);
-        } else {
-            compound
-                .clone()
-                .try_move::<JsArrayRef<D>>()
-                .unwrap()
-                .items()
-                .iter()
-                .for_each(|i| {
-                    track_consts_for_any(i.clone(), object_const_tracker, array_const_tracker);
-                });
-            array_const_tracker.visited_once.insert(compound);
-        }
     }
 }
 
 /// Traverse a DAG referred by `any` (of any js type), tracking objects and arrays, including `any`
 /// itself.
 fn track_consts_for_any<D: Dealloc>(
-    any: Any<D>,
+    any: &Any<D>,
     object_const_tracker: &mut ConstTracker<D>,
     array_const_tracker: &mut ConstTracker<D>,
 ) {
     match any.get_type() {
-        Type::Object => {
-            track_consts_for_compound(any, true, object_const_tracker, array_const_tracker)
-        }
-        Type::Array => {
-            track_consts_for_compound(any, false, object_const_tracker, array_const_tracker)
-        }
+        Type::Object => track_consts_for_object(any, object_const_tracker, array_const_tracker),
+        Type::Array => track_consts_for_array(any, object_const_tracker, array_const_tracker),
         _ => {}
     }
 }
 
-/// Traverse a DAG referred by `any` - returning two sets of to-be consts (objects, arrays).
-fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
+/// Traverses a DAG referred by `any` - returning two sets of to-be consts (objects, arrays).
+fn track_consts<D: Dealloc>(any: &Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
     let mut object_const_tracker = new_const_tracker();
     let mut array_const_tracker = new_const_tracker();
     track_consts_for_any(any, &mut object_const_tracker, &mut array_const_tracker);
@@ -180,18 +140,17 @@ fn track_consts<D: Dealloc>(any: Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) {
     )
 }
 
-fn take_from_set<D: Dealloc>(set: &mut HashSet<Any<D>>) -> Option<Any<D>> {
+// Peeks one value from a set.
+fn peek<D: Dealloc>(set: &mut HashSet<Any<D>>) -> Option<Any<D>> {
     if set.is_empty() {
         None
     } else {
-        let any = set.iter().next()?.clone();
-        set.remove(&any);
-        Some(any)
+        Some(set.iter().next()?.clone())
     }
 }
 
 pub trait WriteDjs: WriteJson {
-    /// Writes out a const object, ensuring that its const dependecies are written out as well
+    /// Writes a const object, ensuring that its const dependencies are written out as well
     /// in the right order (with no forward references).
     fn write_consts_for_object<D: Dealloc>(
         &mut self,
@@ -220,7 +179,7 @@ pub trait WriteDjs: WriteJson {
         }
     }
 
-    /// Writes out a const array, ensuring that its const dependecies are written out as well
+    /// Writes a const array, ensuring that its const dependencies are written out as well
     /// in the right order (with no forward references).
     fn write_consts_for_array<D: Dealloc>(
         &mut self,
@@ -249,8 +208,8 @@ pub trait WriteDjs: WriteJson {
         }
     }
 
-    /// Writes out a const js entity of any type (skipping over types other than object, array),
-    /// ensuring that its const dependecies are written out as well in the right order (with no
+    /// Writes a const js entity of any type (skipping over types other than object, array),
+    /// ensuring that its const dependencies are written out as well in the right order (with no
     /// forward references).
     fn write_consts_for_any<D: Dealloc>(
         &mut self,
@@ -270,7 +229,7 @@ pub trait WriteDjs: WriteJson {
         fmt::Result::Ok(())
     }
 
-    /// Writes out const objects, arrays in the right order (with no forward references).
+    /// Writes const objects, arrays in the right order (with no forward references).
     fn write_consts<D: Dealloc>(
         &mut self,
         objects_to_be_cosnt: HashSet<Any<D>>,
@@ -280,14 +239,14 @@ pub trait WriteDjs: WriteJson {
     ) -> fmt::Result {
         let mut object_const_builder = new_const_builder(objects_to_be_cosnt);
         let mut array_const_builder = new_const_builder(arrays_to_be_const);
-        while let Some(any) = take_from_set(&mut object_const_builder.to_do) {
+        while let Some(any) = peek(&mut object_const_builder.to_do) {
             self.write_consts_for_object(
                 &any,
                 &mut object_const_builder,
                 &mut array_const_builder,
             )?;
         }
-        while let Some(any) = take_from_set(&mut array_const_builder.to_do) {
+        while let Some(any) = peek(&mut array_const_builder.to_do) {
             self.write_consts_for_array(&any, &mut object_const_builder, &mut array_const_builder)?;
         }
         swap(&mut object_const_builder.done, object_const_refs);
@@ -295,6 +254,7 @@ pub trait WriteDjs: WriteJson {
         fmt::Result::Ok(())
     }
 
+    // Writes `v` (an object or an array) using const references.
     fn write_list_with_const_refs<I, D: Dealloc>(
         &mut self,
         open: char,
@@ -314,6 +274,7 @@ pub trait WriteDjs: WriteJson {
         self.write_char(close)
     }
 
+    // Writes `any` using const references.
     fn write_with_const_refs<D: Dealloc>(
         &mut self,
         any: Any<D>,
@@ -365,9 +326,10 @@ pub trait WriteDjs: WriteJson {
         }
     }
 
-    ///
+    /// Writes a DAG referred by `any` with const definitions for objects, arrays that are referred
+    /// multiple times.
     fn write_djs<D: Dealloc>(&mut self, any: Any<D>) -> fmt::Result {
-        let (objects_to_be_cosnt, arrays_to_be_const) = track_consts(any.clone());
+        let (objects_to_be_cosnt, arrays_to_be_const) = track_consts(&any);
         let mut object_const_refs = HashMap::<Any<D>, usize>::new();
         let mut array_const_refs = HashMap::<Any<D>, usize>::new();
         self.write_consts(
