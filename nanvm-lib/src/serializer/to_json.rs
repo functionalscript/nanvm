@@ -23,6 +23,7 @@ pub trait WriteJson: Write {
     fn write_u4_hex(&mut self, v: u16) -> fmt::Result {
         self.write_char(b"0123456789ABCDEF"[v as usize & 0xF] as char)
     }
+
     fn write_js_escape(&mut self, c: u16) -> fmt::Result {
         self.write_str("\\u")?;
         self.write_u4_hex(c >> 12)?;
@@ -30,6 +31,7 @@ pub trait WriteJson: Write {
         self.write_u4_hex(c >> 4)?;
         self.write_u4_hex(c)
     }
+
     /// See https://www.json.org/json-en.html
     fn write_js_string(&mut self, s: &JsStringRef<impl Dealloc>) -> fmt::Result {
         self.write_char('"')?;
@@ -102,7 +104,7 @@ mod test {
     use crate::{
         js::{any::Any, any_cast::AnyCast, js_string::new_string, new::New, null::Null},
         mem::global::{Global, GLOBAL},
-        serializer::WriteJson,
+        serializer::to_json::WriteJson,
     };
 
     #[test]
