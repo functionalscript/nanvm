@@ -367,22 +367,22 @@ mod test {
             ['a' as u16, '\\' as u16, 'b' as u16, '"' as u16, 31],
         )
         .to_ref();
+        let o = GLOBAL.new_js_object([(s, 2.0.move_to_any())]);
         let a0 = GLOBAL.new_js_array([
             1.0.move_to_any(),
             true.move_to_any(),
             Null().move_to_any(),
             GLOBAL.new_js_array([]),
             GLOBAL.new_js_string([]),
-            GLOBAL.new_js_object([]),
-            GLOBAL.new_js_object([(s, 2.0.move_to_any())]),
+            o.clone(),
         ]);
         let a0_as_any: Any<Global> = a0;
-        let a1: A = GLOBAL.new_js_array([a0_as_any.clone(), a0_as_any]);
+        let a1: A = GLOBAL.new_js_array([a0_as_any.clone(), a0_as_any, o]);
         let mut s = String::new();
         s.write_djs(a1).unwrap();
         assert_eq!(
             s,
-            r#"const _0=[1,true,null,[],"",{},{"a\\b\"\u001F":2}];[_0,_0]"#
+            r#"const _0={"a\\b\"\u001F":2};const _1=[1,true,null,[],"",_0];[_1,_1,_0]"#
         );
     }
 }
