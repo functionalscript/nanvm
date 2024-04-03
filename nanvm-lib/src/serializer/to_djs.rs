@@ -326,7 +326,7 @@ pub trait WriteDjs: WriteJson {
 
     /// Writes a DAG referred by `any` with const definitions for objects, arrays that are referred
     /// multiple times.
-    fn write_djs<D: Dealloc>(&mut self, any: Any<D>) -> fmt::Result {
+    fn write_djs<D: Dealloc>(&mut self, any: Any<D>, common_js: bool) -> fmt::Result {
         let (objects_to_be_cosnt, arrays_to_be_const) = track_consts(&any);
         let mut object_const_refs = HashMap::<Any<D>, usize>::new();
         let mut array_const_refs = HashMap::<Any<D>, usize>::new();
@@ -336,15 +336,20 @@ pub trait WriteDjs: WriteJson {
             &mut object_const_refs,
             &mut array_const_refs,
         )?;
+        if common_js {
+            self.write_str("module.exports=")?;
+        } else {
+            self.write_str("export default ")?;
+        }
         self.write_with_const_refs(any, &object_const_refs, &array_const_refs)
     }
 }
 
 impl<T: WriteJson> WriteDjs for T {}
 
-pub fn to_djs(any: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
+pub fn to_djs(any: Any<impl Dealloc>, common_js: bool) -> result::Result<String, fmt::Error> {
     let mut s = String::default();
-    s.write_djs(any)?;
+    s.write_djs(any, common_js)?;
     Ok(s)
 }
 
@@ -379,10 +384,10 @@ mod test {
         let a0_as_any: Any<Global> = a0;
         let a1: A = GLOBAL.new_js_array([a0_as_any.clone(), a0_as_any, o]);
         let mut s = String::new();
-        s.write_djs(a1).unwrap();
+        s.write_djs(a1, false).unwrap();
         assert_eq!(
             s,
-            r#"const _0={"a\\b\"\u001F":2};const _1=[1,true,null,[],"",_0];[_1,_1,_0]"#
+            r#"const _0={"a\\b\"\u001F":2};const _1=[1,true,null,[],"",_0];export default [_1,_1,_0]"#
         );
     }
 }
