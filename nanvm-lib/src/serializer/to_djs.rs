@@ -57,12 +57,12 @@ fn new_const_builder<D: Dealloc>(visited_repeatedly: HashSet<Any<D>>) -> ConstBu
 /// `any` was visited just once (it's in `const_tracker.visited_once`) or more than once (it's in
 /// `const_tracker.visited_repeatedly` in this case since we are up to writing it out as a const).
 fn is_visited<D: Dealloc>(any: &Any<D>, const_tracker: &mut ConstTracker<D>) -> bool {
-    if const_tracker.visited_repeatedly.contains(&any) {
+    if const_tracker.visited_repeatedly.contains(any) {
         // We've visited `any` more than once before, no action is needed here.
         true
-    } else if const_tracker.visited_once.contains(&any) {
+    } else if const_tracker.visited_once.contains(any) {
         // It's the second time we visit `any`, move it from `visited_once` to `to_do`.
-        const_tracker.visited_once.remove(&any);
+        const_tracker.visited_once.remove(any);
         const_tracker.visited_repeatedly.insert(any.clone());
         true
     } else {
@@ -80,7 +80,7 @@ fn track_consts_for_object<D: Dealloc>(
     object_const_tracker: &mut ConstTracker<D>,
     array_const_tracker: &mut ConstTracker<D>,
 ) {
-    if !is_visited(&object, object_const_tracker) {
+    if !is_visited(object, object_const_tracker) {
         object
             .clone()
             .try_move::<JsObjectRef<D>>()
@@ -101,7 +101,7 @@ fn track_consts_for_array<D: Dealloc>(
     object_const_tracker: &mut ConstTracker<D>,
     array_const_tracker: &mut ConstTracker<D>,
 ) {
-    if !is_visited(&array, array_const_tracker) {
+    if !is_visited(array, array_const_tracker) {
         array
             .clone()
             .try_move::<JsArrayRef<D>>()
@@ -162,8 +162,8 @@ pub trait WriteDjs: WriteJson {
         for i in object.items().iter() {
             self.write_consts_for_any(&i.1, object_const_builder, array_const_builder)?;
         }
-        if object_const_builder.to_do.contains(&any) {
-            object_const_builder.to_do.remove(&any);
+        if object_const_builder.to_do.contains(any) {
+            object_const_builder.to_do.remove(any);
             let id = object_const_builder.done.len() + array_const_builder.done.len();
             object_const_builder.done.insert(any.clone(), id);
             self.write_str("const _")?;
@@ -191,8 +191,8 @@ pub trait WriteDjs: WriteJson {
         for i in array.items().iter() {
             self.write_consts_for_any(i, object_const_builder, array_const_builder)?;
         }
-        if array_const_builder.to_do.contains(&any) {
-            array_const_builder.to_do.remove(&any);
+        if array_const_builder.to_do.contains(any) {
+            array_const_builder.to_do.remove(any);
             let id = object_const_builder.done.len() + array_const_builder.done.len();
             array_const_builder.done.insert(any.clone(), id);
             self.write_str("const _")?;
@@ -219,10 +219,10 @@ pub trait WriteDjs: WriteJson {
     ) -> fmt::Result {
         match any.get_type() {
             Type::Object => {
-                self.write_consts_for_object(&any, object_const_tracker, array_const_tracker)?;
+                self.write_consts_for_object(any, object_const_tracker, array_const_tracker)?;
             }
             Type::Array => {
-                self.write_consts_for_array(&any, object_const_tracker, array_const_tracker)?;
+                self.write_consts_for_array(any, object_const_tracker, array_const_tracker)?;
             }
             _ => {}
         }
@@ -268,7 +268,7 @@ pub trait WriteDjs: WriteJson {
         self.write_char(open)?;
         for i in v.items().iter() {
             self.write_str(comma)?;
-            f(self, i, &object_const_refs, &array_const_refs)?;
+            f(self, i, object_const_refs, array_const_refs)?;
             comma = ",";
         }
         self.write_char(close)
@@ -296,11 +296,7 @@ pub trait WriteDjs: WriteJson {
                         |w, (k, v), object_const_refs, array_const_refs| {
                             w.write_js_string(k)?;
                             w.write_char(':')?;
-                            w.write_with_const_refs(
-                                v.clone(),
-                                &object_const_refs,
-                                &array_const_refs,
-                            )
+                            w.write_with_const_refs(v.clone(), object_const_refs, array_const_refs)
                         },
                     )
                 }
