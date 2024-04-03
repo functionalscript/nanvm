@@ -165,7 +165,6 @@ pub trait WriteDjs: WriteJson {
         if object_const_builder.to_do.contains(any) {
             object_const_builder.to_do.remove(any);
             let id = object_const_builder.done.len() + array_const_builder.done.len();
-            object_const_builder.done.insert(any.clone(), id);
             self.write_str("const _")?;
             self.write_str(id.to_string().as_str())?;
             self.write_char('=')?;
@@ -173,7 +172,9 @@ pub trait WriteDjs: WriteJson {
                 any.clone(),
                 &object_const_builder.done,
                 &array_const_builder.done,
-            )
+            )?;
+            object_const_builder.done.insert(any.clone(), id);
+            self.write_char(';')
         } else {
             fmt::Result::Ok(())
         }
@@ -194,7 +195,6 @@ pub trait WriteDjs: WriteJson {
         if array_const_builder.to_do.contains(any) {
             array_const_builder.to_do.remove(any);
             let id = object_const_builder.done.len() + array_const_builder.done.len();
-            array_const_builder.done.insert(any.clone(), id);
             self.write_str("const _")?;
             self.write_str(id.to_string().as_str())?;
             self.write_char('=')?;
@@ -202,7 +202,9 @@ pub trait WriteDjs: WriteJson {
                 any.clone(),
                 &object_const_builder.done,
                 &array_const_builder.done,
-            )
+            )?;
+            array_const_builder.done.insert(any.clone(), id);
+            self.write_char(';')
         } else {
             fmt::Result::Ok(())
         }
@@ -214,15 +216,15 @@ pub trait WriteDjs: WriteJson {
     fn write_consts_for_any<D: Dealloc>(
         &mut self,
         any: &Any<D>,
-        object_const_tracker: &mut ConstBuilder<D>,
-        array_const_tracker: &mut ConstBuilder<D>,
+        object_const_builder: &mut ConstBuilder<D>,
+        array_const_builder: &mut ConstBuilder<D>,
     ) -> fmt::Result {
         match any.get_type() {
             Type::Object => {
-                self.write_consts_for_object(any, object_const_tracker, array_const_tracker)?;
+                self.write_consts_for_object(any, object_const_builder, array_const_builder)?;
             }
             Type::Array => {
-                self.write_consts_for_array(any, object_const_tracker, array_const_tracker)?;
+                self.write_consts_for_array(any, object_const_builder, array_const_builder)?;
             }
             _ => {}
         }
@@ -344,4 +346,43 @@ pub fn to_djs(any: Any<impl Dealloc>) -> result::Result<String, fmt::Error> {
     let mut s = String::default();
     s.write_djs(any)?;
     Ok(s)
+}
+
+#[cfg(test)]
+mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::{
+        js::{any::Any, any_cast::AnyCast, js_string::new_string, new::New, null::Null},
+        mem::global::{Global, GLOBAL},
+        serializer::to_djs::WriteDjs,
+    };
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test() {
+        type A = Any<Global>;
+        let s = new_string(
+            GLOBAL,
+            ['a' as u16, '\\' as u16, 'b' as u16, '"' as u16, 31],
+        )
+        .to_ref();
+        let a0 = GLOBAL.new_js_array([
+            1.0.move_to_any(),
+            true.move_to_any(),
+            Null().move_to_any(),
+            GLOBAL.new_js_array([]),
+            GLOBAL.new_js_string([]),
+            GLOBAL.new_js_object([]),
+            GLOBAL.new_js_object([(s, 2.0.move_to_any())]),
+        ]);
+        let a0_as_any: Any<Global> = a0;
+        let a1: A = GLOBAL.new_js_array([a0_as_any.clone(), a0_as_any]);
+        let mut s = String::new();
+        s.write_djs(a1).unwrap();
+        assert_eq!(
+            s,
+            r#"const _0=[1,true,null,[],"",{},{"a\\b\"\u001F":2}];[_0,_0]"#
+        );
+    }
 }
