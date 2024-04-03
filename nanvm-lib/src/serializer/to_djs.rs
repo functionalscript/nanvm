@@ -141,12 +141,8 @@ fn track_consts<D: Dealloc>(any: &Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) 
 }
 
 // Peeks one value from a set.
-fn peek<D: Dealloc>(set: &mut HashSet<Any<D>>) -> Option<Any<D>> {
-    if set.is_empty() {
-        None
-    } else {
-        Some(set.iter().next()?.clone())
-    }
+fn peek<D: Dealloc>(set: &HashSet<Any<D>>) -> Option<Any<D>> {
+    Some(set.iter().next()?.clone())
 }
 
 pub trait WriteDjs: WriteJson {
@@ -241,14 +237,14 @@ pub trait WriteDjs: WriteJson {
     ) -> fmt::Result {
         let mut object_const_builder = new_const_builder(objects_to_be_cosnt);
         let mut array_const_builder = new_const_builder(arrays_to_be_const);
-        while let Some(any) = peek(&mut object_const_builder.to_do) {
+        while let Some(any) = peek(&object_const_builder.to_do) {
             self.write_consts_for_object(
                 &any,
                 &mut object_const_builder,
                 &mut array_const_builder,
             )?;
         }
-        while let Some(any) = peek(&mut array_const_builder.to_do) {
+        while let Some(any) = peek(&array_const_builder.to_do) {
             self.write_consts_for_array(&any, &mut object_const_builder, &mut array_const_builder)?;
         }
         swap(&mut object_const_builder.done, object_const_refs);
