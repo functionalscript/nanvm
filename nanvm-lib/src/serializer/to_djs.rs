@@ -140,7 +140,7 @@ fn track_consts<D: Dealloc>(any: &Any<D>) -> (HashSet<Any<D>>, HashSet<Any<D>>) 
     )
 }
 
-// Peeks one value from a set.
+/// Peeks one value from a set.
 fn peek<D: Dealloc>(set: &HashSet<Any<D>>) -> Option<Any<D>> {
     Some(set.iter().next()?.clone())
 }
@@ -252,7 +252,7 @@ pub trait WriteDjs: WriteJson {
         fmt::Result::Ok(())
     }
 
-    // Writes `v` (an object or an array) using const references.
+    /// Writes `v` (an object or an array) using const references.
     fn write_list_with_const_refs<I, D: Dealloc>(
         &mut self,
         open: char,
@@ -272,7 +272,7 @@ pub trait WriteDjs: WriteJson {
         self.write_char(close)
     }
 
-    // Writes `any` using const references.
+    /// Writes `any` using const references.
     fn write_with_const_refs<D: Dealloc>(
         &mut self,
         any: Any<D>,
