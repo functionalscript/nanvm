@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use io_trait::Io;
 
@@ -38,7 +38,7 @@ pub struct JsonStackObject<D: Dealloc> {
 
 pub struct ModuleCache<D:Dealloc> {
     pub complete: BTreeMap<String, Any<D>>,
-    pub progress: BTreeMap<String, Any<D>>
+    pub progress: BTreeSet<String>
 }
 
 impl <D:Dealloc> Default for ModuleCache<D> {
@@ -130,6 +130,7 @@ pub enum ParseError {
     WrongRequireStatement,
     WrongImportStatement,
     CannotReadFile,
+    CyclicDependency
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -445,21 +446,33 @@ impl<M: Manager> AnyState<M> {
         token: JsonToken,
     ) -> AnyResult<M> {
         match token {
-            JsonToken::String(s) => {
+            JsonToken::String(s) => {                
                 let current_path = concat(split(&context.path).0, s.as_str());
-                let read_result = context.io.read_to_string(current_path.as_str());
+                let current_path_clone = current_path.clone();
+                if context.module_cache.complete.contains_key(&current_path) {
+                    todo!("return from cache")
+                }
+                if context.module_cache.progress.contains(&current_path) {
+                    return AnyResult::Error(ParseError::CyclicDependency);
+                }
+                context.module_cache.progress.insert(current_path);                
+                let read_result = context.io.read_to_string(current_path_clone.as_str());
                 match read_result {
                     Ok(s) => {
                         let tokens = tokenize(s);
                         let res = parse_with_tokens(context, tokens.into_iter());
                         match res {
-                            Ok(r) => AnyResult::Continue(AnyState {
-                                data_type: self.data_type,
-                                status: ParsingStatus::ImportEnd,
-                                current: JsonElement::Any(r.any),
-                                stack: self.stack,
-                                consts: self.consts,
-                            }),
+                            Ok(r) =>
+                            {
+                                context.module_cache.progress.remove(&current_path_clone);
+                                AnyResult::Continue(AnyState {
+                                    data_type: self.data_type,
+                                    status: ParsingStatus::ImportEnd,
+                                    current: JsonElement::Any(r.any),
+                                    stack: self.stack,
+                                    consts: self.consts,
+                                })
+                            } ,
                             Err(e) => AnyResult::Error(e),
                         }
                     }
