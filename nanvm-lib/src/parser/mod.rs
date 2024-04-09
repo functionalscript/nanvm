@@ -19,8 +19,6 @@ use self::path::{concat, split};
 
 pub mod path;
 
-type ModuleCache<D> = BTreeMap<String, Any<D>>;
-
 pub enum JsonElement<D: Dealloc> {
     None,
     Stack(JsonStackElement<D>),
@@ -35,6 +33,21 @@ pub enum JsonStackElement<D: Dealloc> {
 pub struct JsonStackObject<D: Dealloc> {
     pub map: BTreeMap<String, Any<D>>,
     pub key: String,
+}
+
+
+pub struct ModuleCache<D:Dealloc> {
+    pub complete: BTreeMap<String, Any<D>>,
+    pub progress: BTreeMap<String, Any<D>>
+}
+
+impl <D:Dealloc> Default for ModuleCache<D> {
+    fn default() -> Self {
+        Self {
+            complete: default(),
+            progress: default()
+        }        
+    }
 }
 
 pub struct Context<'a, M: Manager, I: Io> {
