@@ -35,18 +35,17 @@ pub struct JsonStackObject<D: Dealloc> {
     pub key: String,
 }
 
-
-pub struct ModuleCache<D:Dealloc> {
+pub struct ModuleCache<D: Dealloc> {
     pub complete: BTreeMap<String, Any<D>>,
-    pub progress: BTreeSet<String>
+    pub progress: BTreeSet<String>,
 }
 
-impl <D:Dealloc> Default for ModuleCache<D> {
+impl<D: Dealloc> Default for ModuleCache<D> {
     fn default() -> Self {
         Self {
             complete: default(),
-            progress: default()
-        }        
+            progress: default(),
+        }
     }
 }
 
@@ -130,7 +129,7 @@ pub enum ParseError {
     WrongRequireStatement,
     WrongImportStatement,
     CannotReadFile,
-    CyclicDependency
+    CyclicDependency,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -446,25 +445,29 @@ impl<M: Manager> AnyState<M> {
         token: JsonToken,
     ) -> AnyResult<M> {
         match token {
-            JsonToken::String(s) => {                
+            JsonToken::String(s) => {
                 let current_path = concat(split(&context.path).0, s.as_str());
-                let current_path_clone = current_path.clone();
-                if context.module_cache.complete.contains_key(&current_path) {
-                    todo!("return from cache")
+                if let Some(any) = context.module_cache.complete.get(&current_path) {
+                    return AnyResult::Continue(AnyState {
+                        data_type: self.data_type,
+                        status: ParsingStatus::ImportEnd,
+                        current: JsonElement::Any(any.clone()),
+                        stack: self.stack,
+                        consts: self.consts,
+                    });
                 }
                 if context.module_cache.progress.contains(&current_path) {
                     return AnyResult::Error(ParseError::CyclicDependency);
                 }
-                context.module_cache.progress.insert(current_path);                
-                let read_result = context.io.read_to_string(current_path_clone.as_str());
+                context.module_cache.progress.insert(current_path.clone());
+                let read_result = context.io.read_to_string(current_path.as_str());
                 match read_result {
                     Ok(s) => {
                         let tokens = tokenize(s);
                         let res = parse_with_tokens(context, tokens.into_iter());
                         match res {
-                            Ok(r) =>
-                            {
-                                context.module_cache.progress.remove(&current_path_clone);
+                            Ok(r) => {
+                                context.module_cache.progress.remove(&current_path);
                                 AnyResult::Continue(AnyState {
                                     data_type: self.data_type,
                                     status: ParsingStatus::ImportEnd,
@@ -472,7 +475,7 @@ impl<M: Manager> AnyState<M> {
                                     stack: self.stack,
                                     consts: self.consts,
                                 })
-                            } ,
+                            }
                             Err(e) => AnyResult::Error(e),
                         }
                     }
