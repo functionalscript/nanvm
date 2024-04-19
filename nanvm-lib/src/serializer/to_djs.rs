@@ -1,10 +1,6 @@
 use crate::{
     js::{any::Any, js_array::JsArrayRef, js_object::JsObjectRef, type_::Type},
-    mem::{
-        flexible_array::{header::FlexibleArrayHeader, FlexibleArray},
-        manager::Dealloc,
-        ref_::Ref,
-    },
+    mem::manager::Dealloc,
 };
 
 use core::{
