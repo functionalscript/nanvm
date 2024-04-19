@@ -252,24 +252,6 @@ pub trait WriteDjs: WriteJson {
         fmt::Result::Ok(())
     }
 
-    /// Writes `v` (an object or an array) using const references.
-    fn write_list_with_const_refs<I, D: Dealloc>(
-        &mut self,
-        open: char,
-        close: char,
-        v: &Ref<FlexibleArray<I, impl FlexibleArrayHeader>, D>,
-        f: impl Fn(&mut Self, &I) -> fmt::Result,
-    ) -> fmt::Result {
-        let mut comma = "";
-        self.write_char(open)?;
-        for i in v.items().iter() {
-            self.write_str(comma)?;
-            f(self, i)?;
-            comma = ",";
-        }
-        self.write_char(close)
-    }
-
     /// Writes `any` using const references.
     fn write_with_const_refs<D: Dealloc>(
         &mut self,
@@ -283,7 +265,7 @@ pub trait WriteDjs: WriteJson {
                     self.write_str("_")?;
                     self.write_str(n.to_string().as_str())
                 } else {
-                    self.write_list_with_const_refs(
+                    self.write_list(
                         '{',
                         '}',
                         &any.try_move::<JsObjectRef<D>>().unwrap(),
@@ -300,7 +282,7 @@ pub trait WriteDjs: WriteJson {
                     self.write_str("_")?;
                     self.write_str(n.to_string().as_str())
                 } else {
-                    self.write_list_with_const_refs(
+                    self.write_list(
                         '[',
                         ']',
                         &any.try_move::<JsArrayRef<D>>().unwrap(),
