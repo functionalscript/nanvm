@@ -258,15 +258,13 @@ pub trait WriteDjs: WriteJson {
         open: char,
         close: char,
         v: &Ref<FlexibleArray<I, impl FlexibleArrayHeader>, D>,
-        object_const_refs: &HashMap<Any<D>, usize>,
-        array_const_refs: &HashMap<Any<D>, usize>,
-        f: impl Fn(&mut Self, &I, &HashMap<Any<D>, usize>, &HashMap<Any<D>, usize>) -> fmt::Result,
+        f: impl Fn(&mut Self, &I) -> fmt::Result,
     ) -> fmt::Result {
         let mut comma = "";
         self.write_char(open)?;
         for i in v.items().iter() {
             self.write_str(comma)?;
-            f(self, i, object_const_refs, array_const_refs)?;
+            f(self, i)?;
             comma = ",";
         }
         self.write_char(close)
@@ -289,9 +287,7 @@ pub trait WriteDjs: WriteJson {
                         '{',
                         '}',
                         &any.try_move::<JsObjectRef<D>>().unwrap(),
-                        object_const_refs,
-                        array_const_refs,
-                        |w, (k, v), object_const_refs, array_const_refs| {
+                        |w, (k, v)| {
                             w.write_js_string(k)?;
                             w.write_char(':')?;
                             w.write_with_const_refs(v.clone(), object_const_refs, array_const_refs)
@@ -308,9 +304,7 @@ pub trait WriteDjs: WriteJson {
                         '[',
                         ']',
                         &any.try_move::<JsArrayRef<D>>().unwrap(),
-                        object_const_refs,
-                        array_const_refs,
-                        |w, i, object_const_refs, array_const_refs| {
+                        |w, i| {
                             w.write_with_const_refs(i.clone(), object_const_refs, array_const_refs)
                         },
                     )
