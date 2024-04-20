@@ -1,10 +1,6 @@
 use crate::{
     js::{any::Any, js_array::JsArrayRef, js_object::JsObjectRef, type_::Type},
-    mem::{
-        flexible_array::{header::FlexibleArrayHeader, FlexibleArray},
-        manager::Dealloc,
-        ref_::Ref,
-    },
+    mem::manager::Dealloc,
 };
 
 use core::{
@@ -252,26 +248,6 @@ pub trait WriteDjs: WriteJson {
         fmt::Result::Ok(())
     }
 
-    /// Writes `v` (an object or an array) using const references.
-    fn write_list_with_const_refs<I, D: Dealloc>(
-        &mut self,
-        open: char,
-        close: char,
-        v: &Ref<FlexibleArray<I, impl FlexibleArrayHeader>, D>,
-        object_const_refs: &HashMap<Any<D>, usize>,
-        array_const_refs: &HashMap<Any<D>, usize>,
-        f: impl Fn(&mut Self, &I, &HashMap<Any<D>, usize>, &HashMap<Any<D>, usize>) -> fmt::Result,
-    ) -> fmt::Result {
-        let mut comma = "";
-        self.write_char(open)?;
-        for i in v.items().iter() {
-            self.write_str(comma)?;
-            f(self, i, object_const_refs, array_const_refs)?;
-            comma = ",";
-        }
-        self.write_char(close)
-    }
-
     /// Writes `any` using const references.
     fn write_with_const_refs<D: Dealloc>(
         &mut self,
@@ -285,13 +261,11 @@ pub trait WriteDjs: WriteJson {
                     self.write_str("_")?;
                     self.write_str(n.to_string().as_str())
                 } else {
-                    self.write_list_with_const_refs(
+                    self.write_list(
                         '{',
                         '}',
-                        &any.try_move::<JsObjectRef<D>>().unwrap(),
-                        object_const_refs,
-                        array_const_refs,
-                        |w, (k, v), object_const_refs, array_const_refs| {
+                        any.try_move::<JsObjectRef<D>>().unwrap(),
+                        |w, (k, v)| {
                             w.write_js_string(k)?;
                             w.write_char(':')?;
                             w.write_with_const_refs(v.clone(), object_const_refs, array_const_refs)
@@ -304,13 +278,11 @@ pub trait WriteDjs: WriteJson {
                     self.write_str("_")?;
                     self.write_str(n.to_string().as_str())
                 } else {
-                    self.write_list_with_const_refs(
+                    self.write_list(
                         '[',
                         ']',
-                        &any.try_move::<JsArrayRef<D>>().unwrap(),
-                        object_const_refs,
-                        array_const_refs,
-                        |w, i, object_const_refs, array_const_refs| {
+                        any.try_move::<JsArrayRef<D>>().unwrap(),
+                        |w, i| {
                             w.write_with_const_refs(i.clone(), object_const_refs, array_const_refs)
                         },
                     )
