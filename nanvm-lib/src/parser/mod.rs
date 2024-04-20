@@ -468,6 +468,7 @@ impl<M: Manager> AnyState<M> {
                         match res {
                             Ok(r) => {
                                 context.module_cache.progress.remove(&current_path);
+                                context.module_cache.complete.insert(current_path, r.any.clone());
                                 AnyResult::Continue(AnyState {
                                     data_type: self.data_type,
                                     status: ParsingStatus::ImportEnd,
