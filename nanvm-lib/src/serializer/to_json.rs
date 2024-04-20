@@ -59,7 +59,7 @@ pub trait WriteJson: Write {
         &mut self,
         open: char,
         close: char,
-        v: &Ref<FlexibleArray<I, impl FlexibleArrayHeader>, impl Dealloc>,
+        v: Ref<FlexibleArray<I, impl FlexibleArrayHeader>, impl Dealloc>,
         f: impl Fn(&mut Self, &I) -> fmt::Result,
     ) -> fmt::Result {
         let mut comma = "";
@@ -79,12 +79,12 @@ pub trait WriteJson: Write {
             Visitor::Null => self.write_str("null"),
             Visitor::Bool(b) => self.write_str(if b { "true" } else { "false" }),
             Visitor::String(s) => self.write_js_string(&s),
-            Visitor::Object(o) => self.write_list('{', '}', &o, |w, (k, v)| {
+            Visitor::Object(o) => self.write_list('{', '}', o, |w, (k, v)| {
                 w.write_js_string(k)?;
                 w.write_char(':')?;
                 w.write_json(v.clone())
             }),
-            Visitor::Array(a) => self.write_list('[', ']', &a, |w, i| w.write_json(i.clone())),
+            Visitor::Array(a) => self.write_list('[', ']', a, |w, i| w.write_json(i.clone())),
         }
     }
 }

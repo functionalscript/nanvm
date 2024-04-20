@@ -264,7 +264,7 @@ pub trait WriteDjs: WriteJson {
                     self.write_list(
                         '{',
                         '}',
-                        &any.try_move::<JsObjectRef<D>>().unwrap(),
+                        any.try_move::<JsObjectRef<D>>().unwrap(),
                         |w, (k, v)| {
                             w.write_js_string(k)?;
                             w.write_char(':')?;
@@ -281,7 +281,7 @@ pub trait WriteDjs: WriteJson {
                     self.write_list(
                         '[',
                         ']',
-                        &any.try_move::<JsArrayRef<D>>().unwrap(),
+                        any.try_move::<JsArrayRef<D>>().unwrap(),
                         |w, i| {
                             w.write_with_const_refs(i.clone(), object_const_refs, array_const_refs)
                         },
