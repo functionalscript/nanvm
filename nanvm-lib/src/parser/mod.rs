@@ -1072,13 +1072,13 @@ mod test {
         let main_path = "test_cache_main.d.cjs";
         io.write(main_path, main.as_bytes()).unwrap();
 
-        let module_1 = include_str!("../../test/test_cache_b.d.cjs");
-        let module_1_path = "test_cache_b.d.cjs";
-        io.write(module_1_path, module_1.as_bytes()).unwrap();
+        let module_b = include_str!("../../test/test_cache_b.d.cjs");
+        let module_b_path = "test_cache_b.d.cjs";
+        io.write(module_b_path, module_b.as_bytes()).unwrap();
 
-        let module_2 = include_str!("../../test/test_cache_c.d.cjs");
-        let module_2_path = "test_cache_c.d.cjs";
-        io.write(module_2_path, module_2.as_bytes()).unwrap();
+        let module_c = include_str!("../../test/test_cache_c.d.cjs");
+        let module_c_path = "test_cache_c.d.cjs";
+        io.write(module_c_path, module_c.as_bytes()).unwrap();
 
         let mut mc = default();
         let mut context = Context::new(
@@ -1108,13 +1108,13 @@ mod test {
         let main_path = "test_cache_main.d.mjs";
         io.write(main_path, main.as_bytes()).unwrap();
 
-        let module_1 = include_str!("../../test/test_cache_b.d.mjs");
-        let module_1_path = "test_cache_b.d.mjs";
-        io.write(module_1_path, module_1.as_bytes()).unwrap();
+        let module_b = include_str!("../../test/test_cache_b.d.mjs");
+        let module_b_path = "test_cache_b.d.mjs";
+        io.write(module_b_path, module_b.as_bytes()).unwrap();
 
-        let module_2 = include_str!("../../test/test_cache_c.d.mjs");
-        let module_2_path = "test_cache_c.d.mjs";
-        io.write(module_2_path, module_2.as_bytes()).unwrap();
+        let module_c = include_str!("../../test/test_cache_c.d.mjs");
+        let module_c_path = "test_cache_c.d.mjs";
+        io.write(module_c_path, module_c.as_bytes()).unwrap();
 
         let mut mc = default();
         let mut context = Context::new(
