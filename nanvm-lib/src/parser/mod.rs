@@ -1026,6 +1026,93 @@ mod test {
         assert_eq!(item0.try_move(), Ok(4.0));
     }
 
+    fn test_cache() {
+        let local = Local::default();
+        test_import_with_manager(&local);
+    }
+
+    fn test_cache_with_manager<M: Manager>(manager: M) {
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_cache_main.d.cjs");
+        //let path = "../../test/test-import-main.d.mjs";
+        let main_path = "test_cache_main.d.cjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module_1 = include_str!("../../test/test_cache_1.d.cjs");
+        let module_1_path = "test_cache_1.d.cjs";
+        io.write(module_1_path, module_1.as_bytes()).unwrap();
+
+        let module_2 = include_str!("../../test/test_cache_2.d.cjs");
+        let module_2_path = "test_cache_2.d.cjs";
+        io.write(module_2_path, module_2.as_bytes()).unwrap();
+
+        let module_3 = include_str!("../../test/test_cache_3.d.cjs");
+        let module_3_path = "test_cache_3.d.cjs";
+        io.write(module_3_path, module_3.as_bytes()).unwrap();
+
+        let mut mc = default();
+        let mut context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
+        );
+
+        let result = parse(&mut context);
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(2.0));
+        let item1 = items[1].clone();
+        assert_eq!(item1.try_move(), Ok(2.0));
+
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_cache_main.d.mjs");
+        //let path = "../../test/test-import-main.d.mjs";
+        let main_path = "test_cache_main.d.mjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module_1 = include_str!("../../test/test_cache_1.d.mjs");
+        let module_1_path = "test_cache_1.d.mjs";
+        io.write(module_1_path, module_1.as_bytes()).unwrap();
+
+        let module_2 = include_str!("../../test/test_cache_2.d.mjs");
+        let module_2_path = "test_cache_2.d.mjs";
+        io.write(module_2_path, module_2.as_bytes()).unwrap();
+
+        let module_3 = include_str!("../../test/test_cache_3.d.mjs");
+        let module_3_path = "test_cache_3.d.mjs";
+        io.write(module_3_path, module_3.as_bytes()).unwrap();
+
+        let mut mc = default();
+        let mut context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
+        );
+
+        let result = parse(&mut context);
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(1.0));
+        let item1 = items[1].clone();
+        assert_eq!(item1.try_move(), Ok(1.0));
+    }
+
     #[test]
     #[wasm_bindgen_test]
     fn test_import_error() {
