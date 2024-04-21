@@ -1070,7 +1070,6 @@ mod test {
         let io: VirtualIo = VirtualIo::new(&[]);
 
         let main = include_str!("../../test/test_cache_main.d.cjs");
-        //let path = "../../test/test-import-main.d.mjs";
         let main_path = "test_cache_main.d.cjs";
         io.write(main_path, main.as_bytes()).unwrap();
 
@@ -1106,7 +1105,6 @@ mod test {
         let io: VirtualIo = VirtualIo::new(&[]);
 
         let main = include_str!("../../test/test_cache_main.d.mjs");
-        //let path = "../../test/test_cache_main.d.mjs";
         let main_path = "test_cache_main.d.mjs";
         io.write(main_path, main.as_bytes()).unwrap();
 
