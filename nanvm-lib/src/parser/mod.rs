@@ -129,7 +129,7 @@ pub enum ParseError {
     WrongRequireStatement,
     WrongImportStatement,
     CannotReadFile,
-    CyclicDependency,
+    CircularDependency,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -339,6 +339,17 @@ impl<M: Manager> RootState<M> {
             RootStatus::ImportIdFrom(id) => match token {
                 JsonToken::String(s) => {
                     let current_path = concat(split(&context.path).0, s.as_str());
+                    if let Some(any) = context.module_cache.complete.get(&current_path) {
+                        self.state.consts.insert(id, any.clone());
+                        return JsonState::ParseRoot(RootState {
+                            status: RootStatus::Initial,
+                            state: self.state,
+                        });
+                    }
+                    if context.module_cache.progress.contains(&current_path) {
+                        return JsonState::Error(ParseError::CircularDependency);
+                    }
+                    context.module_cache.progress.insert(current_path.clone());
                     let read_result = context.io.read_to_string(current_path.as_str());
                     match read_result {
                         Ok(s) => {
@@ -346,6 +357,11 @@ impl<M: Manager> RootState<M> {
                             let res = parse_with_tokens(context, tokens.into_iter());
                             match res {
                                 Ok(r) => {
+                                    context.module_cache.progress.remove(&current_path);
+                                    context
+                                        .module_cache
+                                        .complete
+                                        .insert(current_path, r.any.clone());
                                     self.state.consts.insert(id, r.any);
                                     JsonState::ParseRoot(RootState {
                                         status: RootStatus::Initial,
@@ -457,7 +473,7 @@ impl<M: Manager> AnyState<M> {
                     });
                 }
                 if context.module_cache.progress.contains(&current_path) {
-                    return AnyResult::Error(ParseError::CyclicDependency);
+                    return AnyResult::Error(ParseError::CircularDependency);
                 }
                 context.module_cache.progress.insert(current_path.clone());
                 let read_result = context.io.read_to_string(current_path.as_str());
@@ -468,6 +484,10 @@ impl<M: Manager> AnyState<M> {
                         match res {
                             Ok(r) => {
                                 context.module_cache.progress.remove(&current_path);
+                                context
+                                    .module_cache
+                                    .complete
+                                    .insert(current_path, r.any.clone());
                                 AnyResult::Continue(AnyState {
                                     data_type: self.data_type,
                                     status: ParsingStatus::ImportEnd,
@@ -817,6 +837,7 @@ impl<M: Manager> JsonState<M> {
 }
 
 pub fn parse<M: Manager, I: Io>(context: &mut Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+    context.module_cache.progress.insert(context.path.clone());
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
@@ -1053,6 +1074,138 @@ mod test {
         let items = result_unwrap.items();
         let item0 = items[0].clone();
         assert_eq!(item0.try_move(), Ok(4.0));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_cache() {
+        let local = Local::default();
+        test_cache_with_manager(&local);
+    }
+
+    fn test_cache_with_manager<M: Manager>(manager: M) {
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_cache_main.d.cjs");
+        let main_path = "test_cache_main.d.cjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module_b = include_str!("../../test/test_cache_b.d.cjs");
+        let module_b_path = "test_cache_b.d.cjs";
+        io.write(module_b_path, module_b.as_bytes()).unwrap();
+
+        let module_c = include_str!("../../test/test_cache_c.d.cjs");
+        let module_c_path = "test_cache_c.d.cjs";
+        io.write(module_c_path, module_c.as_bytes()).unwrap();
+
+        let mut mc = default();
+        let mut context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
+        );
+
+        let result = parse(&mut context);
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(1.0));
+        let item1 = items[1].clone();
+        assert_eq!(item1.try_move(), Ok(1.0));
+
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_cache_main.d.mjs");
+        let main_path = "test_cache_main.d.mjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module_b = include_str!("../../test/test_cache_b.d.mjs");
+        let module_b_path = "test_cache_b.d.mjs";
+        io.write(module_b_path, module_b.as_bytes()).unwrap();
+
+        let module_c = include_str!("../../test/test_cache_c.d.mjs");
+        let module_c_path = "test_cache_c.d.mjs";
+        io.write(module_c_path, module_c.as_bytes()).unwrap();
+
+        let mut mc = default();
+        let mut context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
+        );
+
+        let result = parse(&mut context);
+        assert!(result.is_ok());
+        let result_unwrap = result
+            .unwrap()
+            .any
+            .try_move::<JsArrayRef<M::Dealloc>>()
+            .unwrap();
+        let items = result_unwrap.items();
+        let item0 = items[0].clone();
+        assert_eq!(item0.try_move(), Ok(2.0));
+        let item1 = items[1].clone();
+        assert_eq!(item1.try_move(), Ok(2.0));
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_cicular_error() {
+        let local = Local::default();
+        test_cicular_error_with_manager(&local);
+    }
+
+    fn test_cicular_error_with_manager<M: Manager>(manager: M) {
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_circular_1.d.cjs.txt");
+        let main_path = "test_circular_1.d.cjs.txt";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_circular_2.d.cjs.txt");
+        let module_path = "test_circular_2.d.cjs.txt";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let mut mc = default();
+        let mut context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
+        );
+
+        let result = parse(&mut context);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::CircularDependency);
+
+        let io: VirtualIo = VirtualIo::new(&[]);
+
+        let main = include_str!("../../test/test_circular_1.d.mjs.txt");
+        let main_path = "test_circular_1.d.mjs.txt";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_circular_2.d.mjs.txt");
+        let module_path = "test_circular_2.d.mjs.txt";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let mut mc = default();
+        let mut context = Context::new(
+            manager,
+            &io,
+            concat(io.current_dir().unwrap().as_str(), main_path),
+            &mut mc,
+        );
+
+        let result = parse(&mut context);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::CircularDependency);
     }
 
     #[test]
