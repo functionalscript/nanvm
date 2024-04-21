@@ -1,2 +1,2 @@
-const c = require("test_cache_c.d.mjs")
+import c from "test_cache_c.d.cjs"
 export default c

@@ -1059,9 +1059,11 @@ mod test {
         assert_eq!(item0.try_move(), Ok(4.0));
     }
 
+    #[test]
+    #[wasm_bindgen_test]
     fn test_cache() {
         let local = Local::default();
-        test_import_with_manager(&local);
+        test_cache_with_manager(&local);
     }
 
     fn test_cache_with_manager<M: Manager>(manager: M) {
@@ -1097,14 +1099,14 @@ mod test {
             .unwrap();
         let items = result_unwrap.items();
         let item0 = items[0].clone();
-        assert_eq!(item0.try_move(), Ok(2.0));
+        assert_eq!(item0.try_move(), Ok(1.0));
         let item1 = items[1].clone();
-        assert_eq!(item1.try_move(), Ok(2.0));
+        assert_eq!(item1.try_move(), Ok(1.0));
 
         let io: VirtualIo = VirtualIo::new(&[]);
 
         let main = include_str!("../../test/test_cache_main.d.mjs");
-        //let path = "../../test/test-import-main.d.mjs";
+        //let path = "../../test/test_cache_main.d.mjs";
         let main_path = "test_cache_main.d.mjs";
         io.write(main_path, main.as_bytes()).unwrap();
 
@@ -1133,9 +1135,9 @@ mod test {
             .unwrap();
         let items = result_unwrap.items();
         let item0 = items[0].clone();
-        assert_eq!(item0.try_move(), Ok(1.0));
+        assert_eq!(item0.try_move(), Ok(2.0));
         let item1 = items[1].clone();
-        assert_eq!(item1.try_move(), Ok(1.0));
+        assert_eq!(item1.try_move(), Ok(2.0));
     }
 
     #[test]
