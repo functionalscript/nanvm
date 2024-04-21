@@ -1,0 +1,2 @@
+import a from "test_circular_1.d.mjs.txt"
+module.exports = a

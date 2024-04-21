@@ -1,0 +1,2 @@
+const a = require("test_circular_1.d.cjs.txt")
+module.exports = a
