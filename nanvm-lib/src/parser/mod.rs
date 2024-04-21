@@ -339,6 +339,17 @@ impl<M: Manager> RootState<M> {
             RootStatus::ImportIdFrom(id) => match token {
                 JsonToken::String(s) => {
                     let current_path = concat(split(&context.path).0, s.as_str());
+                    if let Some(any) = context.module_cache.complete.get(&current_path) {
+                        self.state.consts.insert(id, any.clone());
+                        return JsonState::ParseRoot(RootState {
+                            status: RootStatus::Initial,
+                            state: self.state,
+                        });
+                    }
+                    if context.module_cache.progress.contains(&current_path) {
+                        return JsonState::Error(ParseError::CyclicDependency);
+                    }
+                    context.module_cache.progress.insert(current_path.clone());
                     let read_result = context.io.read_to_string(current_path.as_str());
                     match read_result {
                         Ok(s) => {
@@ -346,6 +357,11 @@ impl<M: Manager> RootState<M> {
                             let res = parse_with_tokens(context, tokens.into_iter());
                             match res {
                                 Ok(r) => {
+                                    context.module_cache.progress.remove(&current_path);
+                                    context
+                                        .module_cache
+                                        .complete
+                                        .insert(current_path, r.any.clone());
                                     self.state.consts.insert(id, r.any);
                                     JsonState::ParseRoot(RootState {
                                         status: RootStatus::Initial,
