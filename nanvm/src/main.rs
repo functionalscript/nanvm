@@ -49,5 +49,5 @@ fn parser_test() {
 }
 
 fn main() {
-    parser_test();
+    run(&RealIo::default());
 }

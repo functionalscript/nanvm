@@ -8,3 +8,4 @@ pub mod mem;
 pub mod parser;
 pub mod serializer;
 pub mod tokenizer;
+pub mod app;
