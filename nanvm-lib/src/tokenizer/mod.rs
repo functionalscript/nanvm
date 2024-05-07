@@ -277,7 +277,7 @@ const CP_SMALL_A: u32 = 0x61;
 const CP_CAPITAL_A: u32 = 0x41;
 
 const fn is_new_line(c: char) -> bool {
-    matches!(c, '\t' | '\r')
+    matches!(c, '\n')
 }
 
 const fn is_white_space(c: char) -> bool {

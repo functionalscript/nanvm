@@ -130,6 +130,7 @@ pub enum ParseError {
     WrongImportStatement,
     CannotReadFile,
     CircularDependency,
+    NewLineExpected,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -164,6 +165,7 @@ pub enum RootStatus {
 pub struct RootState<M: Manager> {
     pub status: RootStatus,
     pub state: AnyState<M>,
+    pub new_line: bool,
 }
 
 pub struct ConstState<M: Manager> {
@@ -250,32 +252,47 @@ impl<M: Manager> RootState<M> {
     fn parse<I: Io>(mut self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         match self.status {
             RootStatus::Initial => match token {
-                JsonToken::Id(s) => match s.as_ref() {
-                    "const" => JsonState::ParseRoot(RootState {
-                        status: RootStatus::Const,
-                        state: self.state.set_djs(),
-                    }),
-                    "export" if self.state.data_type.is_mjs_compatible() => {
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Export,
-                            state: self.state.set_data_type(DataType::Mjs),
-                        })
-                    }
-                    "module" if self.state.data_type.is_cjs_compatible() => {
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Module,
-                            state: self.state.set_data_type(DataType::Cjs),
-                        })
-                    }
-                    "import" if self.state.data_type.is_mjs_compatible() => {
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Import,
-                            state: self.state.set_data_type(DataType::Mjs),
-                        })
-                    }
-                    _ => self.state.parse_for_module(context, JsonToken::Id(s)),
+                JsonToken::NewLine => JsonState::ParseRoot(RootState {
+                    status: RootStatus::Initial,
+                    state: self.state,
+                    new_line: true,
+                }),
+                JsonToken::Id(s) => match self.new_line {
+                    true => match s.as_ref() {
+                        "const" => JsonState::ParseRoot(RootState {
+                            status: RootStatus::Const,
+                            state: self.state.set_djs(),
+                            new_line: false,
+                        }),
+                        "export" if self.state.data_type.is_mjs_compatible() => {
+                            JsonState::ParseRoot(RootState {
+                                status: RootStatus::Export,
+                                state: self.state.set_data_type(DataType::Mjs),
+                                new_line: false,
+                            })
+                        }
+                        "module" if self.state.data_type.is_cjs_compatible() => {
+                            JsonState::ParseRoot(RootState {
+                                status: RootStatus::Module,
+                                state: self.state.set_data_type(DataType::Cjs),
+                                new_line: false,
+                            })
+                        }
+                        "import" if self.state.data_type.is_mjs_compatible() => {
+                            JsonState::ParseRoot(RootState {
+                                status: RootStatus::Import,
+                                state: self.state.set_data_type(DataType::Mjs),
+                                new_line: false,
+                            })
+                        }
+                        _ => self.state.parse_for_module(context, JsonToken::Id(s)),
+                    },
+                    false => JsonState::Error(ParseError::NewLineExpected),
                 },
-                _ => self.state.parse_for_module(context, token),
+                _ => match self.new_line {
+                    true => self.state.parse_for_module(context, token),
+                    false => JsonState::Error(ParseError::NewLineExpected),
+                },
             },
             RootStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
@@ -288,6 +305,7 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Dot => JsonState::ParseRoot(RootState {
                     status: RootStatus::ModuleDot,
                     state: self.state,
+                    new_line: false,
                 }),
                 _ => JsonState::Error(ParseError::WrongExportStatement),
             },
@@ -296,6 +314,7 @@ impl<M: Manager> RootState<M> {
                     "exports" => JsonState::ParseRoot(RootState {
                         status: RootStatus::ModuleDotExports,
                         state: self.state,
+                        new_line: false,
                     }),
                     _ => JsonState::Error(ParseError::WrongExportStatement),
                 },
@@ -309,6 +328,7 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Id(s) => JsonState::ParseRoot(RootState {
                     status: RootStatus::ConstId(s),
                     state: self.state,
+                    new_line: false,
                 }),
                 _ => JsonState::Error(ParseError::WrongConstStatement),
             },
@@ -323,6 +343,7 @@ impl<M: Manager> RootState<M> {
                 JsonToken::Id(s) => JsonState::ParseRoot(RootState {
                     status: RootStatus::ImportId(s),
                     state: self.state,
+                    new_line: false,
                 }),
                 _ => JsonState::Error(ParseError::WrongImportStatement),
             },
@@ -331,6 +352,7 @@ impl<M: Manager> RootState<M> {
                     "from" => JsonState::ParseRoot(RootState {
                         status: RootStatus::ImportIdFrom(id),
                         state: self.state,
+                        new_line: false,
                     }),
                     _ => JsonState::Error(ParseError::WrongImportStatement),
                 },
@@ -344,6 +366,7 @@ impl<M: Manager> RootState<M> {
                         return JsonState::ParseRoot(RootState {
                             status: RootStatus::Initial,
                             state: self.state,
+                            new_line: false,
                         });
                     }
                     if context.module_cache.progress.contains(&current_path) {
@@ -366,6 +389,7 @@ impl<M: Manager> RootState<M> {
                                     JsonState::ParseRoot(RootState {
                                         status: RootStatus::Initial,
                                         state: self.state,
+                                        new_line: false,
                                     })
                                 }
                                 Err(e) => JsonState::Error(e),
@@ -396,6 +420,7 @@ impl<M: Manager> ConstState<M> {
                         JsonState::ParseRoot(RootState {
                             status: RootStatus::Initial,
                             state: success.state,
+                            new_line: false,
                         })
                     }
                     AnyResult::Error(error) => JsonState::Error(error),
@@ -816,7 +841,10 @@ impl<M: Manager> AnyState<M> {
 impl<M: Manager> JsonState<M> {
     fn push<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         if token == JsonToken::NewLine {
-            return self;
+            return match self {
+                JsonState::ParseRoot(state) => state.parse(context, token),
+                _ => self,
+            };
         }
         match self {
             JsonState::ParseRoot(state) => state.parse(context, token),
@@ -855,6 +883,7 @@ pub fn parse_with_tokens<M: Manager, I: Io>(
     let mut state: JsonState<M> = JsonState::ParseRoot(RootState {
         status: RootStatus::Initial,
         state: default(),
+        new_line: true,
     });
     for token in iter {
         state = state.push(context, token);
@@ -975,6 +1004,12 @@ mod test {
         let tokens = tokenize(json_str.to_owned());
         let result = parse_with_virutal_io(manager, tokens.into_iter());
         assert!(result.is_err());
+
+        let json_str = include_str!("../../test/test-const-error-new-line.d.cjs.txt");
+        let tokens = tokenize(json_str.to_owned());
+        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ParseError::NewLineExpected);
     }
 
     #[test]
