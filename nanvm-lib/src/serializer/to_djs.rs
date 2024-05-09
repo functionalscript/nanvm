@@ -8,9 +8,19 @@ use core::{
     result,
 };
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use super::to_json::WriteJson;
+
+/// `Seen` is a bool-like enumeration to represent a "seen" status of a js compound (an object or
+/// an array) visited by `ConstTracker`. In case of `Seen::Once`, the compound was visited just once
+/// and if it remains with that status, it will be written out as a const. In case of
+/// `Seen::Repeatedly`, the compound was visited more than once and will be written out as a const.
+#[derive(PartialEq)]
+pub enum Seen {
+    Once,
+    Repeatedly,
+}
 
 /// ConstTracker holds references to js compounds (objects or arrays) in two sets:
 /// `visited_once` refers to compounds that we've seen just once so far;
@@ -20,8 +30,7 @@ use super::to_json::WriteJson;
 /// Note that we use one ConstTracker for js objects and another for js arrays, keeping them
 /// separate - to reduce set sizes and save on operations.
 struct ConstTracker<D: Dealloc> {
-    visited_once: HashSet<Any<D>>,
-    visited_repeatedly: HashSet<Any<D>>,
+    visited: HashMap<Any<D>, Seen>,
 }
 
 impl<D: Dealloc> ConstTracker<D> {
@@ -29,18 +38,14 @@ impl<D: Dealloc> ConstTracker<D> {
     /// `any` was visited just once (it's in `const_tracker.visited_once`) or more than once (it's
     /// in `visited_repeatedly` in this case since we are up to writing it out as a const).
     fn is_visited(&mut self, any: &Any<D>) -> bool {
-        if self.visited_repeatedly.contains(any) {
-            // We've visited `any` more than once before, no action is needed here.
-            true
-        } else if self.visited_once.contains(any) {
-            // It's the second time we visit `any`, move it from `visited_once` to `to_do`.
-            self.visited_once.remove(any);
-            self.visited_repeatedly.insert(any.clone());
+        let optional_seen = self.visited.get_mut(any);
+        if let Some(seen) = optional_seen  {
+            if *seen == Seen::Once {
+                *seen = Seen::Repeatedly;
+            }
             true
         } else {
-            // It's the first time we visit `any`, add it to `visited_once` (that is the only
-            // branch where we return `false`).
-            self.visited_once.insert(any.clone());
+            self.visited.insert(any.clone(), Seen::Once);
             false
         }
     }
@@ -58,7 +63,6 @@ impl<D: Dealloc> ConstTracker<D> {
                 .for_each(|(_k, v)| {
                     self.track_consts_for_any(v);
                 });
-            self.visited_once.insert(object.clone());
         }
     }
 
@@ -75,7 +79,6 @@ impl<D: Dealloc> ConstTracker<D> {
                 .for_each(|i| {
                     self.track_consts_for_any(i);
                 });
-            self.visited_once.insert(array.clone());
         }
     }
 
@@ -90,9 +93,9 @@ impl<D: Dealloc> ConstTracker<D> {
     }
 }
 
-/// Peeks one value from a set.
-fn peek<D: Dealloc>(set: &HashSet<Any<D>>) -> Option<Any<D>> {
-    Some(set.iter().next()?.clone())
+/// Peeks one value from a hash map.
+fn peek<D: Dealloc>(hash_map: &HashMap<Any<D>, Seen>) -> Option<Any<D>> {
+    Some(hash_map.iter().next()?.0.clone())
 }
 
 pub trait WriteDjs: WriteJson {
@@ -101,11 +104,10 @@ pub trait WriteDjs: WriteJson {
     fn write_compound_const<D: Dealloc>(
         &mut self,
         any: &Any<D>,
-        to_be_consts: &mut HashSet<Any<D>>,
+        to_be_consts: &mut HashMap<Any<D>, Seen>,
         const_refs: &mut HashMap<Any<D>, usize>,
     ) -> fmt::Result {
-        if to_be_consts.contains(any) {
-            to_be_consts.remove(any);
+        if to_be_consts.remove(any).is_some() {
             let id = const_refs.len();
             self.write_str("const _")?;
             self.write_str(id.to_string().as_str())?;
@@ -124,7 +126,7 @@ pub trait WriteDjs: WriteJson {
     fn write_consts_and_any<D: Dealloc>(
         &mut self,
         any: &Any<D>,
-        to_be_consts: &mut HashSet<Any<D>>,
+        to_be_consts: &mut HashMap<Any<D>, Seen>,
         const_refs: &mut HashMap<Any<D>, usize>,
     ) -> fmt::Result {
         match any.get_type() {
@@ -150,7 +152,7 @@ pub trait WriteDjs: WriteJson {
     /// Writes const objects, arrays in the right order (with no forward references).
     fn write_consts<D: Dealloc>(
         &mut self,
-        to_be_consts: &mut HashSet<Any<D>>,
+        to_be_consts: &mut HashMap<Any<D>, Seen>,
         const_refs: &mut HashMap<Any<D>, usize>,
     ) -> fmt::Result {
         while let Some(any) = peek(to_be_consts) {
@@ -205,11 +207,11 @@ pub trait WriteDjs: WriteJson {
     fn write_djs<D: Dealloc>(&mut self, any: Any<D>, common_js: bool) -> fmt::Result {
         let mut const_refs = HashMap::<Any<D>, usize>::new();
         let mut const_tracker = ConstTracker {
-            visited_once: HashSet::new(),
-            visited_repeatedly: HashSet::new(),
+            visited: HashMap::new(),
         };
         const_tracker.track_consts_for_any(&any);
-        self.write_consts(&mut const_tracker.visited_repeatedly, &mut const_refs)?;
+        const_tracker.visited.retain(|_, seen| *seen == Seen::Repeatedly);
+        self.write_consts(&mut const_tracker.visited, &mut const_refs)?;
         if common_js {
             self.write_str("module.exports=")?;
         } else {
