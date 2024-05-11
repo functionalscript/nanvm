@@ -94,8 +94,8 @@ impl<D: Dealloc> ConstTracker<D> {
 }
 
 /// Writes a const definition for a compound (an array or an object).
-fn write_compound_const<D: Dealloc, WriteT: WriteJson + ?Sized>(
-    write_json: &mut WriteT,
+fn write_compound_const<D: Dealloc>(
+    write_json: &mut (impl WriteJson + ?Sized),
     any: &Any<D>,
     to_be_consts: &mut HashMap<Any<D>, Seen>,
     const_refs: &mut HashMap<Any<D>, usize>,
@@ -116,8 +116,8 @@ fn write_compound_const<D: Dealloc, WriteT: WriteJson + ?Sized>(
 /// Writes a const js entity of any type (skipping over types other than object, array),
 /// ensuring that its const dependencies are written out as well in the right order (with no
 /// forward references).
-fn write_consts_and_any<D: Dealloc, WriteT: WriteJson + ?Sized>(
-    write_json: &mut WriteT,
+fn write_consts_and_any<D: Dealloc>(
+    write_json: &mut (impl WriteJson + ?Sized),
     any: &Any<D>,
     to_be_consts: &mut HashMap<Any<D>, Seen>,
     const_refs: &mut HashMap<Any<D>, usize>,
@@ -149,8 +149,8 @@ fn peek<D: Dealloc>(hash_map: &HashMap<Any<D>, Seen>) -> Option<Any<D>> {
 }
 
 /// Writes const definitions for objects, arrays in the right order (with no forward references).
-fn write_consts<D: Dealloc, WriteT: WriteJson + ?Sized>(
-    write_json: &mut WriteT,
+fn write_consts<D: Dealloc>(
+    write_json: &mut (impl WriteJson + ?Sized),
     to_be_consts: &mut HashMap<Any<D>, Seen>,
     const_refs: &mut HashMap<Any<D>, usize>,
 ) -> fmt::Result {
