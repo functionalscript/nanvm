@@ -52,16 +52,15 @@ impl<D: Dealloc> ConstTracker<D> {
 
     /// Traverse a DAG referred by `any` (of any js type), tracking objects and arrays, including
     /// `any` itself.
-    fn track_consts_for_any(&mut self, any: &Any<D>) {
+    fn track_consts_for_any(&mut self, any: &Any<D>) -> fmt::Result {
         match any.get_type() {
             Type::Array | Type::Object => {
                 if !self.is_visited(any) {
-                    any.for_each(|_k, v| {
-                        self.track_consts_for_any(v);
-                    });
+                    any.for_each::<fmt::Error>(|_k, v| self.track_consts_for_any(v))?;
                 }
+                Ok(())
             }
-            _ => {}
+            _ => Ok(()),
         }
     }
 }
@@ -73,6 +72,7 @@ fn write_compound_const<D: Dealloc>(
     to_be_consts: &mut HashMap<Any<D>, Seen>,
     const_refs: &mut HashMap<Any<D>, usize>,
 ) -> fmt::Result {
+    any.for_each(|_k, v| write_consts_and_any(write_json, v, to_be_consts, const_refs))?;
     if to_be_consts.remove(any).is_some() {
         let id = const_refs.len();
         write_json.write_str("const _")?;
@@ -96,18 +96,7 @@ fn write_consts_and_any<D: Dealloc>(
     const_refs: &mut HashMap<Any<D>, usize>,
 ) -> fmt::Result {
     match any.get_type() {
-        Type::Array => {
-            let array = any.clone().try_move::<JsArrayRef<D>>().unwrap();
-            for i in array.items().iter() {
-                write_consts_and_any(write_json, i, to_be_consts, const_refs)?;
-            }
-            write_compound_const(write_json, any, to_be_consts, const_refs)?;
-        }
-        Type::Object => {
-            let object = any.clone().try_move::<JsObjectRef<D>>().unwrap();
-            for i in object.items().iter() {
-                write_consts_and_any(write_json, &i.1, to_be_consts, const_refs)?;
-            }
+        Type::Array | Type::Object => {
             write_compound_const(write_json, any, to_be_consts, const_refs)?;
         }
         _ => {}
@@ -182,7 +171,7 @@ pub trait WriteDjs: WriteJson {
         let mut const_tracker = ConstTracker {
             visited: HashMap::new(),
         };
-        const_tracker.track_consts_for_any(&any);
+        const_tracker.track_consts_for_any(&any)?;
         const_tracker
             .visited
             .retain(|_, seen| *seen == Seen::Repeatedly);

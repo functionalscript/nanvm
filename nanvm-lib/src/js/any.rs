@@ -92,13 +92,17 @@ impl<D: Dealloc> Any<D> {
 
     /// Iterate trough children of this `Any`. Any type other than array / object yields nothing.
     /// For an object, first argument of `f` is the key string. For an array, it is the index.
-    pub fn for_each(&self, mut f: impl FnMut(/*k*/ Any<D>, /*v*/ &Any<D>)) {
+    pub fn for_each<E>(
+        &self,
+        mut f: impl FnMut(/*k*/ Any<D>, /*v*/ &Any<D>) -> Result<(), E>,
+    ) -> Result<(), E> {
         match self.get_type() {
             Type::Object => {
                 let o = self.clone().try_move::<JsObjectRef<D>>().unwrap();
                 for (k, v) in o.items() {
-                    f(k.clone().move_to_any(), v);
+                    f(k.clone().move_to_any(), v)?;
                 }
+                Ok(())
             }
             Type::Array => {
                 let o = self.clone().try_move::<JsArrayRef<D>>().unwrap();
@@ -106,10 +110,11 @@ impl<D: Dealloc> Any<D> {
                     f(
                         unsafe { Any::from_internal(AnyInternal::new(k.try_into().unwrap())) },
                         v,
-                    );
+                    )?;
                 }
+                Ok(())
             }
-            _ => {}
+            _ => Ok(()),
         }
     }
 }
