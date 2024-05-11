@@ -50,44 +50,15 @@ impl<D: Dealloc> ConstTracker<D> {
         }
     }
 
-    /// Traverse a DAG referred by `object` (a js object), tracking objects and arrays, including
-    /// `object` itself.
-    fn track_consts_for_object(&mut self, object: &Any<D>) {
-        if !self.is_visited(object) {
-            object
-                .clone()
-                .try_move::<JsObjectRef<D>>()
-                .unwrap()
-                .items()
-                .iter()
-                .for_each(|(_k, v)| {
-                    self.track_consts_for_any(v);
-                });
-        }
-    }
-
-    /// Traverse a DAG referred by `array` (a js object), tracking objects and arrays, including
-    /// `array` itself.
-    fn track_consts_for_array(&mut self, array: &Any<D>) {
-        if !self.is_visited(array) {
-            array
-                .clone()
-                .try_move::<JsArrayRef<D>>()
-                .unwrap()
-                .items()
-                .iter()
-                .for_each(|i| {
-                    self.track_consts_for_any(i);
-                });
-        }
-    }
-
     /// Traverse a DAG referred by `any` (of any js type), tracking objects and arrays, including
     /// `any` itself.
     fn track_consts_for_any(&mut self, any: &Any<D>) {
         match any.get_type() {
-            Type::Array => self.track_consts_for_array(any),
-            Type::Object => self.track_consts_for_object(any),
+            Type::Array | Type::Object => if !self.is_visited(any) {
+                any.for_each(|_k, v| {
+                    self.track_consts_for_any(v);
+                });
+            },
             _ => {}
         }
     }

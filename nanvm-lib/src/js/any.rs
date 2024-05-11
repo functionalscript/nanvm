@@ -4,6 +4,8 @@ use super::{
     any_cast::AnyCast,
     any_internal::AnyInternal,
     bitset::{ref_type, REF_SUBSET_SUPERPOSITION},
+    js_array::JsArrayRef,
+    js_object::JsObjectRef,
     null::Null,
     ref_cast::RefCast,
     type_::Type,
@@ -86,6 +88,29 @@ impl<D: Dealloc> Any<D> {
             return Ok(unsafe { &*p });
         }
         Err(())
+    }
+
+    /// Iterate trough children of this `Any`. Any type other than array / object yields nothing.
+    /// For an object, first argument of `f` is the key string. For an array, it is the index.
+    pub fn for_each(&self, mut f: impl FnMut(/*k*/ Any<D>, /*v*/ &Any<D>)) {
+        match self.get_type() {
+            Type::Object => {
+                let o = self.clone().try_move::<JsObjectRef<D>>().unwrap();
+                for (k, v) in o.items() {
+                    f(k.clone().move_to_any(), v);
+                }
+            }
+            Type::Array => {
+                let o = self.clone().try_move::<JsArrayRef<D>>().unwrap();
+                for (k, v) in o.items().iter().enumerate() {
+                    f(
+                        unsafe { Any::from_internal(AnyInternal::new(k.try_into().unwrap())) },
+                        v,
+                    );
+                }
+            }
+            _ => {}
+        }
     }
 }
 
