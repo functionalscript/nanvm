@@ -54,11 +54,13 @@ impl<D: Dealloc> ConstTracker<D> {
     /// `any` itself.
     fn track_consts_for_any(&mut self, any: &Any<D>) {
         match any.get_type() {
-            Type::Array | Type::Object => if !self.is_visited(any) {
-                any.for_each(|_k, v| {
-                    self.track_consts_for_any(v);
-                });
-            },
+            Type::Array | Type::Object => {
+                if !self.is_visited(any) {
+                    any.for_each(|_k, v| {
+                        self.track_consts_for_any(v);
+                    });
+                }
+            }
             _ => {}
         }
     }
