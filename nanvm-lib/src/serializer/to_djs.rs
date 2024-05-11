@@ -161,8 +161,8 @@ fn write_consts<D: Dealloc>(
 }
 
 /// Writes `any` using const references.
-fn write_with_const_refs<D: Dealloc, WriteT: WriteJson + ?Sized>(
-    write_json: &mut WriteT,
+fn write_with_const_refs<D: Dealloc>(
+    write_json: &mut (impl WriteJson + ?Sized),
     any: Any<D>,
     const_refs: &HashMap<Any<D>, usize>,
 ) -> fmt::Result {
