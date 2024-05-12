@@ -134,7 +134,7 @@ pub enum ParseError {
 }
 
 impl ToString for ParseError {
-    fn to_string(&self) -> String{
+    fn to_string(&self) -> String {
         match self {
             ParseError::UnexpectedToken => "UnexpectedToken".to_string(),
             ParseError::UnexpectedEnd => "UnexpectedEnd".to_string(),

@@ -68,5 +68,4 @@ mod test {
         let vec = String::from_utf8(ouput_vec).unwrap();
         assert_eq!(vec, r#"{"key":[true,false,null]}"#);
     }
-
 }
