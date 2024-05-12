@@ -133,6 +133,22 @@ pub enum ParseError {
     NewLineExpected,
 }
 
+impl ToString for ParseError {
+    fn to_string(&self) -> String {
+        match self {
+            ParseError::UnexpectedToken => "UnexpectedToken".to_string(),
+            ParseError::UnexpectedEnd => "UnexpectedEnd".to_string(),
+            ParseError::WrongExportStatement => "WrongExportStatement".to_string(),
+            ParseError::WrongConstStatement => "WrongConstStatement".to_string(),
+            ParseError::WrongRequireStatement => "WrongRequireStatement".to_string(),
+            ParseError::WrongImportStatement => "WrongImportStatement".to_string(),
+            ParseError::CannotReadFile => "CannotReadFile".to_string(),
+            ParseError::CircularDependency => "CircularDependency".to_string(),
+            ParseError::NewLineExpected => "NewLineExpected".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Default, PartialEq)]
 pub enum DataType {
     #[default]
