@@ -41,6 +41,32 @@ pub fn run(io: &impl Io) -> io::Result<()> {
             }
             _ => unreachable!(),
         },
-        Err(_) => Err(Error::other("parse error")),
+        Err(parse_error) => Err(Error::other(parse_error.to_string())),
     }
+}
+
+#[cfg(test)]
+mod test {
+    use io_test::VirtualIo;
+    use io_trait::Io;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use super::run;
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test() {
+        let io: VirtualIo = VirtualIo::new(&["test_json.json", "output.json"]);
+
+        let main = include_str!("../../test/test-json.json");
+        let main_path = "test_json.json";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let result = run(&io);
+        assert!(result.is_ok());
+        let ouput_vec = io.read("output.json").unwrap();
+        let vec = String::from_utf8(ouput_vec).unwrap();
+        assert_eq!(vec, r#"{"key":[true,false,null]}"#);
+    }
+
 }
