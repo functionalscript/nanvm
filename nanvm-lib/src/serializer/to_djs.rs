@@ -40,9 +40,7 @@ impl<D: Dealloc> ConstTracker<D> {
     fn is_visited(&mut self, any: &Any<D>) -> bool {
         let optional_seen = self.visited.get_mut(any);
         if let Some(seen) = optional_seen {
-            if *seen == Seen::Once {
-                *seen = Seen::Repeatedly;
-            }
+            *seen = Seen::Repeatedly;
             true
         } else {
             self.visited.insert(any.clone(), Seen::Once);
