@@ -133,6 +133,9 @@ pub enum ParseError {
     NewLineExpected,
 }
 
+// TODO: implement std::fmt::Display for ParseError instead of ToString - for now we suppress a
+// correspondent Clippy warning here locally.
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for ParseError {
     fn to_string(&self) -> String {
         match self {
