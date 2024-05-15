@@ -102,20 +102,16 @@ impl<D: Dealloc> Any<D> {
                 for (k, v) in o.items() {
                     f(k.clone().move_to_any(), v)?;
                 }
-                Ok(())
             }
             Type::Array => {
                 let o = self.clone().try_move::<JsArrayRef<D>>().unwrap();
                 for (k, v) in o.items().iter().enumerate() {
-                    f(
-                        unsafe { Any::from_internal(AnyInternal::new(k.try_into().unwrap())) },
-                        v,
-                    )?;
+                    f((k as f64).move_to_any(), v)?;
                 }
-                Ok(())
             }
-            _ => Ok(()),
-        }
+            _ => {}
+        };
+        Ok(())
     }
 }
 
