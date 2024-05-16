@@ -49,14 +49,14 @@ pub fn run(io: &impl Io) -> io::Result<()> {
     }
 }
 
-fn file_to_data_type(s: &String) -> Result<DataType, Error> {
+fn file_to_data_type(s: &str) -> Result<DataType, Error> {
     if s.ends_with(".json") {
         return Ok(DataType::Json);
     }
     if s.ends_with("d.cjs") {
         return Ok(DataType::Cjs);
     }
-    if s.ends_with("d.cjs") {
+    if s.ends_with("d.mjs") {
         return Ok(DataType::Mjs);
     }
     Err(Error::other("invalid output extension"))
@@ -72,7 +72,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test() {
+    fn test_json() {
         let io: VirtualIo = VirtualIo::new(&["test_json.json", "output.json"]);
 
         let main = include_str!("../../test/test-json.json");
@@ -84,5 +84,37 @@ mod test {
         let ouput_vec = io.read("output.json").unwrap();
         let vec = String::from_utf8(ouput_vec).unwrap();
         assert_eq!(vec, r#"{"key":[true,false,null]}"#);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_cjs() {
+        let io: VirtualIo = VirtualIo::new(&["test_djs.d.cjs", "output.d.cjs"]);
+
+        let main = include_str!("../../test/test-djs.d.cjs");
+        let main_path = "test_djs.d.cjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let result = run(&io);
+        assert!(result.is_ok());
+        let ouput_vec = io.read("output.d.cjs").unwrap();
+        let vec = String::from_utf8(ouput_vec).unwrap();
+        assert_eq!(vec, r#"module.exports={"id":null}"#);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_mjs() {
+        let io: VirtualIo = VirtualIo::new(&["test_djs.d.mjs", "output.d.mjs"]);
+
+        let main = include_str!("../../test/test-djs.d.mjs");
+        let main_path = "test_djs.d.mjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let result = run(&io);
+        assert!(result.is_ok());
+        let ouput_vec = io.read("output.d.mjs").unwrap();
+        let vec = String::from_utf8(ouput_vec).unwrap();
+        assert_eq!(vec, r#"export default {"id":null}"#);
     }
 }
