@@ -16,33 +16,51 @@ pub fn run(io: &impl Io) -> io::Result<()> {
 
     let mc = &mut default();
     let mut context = Context::new(GLOBAL, io, input, mc);
-    match parse(&mut context) {
-        Ok(parse_result) => match parse_result.data_type {
-            DataType::Json => {
-                let to_json_result = to_json(parse_result.any);
-                match to_json_result {
-                    Ok(s) => io.write(&output, s.as_bytes()),
-                    Err(e) => Err(Error::other(e)),
+    let output_data_type = file_to_data_type(&output);
+    match output_data_type {
+        Ok(data_type) => match parse(&mut context) {
+            Ok(parse_result) => match data_type {
+                DataType::Json => {
+                    let to_json_result = to_json(parse_result.any);
+                    match to_json_result {
+                        Ok(s) => io.write(&output, s.as_bytes()),
+                        Err(e) => Err(Error::other(e)),
+                    }
                 }
-            }
-            DataType::Cjs => {
-                let to_json_result = to_djs(parse_result.any, true);
-                match to_json_result {
-                    Ok(s) => io.write(&output, s.as_bytes()),
-                    Err(e) => Err(Error::other(e)),
+                DataType::Cjs => {
+                    let to_json_result = to_djs(parse_result.any, true);
+                    match to_json_result {
+                        Ok(s) => io.write(&output, s.as_bytes()),
+                        Err(e) => Err(Error::other(e)),
+                    }
                 }
-            }
-            DataType::Mjs => {
-                let to_json_result = to_djs(parse_result.any, false);
-                match to_json_result {
-                    Ok(s) => io.write(&output, s.as_bytes()),
-                    Err(e) => Err(Error::other(e)),
+                DataType::Mjs => {
+                    let to_json_result = to_djs(parse_result.any, false);
+                    match to_json_result {
+                        Ok(s) => io.write(&output, s.as_bytes()),
+                        Err(e) => Err(Error::other(e)),
+                    }
                 }
-            }
-            _ => unreachable!(),
+                _ => unreachable!(),
+            },
+            Err(parse_error) => Err(Error::other(parse_error.to_string())),
         },
-        Err(parse_error) => Err(Error::other(parse_error.to_string())),
+        Err(e) => Err(e)
     }
+    
+}
+
+fn file_to_data_type(s: &String) -> Result<DataType, Error> {
+    if s.ends_with(".json") {
+        return Ok(DataType::Json);
+    }
+    if s.ends_with("d.cjs") {
+        return Ok(DataType::Cjs);
+    }
+    if s.ends_with("d.cjs") {
+        return Ok(DataType::Mjs);
+    }
+    Err(Error::other("invalid output extension"))
 }
 
 #[cfg(test)]
