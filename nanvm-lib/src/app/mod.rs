@@ -117,4 +117,44 @@ mod test {
         let vec = String::from_utf8(ouput_vec).unwrap();
         assert_eq!(vec, r#"export default {"id":null}"#);
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_cjs_import() {
+        let io: VirtualIo = VirtualIo::new(&["test_import_main.d.cjs", "output.d.cjs"]);
+
+        let main = include_str!("../../test/test_import_main.d.cjs");
+        let main_path = "test_import_main.d.cjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.cjs");
+        let module_path = "test_import_main.d.cjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let result = run(&io);
+        assert!(result.is_ok());
+        let ouput_vec = io.read("output.d.cjs").unwrap();
+        let vec = String::from_utf8(ouput_vec).unwrap();
+        assert_eq!(vec, r#"module.exports=3"#);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_mjs_import() {
+        let io: VirtualIo = VirtualIo::new(&["test_import_main.d.mjs", "output.d.mjs"]);
+
+        let main = include_str!("../../test/test_import_main.d.mjs");
+        let main_path = "test_import_main.d.mjs";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let module = include_str!("../../test/test_import_module.d.mjs");
+        let module_path = "test_import_main.d.mjs";
+        io.write(module_path, module.as_bytes()).unwrap();
+
+        let result = run(&io);
+        assert!(result.is_ok());
+        let ouput_vec = io.read("output.d.mjs").unwrap();
+        let vec = String::from_utf8(ouput_vec).unwrap();
+        assert_eq!(vec, r#"export default 4"#);
+    }
 }
