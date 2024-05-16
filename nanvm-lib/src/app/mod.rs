@@ -45,9 +45,8 @@ pub fn run(io: &impl Io) -> io::Result<()> {
             },
             Err(parse_error) => Err(Error::other(parse_error.to_string())),
         },
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
-    
 }
 
 fn file_to_data_type(s: &String) -> Result<DataType, Error> {
