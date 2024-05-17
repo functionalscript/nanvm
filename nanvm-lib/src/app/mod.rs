@@ -53,10 +53,10 @@ fn file_to_data_type(s: &str) -> Result<DataType, Error> {
     if s.ends_with(".json") {
         return Ok(DataType::Json);
     }
-    if s.ends_with("d.cjs") {
+    if s.ends_with(".d.cjs") {
         return Ok(DataType::Cjs);
     }
-    if s.ends_with("d.mjs") {
+    if s.ends_with(".d.mjs") {
         return Ok(DataType::Mjs);
     }
     Err(Error::other("invalid output extension"))
