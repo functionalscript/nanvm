@@ -185,4 +185,17 @@ mod test {
         let vec = String::from_utf8(ouput_vec).unwrap();
         assert_eq!(vec, r#"export default 4"#);
     }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_invalid_ouput_extension() {
+        let io: VirtualIo = VirtualIo::new(&["test_json.json", "outputd.cjs"]);
+
+        let main = include_str!("../../test/test-json.json");
+        let main_path = "test_json.json";
+        io.write(main_path, main.as_bytes()).unwrap();
+
+        let result = run(&io);
+        assert!(result.is_err());
+    }
 }
