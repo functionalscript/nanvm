@@ -40,9 +40,7 @@ impl<D: Dealloc> ConstTracker<D> {
     fn is_visited(&mut self, any: &Any<D>) -> bool {
         let optional_seen = self.visited.get_mut(any);
         if let Some(seen) = optional_seen {
-            if *seen == Seen::Once {
-                *seen = Seen::Repeatedly;
-            }
+            *seen = Seen::Repeatedly;
             true
         } else {
             self.visited.insert(any.clone(), Seen::Once);
@@ -50,45 +48,17 @@ impl<D: Dealloc> ConstTracker<D> {
         }
     }
 
-    /// Traverse a DAG referred by `object` (a js object), tracking objects and arrays, including
-    /// `object` itself.
-    fn track_consts_for_object(&mut self, object: &Any<D>) {
-        if !self.is_visited(object) {
-            object
-                .clone()
-                .try_move::<JsObjectRef<D>>()
-                .unwrap()
-                .items()
-                .iter()
-                .for_each(|(_k, v)| {
-                    self.track_consts_for_any(v);
-                });
-        }
-    }
-
-    /// Traverse a DAG referred by `array` (a js object), tracking objects and arrays, including
-    /// `array` itself.
-    fn track_consts_for_array(&mut self, array: &Any<D>) {
-        if !self.is_visited(array) {
-            array
-                .clone()
-                .try_move::<JsArrayRef<D>>()
-                .unwrap()
-                .items()
-                .iter()
-                .for_each(|i| {
-                    self.track_consts_for_any(i);
-                });
-        }
-    }
-
     /// Traverse a DAG referred by `any` (of any js type), tracking objects and arrays, including
     /// `any` itself.
-    fn track_consts_for_any(&mut self, any: &Any<D>) {
+    fn track_consts_for_any(&mut self, any: &Any<D>) -> fmt::Result {
         match any.get_type() {
-            Type::Array => self.track_consts_for_array(any),
-            Type::Object => self.track_consts_for_object(any),
-            _ => {}
+            Type::Array | Type::Object => {
+                if !self.is_visited(any) {
+                    any.for_each::<fmt::Error>(|_k, v| self.track_consts_for_any(v))?;
+                }
+                Ok(())
+            }
+            _ => Ok(()),
         }
     }
 }
@@ -100,6 +70,7 @@ fn write_compound_const<D: Dealloc>(
     to_be_consts: &mut HashMap<Any<D>, Seen>,
     const_refs: &mut HashMap<Any<D>, usize>,
 ) -> fmt::Result {
+    any.for_each(|_k, v| write_consts_and_any(write_json, v, to_be_consts, const_refs))?;
     if to_be_consts.remove(any).is_some() {
         let id = const_refs.len();
         write_json.write_str("const _")?;
@@ -123,18 +94,7 @@ fn write_consts_and_any<D: Dealloc>(
     const_refs: &mut HashMap<Any<D>, usize>,
 ) -> fmt::Result {
     match any.get_type() {
-        Type::Array => {
-            let array = any.clone().try_move::<JsArrayRef<D>>().unwrap();
-            for i in array.items().iter() {
-                write_consts_and_any(write_json, i, to_be_consts, const_refs)?;
-            }
-            write_compound_const(write_json, any, to_be_consts, const_refs)?;
-        }
-        Type::Object => {
-            let object = any.clone().try_move::<JsObjectRef<D>>().unwrap();
-            for i in object.items().iter() {
-                write_consts_and_any(write_json, &i.1, to_be_consts, const_refs)?;
-            }
+        Type::Array | Type::Object => {
             write_compound_const(write_json, any, to_be_consts, const_refs)?;
         }
         _ => {}
@@ -209,7 +169,7 @@ pub trait WriteDjs: WriteJson {
         let mut const_tracker = ConstTracker {
             visited: HashMap::new(),
         };
-        const_tracker.track_consts_for_any(&any);
+        const_tracker.track_consts_for_any(&any)?;
         const_tracker
             .visited
             .retain(|_, seen| *seen == Seen::Repeatedly);

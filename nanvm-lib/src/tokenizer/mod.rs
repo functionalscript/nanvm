@@ -37,6 +37,7 @@ pub enum ErrorType {
     InvalidNumber,
     InvalidHex,
     MissingQuotes,
+    CommentClosingExpected,
 }
 
 #[derive(Default)]
@@ -57,6 +58,10 @@ enum TokenizerState {
     ParseExp(ExpState),
     ParseBigInt(IntegerState),
     ParseNewLine,
+    ParseCommentStart,
+    ParseSinglelineComment,
+    ParseMultilineComment,
+    ParseMultilineCommentAsterix,
 }
 
 impl TokenizerState {
@@ -76,6 +81,10 @@ impl TokenizerState {
             TokenizerState::ParseExpSign(s) | TokenizerState::ParseExp(s) => tokenize_exp(s, c),
             TokenizerState::ParseBigInt(s) => tokenize_big_int(s, c),
             TokenizerState::ParseNewLine => tokenize_new_line(c),
+            TokenizerState::ParseCommentStart => tokenize_comment_start(c),
+            TokenizerState::ParseSinglelineComment => tokenize_singleline_comment(c),
+            TokenizerState::ParseMultilineComment => tokenize_multiline_comment(c),
+            TokenizerState::ParseMultilineCommentAsterix => tokenize_multiline_comment_asterix(c),
         }
     }
 
@@ -87,12 +96,21 @@ impl TokenizerState {
 
     fn end(self) -> Vec<JsonToken> {
         match self {
-            TokenizerState::Initial | TokenizerState::ParseNewLine => default(),
+            TokenizerState::Initial
+            | TokenizerState::ParseNewLine
+            | TokenizerState::ParseSinglelineComment => default(),
             TokenizerState::ParseId(s) => [JsonToken::Id(s)].cast(),
             TokenizerState::ParseString(_)
             | TokenizerState::ParseEscapeChar(_)
             | TokenizerState::ParseUnicodeChar(_) => {
                 [JsonToken::ErrorToken(ErrorType::MissingQuotes)].cast()
+            }
+            TokenizerState::ParseCommentStart => {
+                [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast()
+            }
+            TokenizerState::ParseMultilineComment
+            | TokenizerState::ParseMultilineCommentAsterix => {
+                [JsonToken::ErrorToken(ErrorType::CommentClosingExpected)].cast()
             }
             TokenizerState::ParseZero(_) => [JsonToken::Number(default())].cast(),
             TokenizerState::ParseInt(s) => [s.into_token()].cast(),
@@ -319,7 +337,7 @@ const fn is_id_char(c: char) -> bool {
 
 fn is_terminal_for_number(c: char) -> bool {
     match c {
-        '"' => true,
+        '"' | '/' => true,
         c if is_white_space(c) => true,
         c if is_operator(c) => true,
         _ => false,
@@ -349,6 +367,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         c if is_id_start(c) => (default(), TokenizerState::ParseId(c.to_string())),
         c if is_new_line(c) => (default(), TokenizerState::ParseNewLine),
         c if is_white_space(c) => (default(), TokenizerState::Initial),
+        '/' => (default(), TokenizerState::ParseCommentStart),
         _ => (
             [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
             TokenizerState::Initial,
@@ -560,6 +579,39 @@ fn tokenize_new_line(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         c if is_white_space(c) => (default(), TokenizerState::ParseNewLine),
         _ => transfer_state([JsonToken::NewLine].cast(), TokenizerState::Initial, c),
+    }
+}
+
+fn tokenize_comment_start(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '/' => (default(), TokenizerState::ParseSinglelineComment),
+        '*' => (default(), TokenizerState::ParseMultilineComment),
+        _ => (
+            [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
+            TokenizerState::Initial,
+        ),
+    }
+}
+
+fn tokenize_singleline_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        c if is_new_line(c) => (default(), TokenizerState::ParseNewLine),
+        _ => (default(), TokenizerState::ParseSinglelineComment),
+    }
+}
+
+fn tokenize_multiline_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
+        _ => (default(), TokenizerState::ParseMultilineComment),
+    }
+}
+
+fn tokenize_multiline_comment_asterix(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '/' => (default(), TokenizerState::Initial),
+        '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
+        _ => (default(), TokenizerState::ParseMultilineComment),
     }
 }
 
@@ -1021,6 +1073,88 @@ mod test {
                 JsonToken::Dot,
                 JsonToken::Id(String::from("exports")),
                 JsonToken::Equals,
+            ]
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_singleline_comments() {
+        let result = tokenize(String::from("{//abc\n2\n}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::NewLine,
+                JsonToken::Number(2.0),
+                JsonToken::NewLine,
+                JsonToken::ObjectEnd,
+            ]
+        );
+
+        let result = tokenize(String::from("0//abc/*"));
+        assert_eq!(&result, &[JsonToken::Number(0.0),]);
+
+        let result = tokenize(String::from("0//"));
+        assert_eq!(&result, &[JsonToken::Number(0.0),]);
+
+        let result = tokenize(String::from("0/"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::Number(0.0),
+                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+            ]
+        );
+
+        let result = tokenize(String::from("0/a"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::Number(0.0),
+                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+            ]
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_multiline_comments() {
+        let result = tokenize(String::from("{/*abc\ndef*/2}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::Number(2.0),
+                JsonToken::ObjectEnd,
+            ]
+        );
+
+        let result = tokenize(String::from("{/*/* /**/2}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::Number(2.0),
+                JsonToken::ObjectEnd,
+            ]
+        );
+
+        let result = tokenize(String::from("{/*"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
+            ]
+        );
+
+        let result = tokenize(String::from("{/**"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
             ]
         );
     }

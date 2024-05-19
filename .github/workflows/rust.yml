@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - run: rustc --version
     - run: cargo clippy --all-targets --all-features -- -D warnings
 
   test:

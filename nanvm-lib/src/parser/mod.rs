@@ -133,6 +133,25 @@ pub enum ParseError {
     NewLineExpected,
 }
 
+// TODO: implement std::fmt::Display for ParseError instead of ToString - for now we suppress a
+// correspondent Clippy warning here locally.
+#[allow(clippy::to_string_trait_impl)]
+impl ToString for ParseError {
+    fn to_string(&self) -> String {
+        match self {
+            ParseError::UnexpectedToken => "UnexpectedToken".to_string(),
+            ParseError::UnexpectedEnd => "UnexpectedEnd".to_string(),
+            ParseError::WrongExportStatement => "WrongExportStatement".to_string(),
+            ParseError::WrongConstStatement => "WrongConstStatement".to_string(),
+            ParseError::WrongRequireStatement => "WrongRequireStatement".to_string(),
+            ParseError::WrongImportStatement => "WrongImportStatement".to_string(),
+            ParseError::CannotReadFile => "CannotReadFile".to_string(),
+            ParseError::CircularDependency => "CircularDependency".to_string(),
+            ParseError::NewLineExpected => "NewLineExpected".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Default, PartialEq)]
 pub enum DataType {
     #[default]
