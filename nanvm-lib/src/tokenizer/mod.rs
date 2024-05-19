@@ -37,6 +37,7 @@ pub enum ErrorType {
     InvalidNumber,
     InvalidHex,
     MissingQuotes,
+    CommentClosingExpected,
 }
 
 #[derive(Default)]
@@ -58,7 +59,9 @@ enum TokenizerState {
     ParseBigInt(IntegerState),
     ParseNewLine,
     ParseCommentStart,
-    ParseSingleLineComment,
+    ParseSinglelineComment,
+    ParseMultilineComment,
+    ParseMultilineCommentAsterix,
 }
 
 impl TokenizerState {
@@ -79,7 +82,9 @@ impl TokenizerState {
             TokenizerState::ParseBigInt(s) => tokenize_big_int(s, c),
             TokenizerState::ParseNewLine => tokenize_new_line(c),
             TokenizerState::ParseCommentStart => tokenize_comment_start(c),
-            TokenizerState::ParseSingleLineComment => tokenize_single_line_comment(c),
+            TokenizerState::ParseSinglelineComment => tokenize_singleline_comment(c),
+            TokenizerState::ParseMultilineComment => tokenize_multiline_comment(c),
+            TokenizerState::ParseMultilineCommentAsterix => tokenize_multiline_comment_asterix(c),
         }
     }
 
@@ -93,7 +98,7 @@ impl TokenizerState {
         match self {
             TokenizerState::Initial
             | TokenizerState::ParseNewLine
-            | TokenizerState::ParseSingleLineComment => default(),
+            | TokenizerState::ParseSinglelineComment => default(),
             TokenizerState::ParseId(s) => [JsonToken::Id(s)].cast(),
             TokenizerState::ParseString(_)
             | TokenizerState::ParseEscapeChar(_)
@@ -102,6 +107,10 @@ impl TokenizerState {
             }
             TokenizerState::ParseCommentStart => {
                 [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast()
+            }
+            TokenizerState::ParseMultilineComment
+            | TokenizerState::ParseMultilineCommentAsterix => {
+                [JsonToken::ErrorToken(ErrorType::CommentClosingExpected)].cast()
             }
             TokenizerState::ParseZero(_) => [JsonToken::Number(default())].cast(),
             TokenizerState::ParseInt(s) => [s.into_token()].cast(),
@@ -575,8 +584,8 @@ fn tokenize_new_line(c: char) -> (Vec<JsonToken>, TokenizerState) {
 
 fn tokenize_comment_start(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
-        '/' => (default(), TokenizerState::ParseSingleLineComment),
-        '*' => todo!(),
+        '/' => (default(), TokenizerState::ParseSinglelineComment),
+        '*' => (default(), TokenizerState::ParseMultilineComment),
         _ => (
             [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
             TokenizerState::Initial,
@@ -584,10 +593,25 @@ fn tokenize_comment_start(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_single_line_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_singleline_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
     match c {
         c if is_new_line(c) => (default(), TokenizerState::ParseNewLine),
-        _ => (default(), TokenizerState::ParseSingleLineComment),
+        _ => (default(), TokenizerState::ParseSinglelineComment),
+    }
+}
+
+fn tokenize_multiline_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
+        _ => (default(), TokenizerState::ParseMultilineComment),
+    }
+}
+
+fn tokenize_multiline_comment_asterix(c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        '/' => (default(), TokenizerState::Initial),
+        '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
+        _ => (default(), TokenizerState::ParseMultilineComment),
     }
 }
 
@@ -1055,7 +1079,7 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_single_line_comments() {
+    fn test_singleline_comments() {
         let result = tokenize(String::from("{//abc\n2\n}"));
         assert_eq!(
             &result,
@@ -1069,20 +1093,10 @@ mod test {
         );
 
         let result = tokenize(String::from("0//abc/*"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Number(0.0),
-            ]
-        );
+        assert_eq!(&result, &[JsonToken::Number(0.0),]);
 
         let result = tokenize(String::from("0//"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Number(0.0),
-            ]
-        );
+        assert_eq!(&result, &[JsonToken::Number(0.0),]);
 
         let result = tokenize(String::from("0/"));
         assert_eq!(
@@ -1099,6 +1113,48 @@ mod test {
             &[
                 JsonToken::Number(0.0),
                 JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+            ]
+        );
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_multiline_comments() {
+        let result = tokenize(String::from("{/*abc\ndef*/2}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::Number(2.0),
+                JsonToken::ObjectEnd,
+            ]
+        );
+
+        let result = tokenize(String::from("{/*/* /**/2}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::Number(2.0),
+                JsonToken::ObjectEnd,
+            ]
+        );
+
+        let result = tokenize(String::from("{/*"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
+            ]
+        );
+
+        let result = tokenize(String::from("{/**"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ObjectBegin,
+                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
             ]
         );
     }
