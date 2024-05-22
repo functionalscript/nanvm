@@ -138,21 +138,17 @@ pub enum ParseError {
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ParseError::UnexpectedToken => "UnexpectedToken",
-                ParseError::UnexpectedEnd => "UnexpectedEnd",
-                ParseError::WrongExportStatement => "WrongExportStatement",
-                ParseError::WrongConstStatement => "WrongConstStatement",
-                ParseError::WrongRequireStatement => "WrongRequireStatement",
-                ParseError::WrongImportStatement => "WrongImportStatement",
-                ParseError::CannotReadFile => "CannotReadFile",
-                ParseError::CircularDependency => "CircularDependency",
-                ParseError::NewLineExpected => "NewLineExpected",
-            }
-        )
+        f.write_str(match self {
+            ParseError::UnexpectedToken => "UnexpectedToken",
+            ParseError::UnexpectedEnd => "UnexpectedEnd",
+            ParseError::WrongExportStatement => "WrongExportStatement",
+            ParseError::WrongConstStatement => "WrongConstStatement",
+            ParseError::WrongRequireStatement => "WrongRequireStatement",
+            ParseError::WrongImportStatement => "WrongImportStatement",
+            ParseError::CannotReadFile => "CannotReadFile",
+            ParseError::CircularDependency => "CircularDependency",
+            ParseError::NewLineExpected => "NewLineExpected",
+        })
     }
 }
 
