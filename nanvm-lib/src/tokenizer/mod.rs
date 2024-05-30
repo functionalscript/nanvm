@@ -62,6 +62,7 @@ enum TokenizerState {
     ParseSinglelineComment,
     ParseMultilineComment,
     ParseMultilineCommentAsterix,
+    ParseOperator(String),
 }
 
 impl TokenizerState {
@@ -85,6 +86,7 @@ impl TokenizerState {
             TokenizerState::ParseSinglelineComment => tokenize_singleline_comment(c),
             TokenizerState::ParseMultilineComment => tokenize_multiline_comment(c),
             TokenizerState::ParseMultilineCommentAsterix => tokenize_multiline_comment_asterix(c),
+            TokenizerState::ParseOperator(s) => tokenize_operator(s, c),
         }
     }
 
@@ -123,6 +125,7 @@ impl TokenizerState {
             | TokenizerState::ParseExpSign(_) => {
                 [JsonToken::ErrorToken(ErrorType::InvalidNumber)].cast()
             }
+            TokenizerState::ParseOperator(s) => [operator_to_token(s).unwrap()].cast(),
         }
     }
 }
@@ -303,22 +306,25 @@ const fn is_white_space(c: char) -> bool {
 }
 
 fn is_operator(c: char) -> bool {
-    to_operator(c).is_some()
+    matches!(
+        c,
+        '{' | '}' | '[' | ']' | ':' | ',' | '=' | '.' | ';' | '(' | ')'
+    )
 }
 
-const fn to_operator(c: char) -> Option<JsonToken> {
-    match c {
-        '{' => Some(JsonToken::ObjectBegin),
-        '}' => Some(JsonToken::ObjectEnd),
-        '[' => Some(JsonToken::ArrayBegin),
-        ']' => Some(JsonToken::ArrayEnd),
-        ':' => Some(JsonToken::Colon),
-        ',' => Some(JsonToken::Comma),
-        '=' => Some(JsonToken::Equals),
-        '.' => Some(JsonToken::Dot),
-        ';' => Some(JsonToken::Semicolon),
-        '(' => Some(JsonToken::OpeningParenthesis),
-        ')' => Some(JsonToken::ClosingParenthesis),
+fn operator_to_token(s: String) -> Option<JsonToken> {
+    match s.as_str() {
+        "{" => Some(JsonToken::ObjectBegin),
+        "}" => Some(JsonToken::ObjectEnd),
+        "[" => Some(JsonToken::ArrayBegin),
+        "]" => Some(JsonToken::ArrayEnd),
+        ":" => Some(JsonToken::Colon),
+        "," => Some(JsonToken::Comma),
+        "=" => Some(JsonToken::Equals),
+        "." => Some(JsonToken::Dot),
+        ";" => Some(JsonToken::Semicolon),
+        "(" => Some(JsonToken::OpeningParenthesis),
+        ")" => Some(JsonToken::ClosingParenthesis),
         _ => None,
     }
 }
@@ -353,10 +359,8 @@ fn start_number(s: Sign, c: char) -> IntegerState {
 }
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    if let Some(t) = to_operator(c) {
-        return ([t].cast(), TokenizerState::Initial);
-    }
     match c {
+        c if is_operator(c) => (default(), TokenizerState::ParseOperator(c.to_string())),
         '1'..='9' => (
             default(),
             TokenizerState::ParseInt(start_number(Sign::Positive, c)),
@@ -612,6 +616,30 @@ fn tokenize_multiline_comment_asterix(c: char) -> (Vec<JsonToken>, TokenizerStat
         '/' => (default(), TokenizerState::Initial),
         '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
         _ => (default(), TokenizerState::ParseMultilineComment),
+    }
+}
+
+fn tokenize_operator(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    match c {
+        c if is_operator(c) => {
+            let mut next_string = s.clone();
+            next_string.push(c);
+            match operator_to_token(next_string) {
+                Some(_) => {
+                    let mut next_string = s.clone();
+                    next_string.push(c);
+                    (default(), TokenizerState::ParseOperator(next_string))
+                }
+                _ => {
+                    let token = operator_to_token(s).unwrap();
+                    transfer_state([token].cast(), TokenizerState::Initial, c)
+                }
+            }
+        }
+        _ => {
+            let token = operator_to_token(s).unwrap();
+            transfer_state([token].cast(), TokenizerState::Initial, c)
+        }
     }
 }
 
