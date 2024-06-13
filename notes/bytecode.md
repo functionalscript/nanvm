@@ -8,7 +8,10 @@ interpreter’s parameters now on). It’s interesting to run a set of benchmark
 footprint – without sacrificing speed).
 
 “Bytecode” instructions are placed in one continuous array – not necessarily an array of bytes.
-We might get performance benefits from using a 2-byte or 4-byte or 8-byte instruction word.
+We might get performance benefits from using a 2-byte or 4-byte or 8-byte instruction word. We plan
+to use 8-byte instruction word model because some instructions contain pointers. With that mode
+an instruction that does not contain a pointer has an extra in-instruction space that might be used
+for optimizations (more on that below).
 
 The interpreter maintains an instruction pointer (IP) index in the bytecode array. “Call”, "return"
 and “jump” instructions operate on the IP value, while after execution of other instructions the
@@ -73,6 +76,20 @@ Yes we can implement this optimization – that by the way unifies calling conve
 intrinsic calls – from day one. The cost to pay is – all references of ‘arguments’ in a JS function
 compile to special bytecode instructions that are hard-coded in the interpreter (as intrinsics,
 most likely). This looks like a reasonable price to pay.
+
+We plan to benchmark an optimization of the intrinsic call instruction that capitalizes on unused
+bytes of instruction's 8-byte word - using a more complicated calling convention (that is applicable
+to intrinsics only). Since the interpreter implements both sides of an intrinsic call, it can use
+these bytes for
+- a constant parameter of an operation intrinsic - as in “add 42” where 42 is placed in the
+call-intrinsic-add instruction, while the other argument is at the top of the stack;
+- indirect references of local variables as in “add C2 C4” that sums the second-from-top cell with
+the fourth-from-top cell;
+- an indirect reference of a local variable where the result will be stored (instead of storing it at
+the top of the stack) as in “add -> C3”;
+- a combination of options listed above as in “add C2 42 -> C3”. In that encoding, use of the standard
+calling convention could be expressed as “add C0 C0 -> C0”, meaning: “pop one argument from the stack,
+pop another argument from the stack, push the result to the stack”.
 
 ### Intrinsic and IntrinsicContext traits
 
