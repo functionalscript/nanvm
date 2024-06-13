@@ -53,9 +53,9 @@ aside, it might make sense to allocate a JS array of parameters each time a byte
 That array is placed as the Any cell on the top of the data stack; the callee bytecode access that
 top cell to read parameters. That array corresponds to JS’s ‘arguments’ array; so, we create a
 single-element array when one argument is passed – because the callee might refer to that single
-argument not by its parameter name, but as ‘arguments[0]’. Even when any indexing ‘arguments’ raises
-an exception in case when there are no arguments, a zero-length array at the top of the stack is
-needed in this model, allowing the callee to access ‘arguments’ functions like ‘length’.
+argument not by its parameter name, but as ‘arguments[0]’. When no arguments are passed, any
+indexing of ‘arguments’ raises an exception, yet still we need to create a zero-length parameter
+array in this case too,  allowing the callee to access ‘arguments’ functions like ‘length’.
 
 However, since we plan to implement even simple arithmetic operations as intrinsics, it makes sense
 to have a more efficient calling convention for intrinsics (expressed via a pair of traits: an
