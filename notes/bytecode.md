@@ -9,7 +9,7 @@ footprint – without sacrificing speed).
 
 “Bytecode” instructions are placed in one continuous array – not necessarily an array of bytes.
 We might get performance benefits from using a 2-byte or 4-byte or 8-byte instruction word. We plan
-to use 8-byte instruction word model because some instructions contain pointers. With that mode
+to use the 8-byte instruction word model because some instructions contain pointers. With that mode
 an instruction that does not contain a pointer has an extra in-instruction space that might be used
 for optimizations (more on that below).
 
