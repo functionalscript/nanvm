@@ -4,8 +4,8 @@ This note discusses ideas for initial NaNVM’s bytecode specification and bytec
 
 We aim for a simple initial implementation that is parametrized by a set of options (that we name
 interpreter’s parameters now on). It’s interesting to run a set of benchmarks varying these parameters
-– to get insights on promising areas of improvements (to increase speed and them memory footprint –
-without sacrificing speed).
+– to get insights on promising areas of improvements (to increase speed and then to reduce memory
+footprint – without sacrificing speed).
 
 “Bytecode” instructions are placed in one continuous array – not necessarily an array of bytes.
 We might get performance benefits from using a 2-byte or 4-byte or 8-byte instruction word.
