@@ -1,4 +1,4 @@
-I think we should start with the current DJS file. We can assume that one DJS file is a function that returns an objects. If we skip `imports` we can see that it looks like a body of the function:
+I think we should start with the current DJS file. We can assume that one DJS file is a function that returns an object. If we skip `import` statements, we can see that it looks like a body of the function:
 
 ```js
 const a = "a"
@@ -6,8 +6,9 @@ const b = 3
 export default { a, b }
 ```
 
-can be seen as 
-```
+can be seen as
+
+```js
 const f = () => {
     const a = "a"
     const b = 3
@@ -15,3 +16,5 @@ const f = () => {
 }
 export default f()
 ```
+
+So, a minimal function contains multiple sequential statements and a `return` statement at the end. Each statement creates a named constant.
