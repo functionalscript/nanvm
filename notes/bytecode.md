@@ -7,15 +7,35 @@ interpreter’s parameters now on). It’s interesting to run a set of benchmark
 – to get insights on promising areas of improvements (to increase speed and then to reduce memory
 footprint – without sacrificing speed).
 
-“Bytecode” instructions are placed in one continuous array – not necessarily an array of bytes.
-We might get performance benefits from using a 2-byte or 4-byte or 8-byte instruction word. We plan
-to use the 8-byte instruction word model because some instructions contain pointers. With that mode
-an instruction that does not contain a pointer has an extra in-instruction space that might be used
-for optimizations (more on that below).
+Our bytecode is stack-based (as opposite to register-based).
 
-The interpreter maintains an instruction pointer (IP) index in the bytecode array. “Call”, "return"
-and “jump” instructions operate on the IP value, while after execution of other instructions the
-interpreter increments the IP to proceed to the next instruction.
+“Bytecode” instructions are placed in one continuous array. The interpreter maintains an instruction
+pointer (IP) index in the bytecode array. “Call”, "return" and “jump” instructions operate on the IP
+value explicitly, while after execution of other instructions the interpreter moves the IP to
+proceed to the next instruction implicitly.
+
+The bytecode array is not necessarily an array of bytes. We might get performance benefits from
+using a 2-byte or 4-byte or 8-byte instruction word.
+
+One option is to use the 8-byte instruction word model because some instructions might contain
+pointers. In that model an instruction that does not contain a pointer has an extra in-instruction
+space that might be used for optimizations (more on that below).
+
+Another option is - let's avoid storing pointers in bytecode instructions since that makes bytecode
+less persistent. Consider a model when a NaNVM engine loads a compound to evaluate - starting from
+a root object. Upon loading, the engine pushes that one and only root object pointer to the stack,
+then executes immediate bytecode off that initial VM state (akin to execution of “main”). In this
+scheme, the bytecode does not need to have any pointers in it: the “main” function analogue can rely
+on the root object at the top of the stack, and any pointers used in the process are produced
+dynamically (stored on the stack) – and thus should not be in the bytecode. One benefit on that
+pointer-less bytecode strategy is - in absence of pointers, a hash of a compiled bytecode snippet is
+akin to a hash of any other content-addressable data.
+
+If we proceed with this pointer-less strategy, we should stick with a variable-length bytecode
+scheme most likely. In that scheme the VM starts interpreting an instruction from its first byte,
+deciding on what of following bytes belong to the same instruction (moving the IP accordingly). That
+scheme yields a more compact and platform-independent bytecode (compared with longer-word fixed-size
+instruction schemes).
 
 There are two different kinds of call instructions: bytecode function calls and native function calls.
 Native functions, in turn, are either interpreter’s “intrinsics” or foreign functions implemented
@@ -23,8 +43,6 @@ outside of the interpreter (they are provided by interpreter’s host). For the 
 initial interpreter implementation uses intrinsic calls pervasively, even for arithmetic operations.
 
 ### On interpreter's stack(s)
-
-Our bytecode is stack-based (as opposite to register-based).
 
 It makes sense to implement interpreter’s data stack (to store function call parameters, local
 variables, returned values) as an indexed collection of Any-s (let’s name an element of that
@@ -57,8 +75,8 @@ That array is placed as the Any cell on the top of the data stack; the callee by
 top cell to read parameters. That array corresponds to JS’s ‘arguments’ array; so, we create a
 single-element array when one argument is passed – because the callee might refer to that single
 argument not by its parameter name, but as ‘arguments[0]’. When no arguments are passed, any
-indexing of ‘arguments’ raises an exception, yet still we need to create a zero-length parameter
-array in this case too,  allowing the callee to access ‘arguments’ functions like ‘length’.
+indexing of ‘arguments’ produces an ‘undefined’ value, yet still we need to create a zero-length
+parameter array in this case too, allowing the callee to access ‘arguments’ functions like ‘length’.
 
 However, since we plan to implement even simple arithmetic operations as intrinsics, it makes sense
 to have a more efficient calling convention for intrinsics (expressed via a pair of traits: an
@@ -78,7 +96,8 @@ compile to special bytecode instructions that are hard-coded in the interpreter 
 most likely). This looks like a reasonable price to pay.
 
 We plan to benchmark an optimization of the intrinsic call instruction that capitalizes on unused
-bytes of instruction's 8-byte word - using a more complicated calling convention (that is applicable
+bytes of instruction's 8-byte word (if we choose 8-byte instruction scheme and not a variable-length
+instruction scheme) - using a more complicated calling convention (that is applicable
 to intrinsics only). Since the interpreter implements both sides of an intrinsic call, it can use
 these bytes for
 - a constant parameter of an operation intrinsic - as in “add 42” where 42 is placed in the
