@@ -50,7 +50,7 @@ export default { a, b }
 
 will be parsed as
 
-```
+```js
 import m from "module.cjs"
 export default () => {
     const a = "a" 
