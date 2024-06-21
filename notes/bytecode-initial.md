@@ -38,3 +38,23 @@ export default () => {
     return { a, b }
 }()
 ```
+
+It should help as to introduce more complicated expressions into DJS. For example, this DJS code:
+
+```js
+import m from "module.cjs"
+const a = "a" 
+const b = [3 + 4, m[12 - 6]]
+export default { a, b }
+```
+
+will be parsed as
+
+```
+import m from "module.cjs"
+export default () => {
+    const a = "a" 
+    const b = [3 + 4, m[12 - 6]]
+    return { a, b }
+}
+```
