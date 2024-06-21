@@ -62,9 +62,9 @@ export default () => {
 Actually, it's more like this:
 
 ```js
-import _0 from "module.cjs"
+import moduleCjs from "module.cjs"
 export default () => {
-    const m = _0
+    const m = moduleCjs
     const a = "a" 
     const b = [3 + 4, m[12 - 6]]
     return { a, b }
