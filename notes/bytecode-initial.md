@@ -30,7 +30,7 @@ export default { a, b }
 
 will be interpreted as
 
-```
+```js
 import m from "module.cjs"
 export default () => {
     const a = "a"
