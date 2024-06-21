@@ -18,3 +18,23 @@ export default f()
 ```
 
 So, a minimal function contains multiple sequential statements and a `return` statement at the end. Each statement creates a named constant.
+
+`import` should be outside the scope of the function.
+
+```js
+import m from "module.cjs"
+const a = "a"
+const b = [3, m]
+export default { a, b }
+```
+
+will be interpreted as
+
+```
+import m from "module.cjs"
+export default () => {
+    const a = "a"
+    const b = [3, m]
+    return { a, b }
+}()
+```
