@@ -56,5 +56,5 @@ export default () => {
     const a = "a" 
     const b = [3 + 4, m[12 - 6]]
     return { a, b }
-}
+}()
 ```
