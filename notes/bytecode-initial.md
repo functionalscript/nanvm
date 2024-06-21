@@ -58,3 +58,15 @@ export default () => {
     return { a, b }
 }()
 ```
+
+Actually, it's more like this:
+
+```js
+import global["module.cjs"] from "module.cjs"
+export default () => {
+    const m = global["module.cjs"]
+    const a = "a" 
+    const b = [3 + 4, m[12 - 6]]
+    return { a, b }
+}()
+```
