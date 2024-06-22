@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Display,
+};
 
 use io_trait::Io;
 
@@ -131,6 +134,22 @@ pub enum ParseError {
     CannotReadFile,
     CircularDependency,
     NewLineExpected,
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ParseError::UnexpectedToken => "UnexpectedToken",
+            ParseError::UnexpectedEnd => "UnexpectedEnd",
+            ParseError::WrongExportStatement => "WrongExportStatement",
+            ParseError::WrongConstStatement => "WrongConstStatement",
+            ParseError::WrongRequireStatement => "WrongRequireStatement",
+            ParseError::WrongImportStatement => "WrongImportStatement",
+            ParseError::CannotReadFile => "CannotReadFile",
+            ParseError::CircularDependency => "CircularDependency",
+            ParseError::NewLineExpected => "NewLineExpected",
+        })
+    }
 }
 
 #[derive(Debug, Default, PartialEq)]
