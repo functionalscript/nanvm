@@ -61,13 +61,20 @@ where
                         });
                         next_a = Some(value_a);
                         next_b = b.next();
-                    } else {
+                    } else if value_a.to < value_b.to {
                         res.push(Entry {
                             value,
                             to: value_a.to,
                         });
                         next_a = a.next();
                         next_b = Some(value_b);
+                    } else {
+                        res.push(Entry {
+                            value,
+                            to: value_a.to,
+                        });
+                        next_a = a.next();
+                        next_b = b.next();
                     }
                 }
                 None => {

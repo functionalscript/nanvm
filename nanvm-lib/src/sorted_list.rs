@@ -1,4 +1,4 @@
-use crate::common::default::default;
+use crate::{common::default::default, range_map::Union};
 
 pub struct SortedList<T>
 where
@@ -6,6 +6,12 @@ where
 {
     pub list: Vec<T>,
 }
+
+// impl<T> Union for SortedList<T> where T: PartialOrd {
+//     fn union(&self, other: &Self) -> Self {
+//         merge(self, other)
+//     }
+// }
 
 pub fn merge<T>(a: SortedList<T>, b: SortedList<T>) -> SortedList<T>
 where
