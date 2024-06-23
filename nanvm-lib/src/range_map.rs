@@ -1,77 +1,69 @@
-use std::ops::Range;
-
 use crate::common::default::default;
 
-pub struct Entry<T, Num>
+pub struct Entry<Num, T>
 where
     Num: PartialOrd,
 {
+    pub key: Num,
     pub value: T,
-    pub to: Num,
 }
 
-pub struct RangeMap<T, Num>
+pub struct RangeMap<Num, T>
 where
     Num: PartialOrd,
 {
-    pub list: Vec<Entry<T, Num>>,
+    pub list: Vec<Entry<Num, T>>,
 }
 
-pub trait Union<T = Self> {
-    fn union(&self, other: &T) -> T;
+pub trait Union {
+    fn union(self, other: Self) -> Self;
 }
 
-// impl RangeMap<T, Num> where Num: PartialOrd {
-
-// }
-
-pub fn merge<Num>(_a: Range<Num>, _b: Range<Num>) {
-    todo!()
-}
-
-pub fn range_merge<T, Num>(a: RangeMap<T, Num>, b: RangeMap<T, Num>) -> RangeMap<T, Num>
+pub fn merge<Num, T>(a: RangeMap<Num, T>, b: RangeMap<Num, T>) -> RangeMap<Num, T>
 where
     T: Union,
+    T: Clone,
     Num: PartialOrd,
 {
     let list = merge_iter(a.list.into_iter(), b.list.into_iter());
     RangeMap { list }
 }
 
-pub fn merge_iter<T, Num>(
-    mut a: impl Iterator<Item = Entry<T, Num>>,
-    mut b: impl Iterator<Item = Entry<T, Num>>,
-) -> Vec<Entry<T, Num>>
+pub fn merge_iter<Num, T>(
+    mut a: impl Iterator<Item = Entry<Num, T>>,
+    mut b: impl Iterator<Item = Entry<Num, T>>,
+) -> Vec<Entry<Num, T>>
 where
     T: Union,
+    T: Clone,
     Num: PartialOrd,
 {
-    let mut res: Vec<Entry<T, Num>> = default();
+    let mut res: Vec<Entry<Num, T>> = default();
     let mut next_a = a.next();
     let mut next_b = b.next();
     loop {
         match next_a {
             Some(value_a) => match next_b {
                 Some(value_b) => {
-                    let value = value_a.value.union(&value_b.value);
-                    if value_a.to > value_b.to {
+                    let value = value_a.value.clone().union(value_b.value.clone());
+                    if value_a.key > value_b.key {
                         res.push(Entry {
                             value,
-                            to: value_b.to,
+                            key: value_b.key,
                         });
                         next_a = Some(value_a);
                         next_b = b.next();
-                    } else if value_a.to < value_b.to {
+                    } else if value_a.key < value_b.key {
                         res.push(Entry {
                             value,
-                            to: value_a.to,
+                            key: value_a.key,
                         });
                         next_a = a.next();
                         next_b = Some(value_b);
                     } else {
                         res.push(Entry {
                             value,
-                            to: value_a.to,
+                            key: value_a.key,
                         });
                         next_a = a.next();
                         next_b = b.next();
