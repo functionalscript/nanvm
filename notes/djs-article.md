@@ -6,3 +6,5 @@ Let's take a random motivating example of a "JSON+" data format: a [JSON Templat
 In this article we lay down a vendor-agnostic approach for extending JSON with long-time wished-for features expressed in a historically well-known syntax that is familiar and thus natural to human users. We name it Data JS. Please let me explain how exactly Data JS tries to avoid common pitfalls of prior JSON extensions - the key point here is: Data JS does not introduce any new language at all.
 
 Let's consider what JSON pain points do we want to address with Data JS, and - by what means (spoiler: there will be no special meanings of a dollar sign, or a hash sign, or of any other funny symbol!).
+
+What is the point of view in focus of this consideration, "who are 'we'?" in here? From a point of view of my prior "generalist" programmer, I'll elaborate on that below. My personal background involves decades of system-level C/C++ programming, with quite a dash of JS / TypeScript on top of that.
