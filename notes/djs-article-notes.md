@@ -9,7 +9,7 @@ Explain the cost of unmitigated redundancy.
 Data as a DAG of objects, not a tree of objects.
 Const definitions / usage.
 Modules. Mention both .cjs and .mjs.
-Plus, a brief one-paragraph list of commonly-used JSON relaxations / enhancements (JSON5 etc.) that make JSON more human-friendly. What we suggest with JS Data is to introduce a bit more programmer-friendly data+code language.
+Here goes a brief one-paragraph list of commonly-used JSON relaxations / enhancements (JSON5 etc.) that make JSON more human-friendly. What we introduce with JS Data is - a bit more programmer-friendly data+code language that is a subset, not a superset of well-known languages (JSON and JS).
 ### On embedding code in data - JS as the best JSON friend
 Show a couple of examples of niche ad-hoc DSL-s embedded in JSON values (e.g. Azure templates; JSON Schema).
 Embracing a well-controlled subset of JS in Data JS is a straight continuation of the const / modules line discussed above.
@@ -19,10 +19,11 @@ Data JS's MVP is a build-time preprocessing system that allows to
 1. generate vanilla JSON out of well-structured .djs source code;
 2. provide a playground for mixed well-controlled compile-time / run-time execution environments (bridging to Functional Script);
 3. revisit tree-shaking / bundling functionality of JS dev stacks.
+Mention Zig model of unifying compile time, run time syntax under same core language umbrella - that is what Data JS shoots for as well.
 ### On importance of controlled execution of code in Data JS
-Embracing a wide range of JS features in Data JS opens a floodgate of security and performance issues. Thus we don't "step down JS", we step up JSON with well-controlled computation enhancements.
+Embracing a wide range of JS features in Data JS opens a floodgate of security and performance issues. Thus we don't "step down JS", we step up JSON with well-controlled computational enhancements.
 ### What do we have as of now?
-We have code for Data JS serialization and deserialization that supports modules and const-s, accompanied with popular minor JSON syntax relaxations. Our next MVP goal is - enabling JS expression in values, supporting a limited subset of JS runtime functions.
+We have Rust code for Data JS serialization and deserialization that supports modules and const-s, accompanied with popular minor JSON syntax relaxations. Our next MVP goal is - enabling JS expression in values, supporting a limited subset of JS runtime functions.
 ### What do we plan?
-We plan to gradually bridge bottom-to-top Data JS with FunctionalScript.
+We plan to gradually bridge - bottom-to-top - Data JS with FunctionalScript.
 
