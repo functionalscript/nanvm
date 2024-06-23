@@ -63,7 +63,34 @@ where
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
+    use crate::sorted_list::SortedList;
+
+    use super::merge;
+
     #[test]
     #[wasm_bindgen_test]
-    fn test() {}
+    fn test() {
+        let a = SortedList {
+            list: [2, 3, 4].to_vec(),
+        };
+        let b = SortedList {
+            list: [1, 3, 5].to_vec(),
+        };
+        let result = merge(a, b);
+        assert_eq!(result.list, [1, 2, 3, 4, 5].to_vec());
+
+        let a = SortedList {
+            list: [1, 2, 3].to_vec(),
+        };
+        let b = SortedList { list: [].to_vec() };
+        let result = merge(a, b);
+        assert_eq!(result.list, [1, 2, 3].to_vec());
+
+        let a = SortedList { list: [].to_vec() };
+        let b = SortedList {
+            list: [1, 2, 3].to_vec(),
+        };
+        let result = merge(a, b);
+        assert_eq!(result.list, [1, 2, 3].to_vec());
+    }
 }
