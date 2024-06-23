@@ -7,4 +7,4 @@ In this article we lay down a vendor-agnostic approach for extending JSON with l
 
 Let's consider what JSON pain points do we want to address with Data JS, and - by what means (spoiler: there will be no special meanings of a dollar sign, or a hash sign, or of any other funny symbol!).
 
-What is the point of view in focus of this consideration, "who are 'we'?" in here? From a point of view of my prior "generalist" programmer, I'll elaborate on that below. My personal background involves decades of system-level C/C++ programming, with quite a dash of JS / TypeScript on top of that.
+What is the point of view in focus of this consideration, "who are 'we'?" in here? From a point of view of my prior "generalist" programmer's experience, I'll elaborate on that below. My personal background involves decades of a system-level C/C++ programming, with quite a dash of JS / TypeScript on top of that.
