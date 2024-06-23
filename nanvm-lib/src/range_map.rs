@@ -95,7 +95,5 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test() {
-        
-    }
+    fn test() {}
 }
