@@ -5,4 +5,4 @@ Let's take a random motivating example of a "JSON+" data format: a [JSON Templat
 
 In this article we lay down a vendor-agnostic approach for extending JSON with long-time wished-for features expressed in a historically well-known syntax that is familiar and thus natural to human users (that we name "JS" for good reasons - please keep reading!).
 
-We name it Data JS. Let's consider what JSON pain points do we want to address, and in what means (spoiler: there will be no dollar, hash, and and any other funny symbols!).
+We name it Data JS. Let's consider what JSON pain points do we want to address, and in what means (spoiler: there will be no dollar sign, hash sign, and and any other funny symbols!).
