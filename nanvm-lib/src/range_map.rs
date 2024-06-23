@@ -29,12 +29,13 @@ pub fn merge<Num>(_a: Range<Num>, _b: Range<Num>) {
     todo!()
 }
 
-pub fn range_merge<T, Num>(_a: RangeMap<T, Num>, _b: RangeMap<T, Num>)
+pub fn range_merge<T, Num>(a: RangeMap<T, Num>, b: RangeMap<T, Num>) -> RangeMap<T, Num>
 where
     T: Union,
     Num: PartialOrd,
 {
-    todo!()
+    let list = merge_iter(a.list.into_iter(), b.list.into_iter());
+    RangeMap { list }
 }
 
 pub fn merge_iter<T, Num>(
@@ -86,4 +87,15 @@ where
         }
     }
     res
+}
+
+#[cfg(test)]
+mod test {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test() {
+        
+    }
 }
