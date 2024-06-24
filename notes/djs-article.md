@@ -1,15 +1,14 @@
 ## Addressing JSON pain points via Data JS
 
-JSON serves as the universal language for data exchange, but it has known limitations. These have been tackled by general-purpose alternatives like [JSON5](https://json5.org/) and [Hjson](https://github.com/hjson/hjson-js), as well as custom enhancements in problem-specific systems.
+JSON serves as the universal language for data exchange, but it has known limitations. These have been tackled by general-purpose extensions like [JSON5](https://json5.org/) and [Hjson](https://github.com/hjson/hjson-js), as well as custom extensions in problem-specific systems.
 
 In this article we describe a promising new approach on extending JSON - that avoids common pitfalls. Let’s delve into a couple of motivating examples of ‘JSON+’ data formats.
 
 [JSON Template Engine](https://github.com/vmware-archive/json-template-engine/blob/master/templating/README.md):
-This tool allows referencing JSON entities within the same or other .json files and performing limited computations.
-allows to reference JSON entities in same or other .json file and perform
-limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` earlier in the data,
-`"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax to wrap a JS-like term).
-A more complicated example,
+This tool allows referencing JSON entities within the same or other .json files and
+performing limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` earlier in
+the data, `"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax to wrap a JS-like
+term). A more complicated example,
 `["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects parametrized
 content of another .json template (using `#` syntax to specify a predefined processing
 function). Despite its relative obscurity, this project provides expressive computation
@@ -42,8 +41,8 @@ building problem-oriented applications by bridging to various ‘host environmen
 Data JS addresses several key points:
 - It eliminates data redundancy through `const` declarations.
 - It enables modular data structuring via cross-file references, using syntax that is
-well-familiar to JavaScript users; 
-- It allows load-time computations sing JavaScript syntax, plus delayed "run-time"
+well-familiar to JavaScript users. 
+- It allows load-time computations using JavaScript syntax, plus delayed ‘run-time’
 computations in a host environment.
 - Despite its expressiveness, Data JS maintains security and efficiently manages 
 load-time resource consumption (CPU cycles/memory). Our reference Data JS
@@ -54,7 +53,11 @@ implementation performs computations within a strict sandboxed environment.
 Code duplication, often referred to as ‘copy and paste programming,’ is an infamous
 anti-pattern. To mitigate this, we modularize our programs and factor out repeated code.
 
-To address data duplication (or excessive data ‘copy and paste’), Data JS leverages JavaScript’s `const` declaration and standard modularization techniques (either CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript syntax. Consider the following example from `test.d.mjs` (where the `.d` sub-extension denotes Data JS content):
+To address data duplication (or excessive data ‘copy and paste’), Data JS leverages
+JavaScript’s `const` declaration and standard modularization techniques (either
+CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript
+syntax. Consider the following example from `test.d.mjs` (where the `.d` sub-extension
+denotes Data JS content):
 
 ```js
 import m from "my_module.d.mjs"
@@ -67,13 +70,15 @@ export default { foo: [a, b], bar: b }
 In this snippet, a data entity imported from `my_module.d.mjs` is referred as `m`.
 When other data entities are used multiple times, defining them via `const`
 declarations eliminates redundancy. The `test.d.mjs` exports exactly one data entity
-for external usage. Notably, Data JS implements commonly used JSON relaxations (as demonstrated in the snippet with comments and non-quoted identifiers as keys).
+for external usage. Notably, Data JS implements commonly used JSON relaxations (as
+demonstrated in the snippet with comments and non-quoted identifiers as keys).
 
 Data JS employs relative paths in `import` statements, forming a directed acyclic graph
 of interconnected modules. Upon loading and processing, the resulting data graph can be
 saved in vanilla JSON format (which may be bloated due to loss of deduplication
 benefits) or as a bundled singular `.d.mjs` file. In both cases, the output excludes
-data that are not referred to from the root data object — akin to the “tree-shaking” capabilities of JS bundlers.
+data that are not referred to from the root data object — akin to the “tree-shaking”
+capabilities of JS bundlers.
 
 
 ### Load-time computations
@@ -84,10 +89,12 @@ JS supports a well-defined subset of ECMAScript, including standard operators an
 functions (referred to as the ‘standard JS prelude’ below).
 
 As we enhance the capabilities of our reference implementation of Data JS, we plan to:
-- Extend the standard JS prelude with custom external pre-defined objects and functions (creating a ‘host environment’).
-- Introduce user-defined functions that Data JS executes in a well-controlled manner.
+- Allow to extend the standard JS prelude with custom external pre-defined objects and
+functions (creating a ‘host environment’).
+- Support user-defined functions that Data JS executes in a well-controlled manner.
 
-These enhancements bridge Data JS to [FunctionalScript](https://medium.com/@sergeyshandar/list/functional-programming-in-javascript-495efca5536a).
+These enhancements bridge Data JS to
+[FunctionalScript](https://medium.com/@sergeyshandar/list/functional-programming-in-javascript-495efca5536a).
 Loaded Data JS datasets containing user-defined functions form an in-memory structured
 code + data compound that operates on the host environment ‘at run time’ (in contrast
 to code executed ‘at load time’).
