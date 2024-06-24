@@ -130,4 +130,5 @@ As part of NaNVM’s stress-testing and development, we intend to port some of t
 Rust-based NaNVM code to FunctionalScript. In this model, the NaNVM Rust core serves as
 the host environment, and FunctionalScript NaNVM code calls into the core as necessary.
 
-We intend to share future progress on the NaNVM project and delve into its design details in upcoming articles.
+We intend to share future progress on the NaNVM project and delve into its design
+details in upcoming articles.
