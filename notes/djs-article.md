@@ -116,9 +116,10 @@ exceed built-in restrictions.
 Upon successful completion of a load session, the host system can serialize the
 resulting Data JS compound for future reuse. Subsequent re-loading of such a ‘saved
 snapshot’ is quicker and requires less memory compared to the initial loading, which
-involved JavaScript code compilation and load-time execution. This process is somewhat
-analogous to the
-[build-time initialization feature of Graal VM](https://www.graalvm.org/latest/reference-manual/native-image/optimizations-and-performance/ClassInitialization/#build-time-initialization).
+involved JavaScript code compilation and load-time execution. This model is somewhat
+analogous to
+[CRaC (Coordinated Restore at Checkpoint)](https://docs.azul.com/core/crac/crac-introduction)
+technology in Java world.
 
 ### Current status of Data JS
 
