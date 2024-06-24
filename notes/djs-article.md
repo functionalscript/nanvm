@@ -1,8 +1,13 @@
 ## Addressing JSON pain points via Data JS
 
-JSON serves as the universal language for data exchange, but it has known limitations. These have been tackled by general-purpose extensions like [JSON5](https://json5.org/) and [Hjson](https://github.com/hjson/hjson-js), as well as custom extensions in problem-specific systems.
+JSON serves as the universal language for data exchange, but it has known limitations.
+These have been tackled by general-purpose extensions like
+[JSON5](https://json5.org/) and [Hjson](https://github.com/hjson/hjson-js), as well as
+custom extensions in problem-specific systems.
 
-In this article we describe a promising new approach on extending JSON - that avoids common pitfalls. Let’s delve into a couple of motivating examples of ‘JSON+’ data formats.
+In this article we describe a promising new approach on extending JSON - that avoids
+common pitfalls. Let’s delve into a couple of motivating examples of ‘JSON+’ data
+formats.
 
 [JSON Template Engine](https://github.com/vmware-archive/json-template-engine/blob/master/templating/README.md):
 This tool allows referencing JSON entities within the same or other .json files and
