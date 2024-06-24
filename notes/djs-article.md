@@ -3,7 +3,7 @@
 JSON serves as the universal language for data exchange, but it has known limitations.
 These have been tackled by general-purpose extensions like
 [JSON5](https://json5.org/) and [Hjson](https://github.com/hjson/hjson-js), as well as
-custom extensions in problem-specific systems.
+by custom extensions in problem-oriented systems.
 
 In this article we describe a promising new approach on extending JSON - that avoids
 common pitfalls. Let’s delve into a couple of motivating examples of ‘JSON+’ data
@@ -15,9 +15,9 @@ performing limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` ear
 the data, `"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax to wrap a JS-like
 term). A more complicated example,
 `["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects parametrized
-content of another .json template (using `#` syntax to specify a predefined processing
-function). Despite its relative obscurity, this project provides expressive computation
-capabilities for extending JSON in a general-purpose manner.
+content of another .json template in a loop (using `#` prefix to refer a built-in
+`for_each`function). Despite its relative obscurity, this project provides expressive
+computation capabilities for extending JSON in a general-purpose manner.
 
 Our second exemplar JSON extension,
 [ARM templates DSL](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax),
@@ -30,18 +30,18 @@ and a [limited ability to define user functions](https://learn.microsoft.com/en-
 As in the previous example, this DSL allows to reference resource templates defined
 in separate .json files. It's syntax for templated JSON values is different (requiring
 familiarity with special meanings of  `[]`, `()`, `{}`, `''` within string values, not
-`$` and `#` as in the previous example). The JSON extension remains closely tied to its
+`$` and `#` as in the previous example). This JSON extension remains closely tied to its
 problem-oriented use cases and isn’t a general-purpose solution.
 
-Numerous custom JSON extensions, like the two we discussed in brief, fulfill their
-purposes effectively. However, each extension’s DSL incurs cognitive overhead and
-long-term maintenance costs.
+Numerous custom JSON extensions, like the two that we discussed above in brief,
+fulfill their purposes effectively. However, each extension’s DSL incurs cognitive
+overhead and long-term maintenance costs.
 
-In this article, we present Data JS — a vendor-agnostic approach to extending JSON
-that does not introduce a DSL language for templated values and cross-file references.
-Instead it leverages familiar JavaScript syntax and standard modularization techniques.
-Having a general-purpose core, Data JS enables
-building problem-oriented applications by bridging to various ‘host environments’.
+In this article, we present Data JS — an approach to extending JSON that does not
+introduce a DSL language for templated values and cross-file references. Instead it
+leverages familiar JavaScript syntax and standard modularization techniques. Having a
+general-purpose core, Data JS enables building problem-oriented applications by
+bridging to various ‘host environments’.
 
 Data JS addresses several key points:
 - It eliminates data redundancy through `const` declarations.
@@ -55,11 +55,11 @@ computations within a strict sandboxed environment.
 
 ### Deduplication: constants and modules
 
-Code duplication, often referred to as ‘copy and paste programming,’ is an infamous
-anti-pattern. To mitigate this, we modularize our programs and factor out repeated code.
+Code duplication, often referred to as ‘copy and paste programming’, is an infamous
+anti-pattern. To mitigate it, we modularize our programs and factor out repeated code.
 
 To address data duplication (or excessive data ‘copy and paste’), Data JS leverages
-JavaScript’s `const` declaration and standard modularization techniques (either
+JavaScript’s `const` declarations and standard modularization techniques (either
 CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript module
 syntax. Consider the following example from `test.d.mjs` (where the `.d` sub-extension
 denotes Data JS content):
@@ -76,7 +76,7 @@ In this snippet, a data entity imported from `my_module.d.mjs` is referred as `m
 When other data entities are used multiple times, defining them via `const`
 declarations eliminates redundancy. The `test.d.mjs` exports exactly one data entity
 for external usage. Notably, Data JS implements commonly used JSON relaxations (as
-demonstrated in the snippet with comments and non-quoted identifiers as keys).
+demonstrated in the snippet with a comment and a use of non-quoted identifiers as keys).
 
 Data JS employs relative paths in `import` statements, forming a directed acyclic graph
 of interconnected modules. Upon loading and processing, the resulting data graph can be
@@ -106,9 +106,9 @@ code + data compound; its functions can operate on the host environment ‘at ru
 (in contrast to code executed ‘at load time’).
 
 Our reference implementation of Data JS transforms JavaScript code into bytecode
-arrays, some of which execute on the fly ‘at load time.’ However, unrestricted
+arrays, some of which get executed on the fly ‘at load time.’ However, unrestricted
 computations may pose security risks and lead to unbounded CPU and/or memory
-consumption. Data JS mitigates this by a strict isolation of the execution context,
+consumption. Data JS mitigates this by isolating the execution context completely,
 plus via enforcing adjustable quotas, aborting data loading sessions that exceed these
 quotas — similar to how a C++ or Rust compiler panics when compile-time calculations
 exceed built-in restrictions.
@@ -125,7 +125,7 @@ technology in Java world.
 
 Our reference implementation of Data JS, written in Rust, includes a partially
 functional bytecode interpreter VM called NaNVM. We’ve developed a Data JS loader
-(deserializer) and a serializer; both feature support for `const` and modules.
+(deserializer) and a serializer (both supporting / using constants and modules).
 However, our JS-to-bytecode compiler and bytecode interpreter are not yet functional.
 In the meantime, we experiment with Data JS snippets containing JS code using external
 JS execution engines like Node.js.
