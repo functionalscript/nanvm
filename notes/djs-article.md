@@ -50,8 +50,8 @@ well-familiar to JavaScript users.
 - It allows load-time computations using JavaScript syntax, plus delayed ‘run-time’
 computations in a host environment.
 - Despite its expressiveness, Data JS maintains security and efficiently manages 
-load-time resource consumption (CPU cycles/memory). Our reference Data JS
-implementation performs computations within a strict sandboxed environment.
+resource consumption (CPU cycles/memory). Our reference Data JS implementation performs
+computations within a strict sandboxed environment.
 
 ### Deduplication: constants and modules
 
@@ -60,7 +60,7 @@ anti-pattern. To mitigate this, we modularize our programs and factor out repeat
 
 To address data duplication (or excessive data ‘copy and paste’), Data JS leverages
 JavaScript’s `const` declaration and standard modularization techniques (either
-CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript
+CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript module
 syntax. Consider the following example from `test.d.mjs` (where the `.d` sub-extension
 denotes Data JS content):
 
@@ -89,27 +89,29 @@ capabilities of JS bundlers.
 ### Load-time computations
 
 In the snippet above, the use of identifiers (referring to constants or imported
-values) represents a simplified form of JavaScript expressions in value contexts. Data
-JS supports a well-defined subset of ECMAScript, including standard operators and
-functions (referred to as the ‘standard JS prelude’ below).
+values) represents a simple case of JavaScript expressions in value contexts. Data
+JS supports a well-defined subset of ECMAScript, including all operators and a subset
+of standard functions (referred to as the ‘standard JS prelude’ below).
 
 As we enhance the capabilities of our reference implementation of Data JS, we plan to:
 - Allow to extend the standard JS prelude with custom external pre-defined objects and
 functions (creating a ‘host environment’).
+
 - Support user-defined functions that Data JS executes in a well-controlled manner.
 
 These enhancements bridge Data JS to
 [FunctionalScript](https://medium.com/@sergeyshandar/list/functional-programming-in-javascript-495efca5536a).
 Loaded Data JS datasets containing user-defined functions form an in-memory structured
-code + data compound that operates on the host environment ‘at run time’ (in contrast
-to code executed ‘at load time’).
+code + data compound; its functions can operate on the host environment ‘at run time’
+(in contrast to code executed ‘at load time’).
 
 Our reference implementation of Data JS transforms JavaScript code into bytecode
 arrays, some of which execute on the fly ‘at load time.’ However, unrestricted
 computations may pose security risks and lead to unbounded CPU and/or memory
-consumption. Data JS mitigates this by enforcing adjustable quotas, aborting data
-loading sessions that exceed these limits — similar to how a C++ or Rust compiler
-panics when compile-time calculations exceed built-in restrictions.
+consumption. Data JS mitigates this by a strict isolation of the execution context,
+plus via enforcing adjustable quotas, aborting data loading sessions that exceed these
+quotas — similar to how a C++ or Rust compiler panics when compile-time calculations
+exceed built-in restrictions.
 
 Upon successful completion of a load session, the host system can serialize the
 resulting Data JS compound for future reuse. Subsequent re-loading of such a ‘saved
@@ -121,7 +123,7 @@ to the [native-image feature of Graal VM](https://www.graalvm.org/latest/referen
 
 Our reference implementation of Data JS, written in Rust, includes a partially
 functional bytecode interpreter VM called NaNVM. We’ve developed a Data JS loader
-(deserializer) and a serializer that both handle const declarations and modularization.
+(deserializer) and a serializer; both feature support for `const` and modules.
 However, our JS-to-bytecode compiler and bytecode interpreter are not yet functional.
 In the meantime, we experiment with Data JS snippets containing JS code using external
 JS execution engines like Node.js.
