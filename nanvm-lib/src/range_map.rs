@@ -19,6 +19,31 @@ pub trait Union {
     fn union(self, other: Self) -> Self;
 }
 
+impl<Num, T> RangeMap<Num, T>
+where
+    Num: PartialOrd,
+{
+    pub fn get(&self, key: Num) -> Option<&T> {
+        let len = self.list.len();
+        let mut b = 0;
+        let mut e = len - 1;
+        loop {
+            if b >= len {
+                return None;
+            }
+            if e < b {
+                return Some(&self.list.get(b).unwrap().value);
+            }
+            let mid = b + ((e - b) >> 1);
+            if key <= self.list.get(mid).unwrap().key {
+                e = mid - 1;
+            } else {
+                b = mid + 1;
+            }
+        }
+    }
+}
+
 pub fn merge<Num, T>(a: RangeMap<Num, T>, b: RangeMap<Num, T>) -> RangeMap<Num, T>
 where
     T: Union,
