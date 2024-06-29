@@ -35,7 +35,7 @@ where
                     if a.eq(&b) {
                         State { value: Some(b) }
                     } else {
-                        panic!("union is not possible")
+                        panic!("state values should be the same")
                     }
                 }
                 None => State { value: Some(a) },
@@ -271,5 +271,24 @@ mod test {
         assert_eq!(result.list[3].value, State { value: None });
         assert_eq!(result.list[4].key, 50);
         assert_eq!(result.list[4].value, State { value: Some('d') });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    #[should_panic(expected = "state values should be the same")]
+    fn test_merge_panic() {
+        let a = RangeMap {
+            list: vec![Entry {
+                key: 10,
+                value: State { value: Some('a') },
+            }],
+        };
+        let b = RangeMap {
+            list: vec![Entry {
+                key: 20,
+                value: State { value: Some('b') },
+            }],
+        };
+        let _result = merge(a, b);
     }
 }
