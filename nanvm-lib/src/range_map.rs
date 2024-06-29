@@ -122,9 +122,43 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_get() {
-        let list = vec![Entry { key: 10, value: 'a'}, Entry { key: 20, value: 'b'}, Entry { key: 30, value: 'c'}];
+        let list = vec![
+            Entry {
+                key: 10,
+                value: 'a',
+            },
+            Entry {
+                key: 20,
+                value: 'b',
+            },
+            Entry {
+                key: 30,
+                value: 'c',
+            },
+        ];
         let rm = RangeMap { list };
         let result = rm.get(5);
         assert_eq!(result.unwrap(), &'a');
+        let result = rm.get(10);
+        assert_eq!(result.unwrap(), &'a');
+        let result = rm.get(15);
+        assert_eq!(result.unwrap(), &'b');
+        let result = rm.get(20);
+        assert_eq!(result.unwrap(), &'b');
+        let result = rm.get(25);
+        assert_eq!(result.unwrap(), &'c');
+        let result = rm.get(30);
+        assert_eq!(result.unwrap(), &'c');
+        let result = rm.get(35);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_get_from_empty() {
+        let list = vec![];
+        let rm: RangeMap<i32, char> = RangeMap { list };
+        let result = rm.get(10);
+        assert_eq!(result, None);
     }
 }
