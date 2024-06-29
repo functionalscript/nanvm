@@ -24,7 +24,7 @@ where
     Num: PartialOrd,
 {
     pub fn get(&self, key: Num) -> Option<&T> {
-        let len = self.list.len();
+        let len = self.list.len() as i32;
         let mut b = 0;
         let mut e = len - 1;
         loop {
@@ -32,10 +32,10 @@ where
                 return None;
             }
             if e < b {
-                return Some(&self.list.get(b).unwrap().value);
+                return Some(&self.list.get(b as usize).unwrap().value);
             }
             let mid = b + ((e - b) >> 1);
-            if key <= self.list.get(mid).unwrap().key {
+            if key <= self.list.get(mid as usize).unwrap().key {
                 e = mid - 1;
             } else {
                 b = mid + 1;
@@ -117,7 +117,14 @@ where
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
+    use super::{Entry, RangeMap};
+
     #[test]
     #[wasm_bindgen_test]
-    fn test() {}
+    fn test_get() {
+        let list = vec![Entry { key: 10, value: 'a'}, Entry { key: 20, value: 'b'}, Entry { key: 30, value: 'c'}];
+        let rm = RangeMap { list };
+        let result = rm.get(5);
+        assert_eq!(result.unwrap(), &'a');
+    }
 }
