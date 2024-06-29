@@ -19,6 +19,32 @@ pub trait Union {
     fn union(self, other: Self) -> Self;
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct State<T> {
+    pub value: Option<T>,
+}
+
+impl<T> Union for State<T>
+where
+    T: Eq,
+{
+    fn union(self, other: Self) -> Self {
+        match self.value {
+            Some(a) => match other.value {
+                Some(b) => {
+                    if a.eq(&b) {
+                        State { value: Some(b) }
+                    } else {
+                        panic!("union is not possible")
+                    }
+                }
+                None => State { value: Some(a) },
+            },
+            None => other,
+        }
+    }
+}
+
 impl<Num, T> RangeMap<Num, T>
 where
     Num: PartialOrd,
@@ -117,7 +143,7 @@ where
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::{Entry, RangeMap};
+    use super::{merge, Entry, RangeMap, State};
 
     #[test]
     #[wasm_bindgen_test]
@@ -160,5 +186,90 @@ mod test {
         let rm: RangeMap<i32, char> = RangeMap { list };
         let result = rm.get(10);
         assert_eq!(result, None);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_merge() {
+        let a = RangeMap {
+            list: vec![Entry {
+                key: 10,
+                value: State { value: Some('a') },
+            }],
+        };
+        let b = RangeMap { list: vec![] };
+        let result = merge(a, b);
+        assert_eq!(result.list.len(), 1);
+        assert_eq!(result.list[0].key, 10);
+        assert_eq!(result.list[0].value, State { value: Some('a') });
+
+        let a = RangeMap { list: vec![] };
+        let b = RangeMap {
+            list: vec![Entry {
+                key: 10,
+                value: State { value: Some('a') },
+            }],
+        };
+        let result = merge(a, b);
+        assert_eq!(result.list.len(), 1);
+        assert_eq!(result.list[0].key, 10);
+        assert_eq!(result.list[0].value, State { value: Some('a') });
+
+        let a = RangeMap {
+            list: vec![
+                Entry {
+                    key: 10,
+                    value: State { value: Some('a') },
+                },
+                Entry {
+                    key: 20,
+                    value: State { value: Some('b') },
+                },
+                Entry {
+                    key: 30,
+                    value: State { value: Some('c') },
+                },
+                Entry {
+                    key: 40,
+                    value: State { value: None },
+                },
+            ],
+        };
+        let b = RangeMap {
+            list: vec![
+                Entry {
+                    key: 10,
+                    value: State { value: Some('a') },
+                },
+                Entry {
+                    key: 20,
+                    value: State { value: None },
+                },
+                Entry {
+                    key: 30,
+                    value: State { value: Some('c') },
+                },
+                Entry {
+                    key: 40,
+                    value: State { value: None },
+                },
+                Entry {
+                    key: 50,
+                    value: State { value: Some('d') },
+                },
+            ],
+        };
+        let result = merge(a, b);
+        assert_eq!(result.list.len(), 5);
+        assert_eq!(result.list[0].key, 10);
+        assert_eq!(result.list[0].value, State { value: Some('a') });
+        assert_eq!(result.list[1].key, 20);
+        assert_eq!(result.list[1].value, State { value: Some('b') });
+        assert_eq!(result.list[2].key, 30);
+        assert_eq!(result.list[2].value, State { value: Some('c') });
+        assert_eq!(result.list[3].key, 40);
+        assert_eq!(result.list[3].value, State { value: None });
+        assert_eq!(result.list[4].key, 50);
+        assert_eq!(result.list[4].value, State { value: Some('d') });
     }
 }
