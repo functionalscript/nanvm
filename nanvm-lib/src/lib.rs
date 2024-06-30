@@ -7,5 +7,6 @@ pub mod common;
 pub mod js;
 pub mod mem;
 pub mod parser;
+pub mod range_map;
 pub mod serializer;
 pub mod tokenizer;
