@@ -1,25 +1,25 @@
 ## Addressing JSON pain points via Data JS
 
 JSON serves as the universal language for data exchange, but it has known limitations.
-These have been tackled by general-purpose extensions like
+They have been tackled by general-purpose extensions like
 [JSON5](https://json5.org/) and [Hjson](https://github.com/hjson/hjson-js), as well as
-by custom extensions in problem-oriented systems.
+by custom extensions in some problem-oriented systems.
 
-In this article we describe a promising new approach on extending JSON - that avoids
-common pitfalls. Let’s delve into a couple of motivating examples of ‘JSON+’ data
+In this article we describe a promising new approach to extending JSON, one that avoids
+common pitfalls. Let’s consider a couple of motivating examples of ‘JSON+’ data
 formats.
 
 [JSON Template Engine](https://github.com/vmware-archive/json-template-engine/blob/master/templating/README.md):
-This tool allows referencing JSON entities within the same or other .json files and
+This tool allows referencing JSON entities within the same or other JSON files and
 performing limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` earlier in
 the data, `"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax to wrap a JS-like
 term). A more complicated example,
-`["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects parametrized
-content of another .json template in a loop (using `#` prefix to refer a built-in
+`["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects parameterized
+content of another JSON template in a loop (using `#` prefix to refer a built-in
 `for_each`function). Despite its relative obscurity, this project provides expressive
 computation capabilities for extending JSON in a general-purpose manner.
 
-Our second exemplar JSON extension,
+Our second example of a JSON extension,
 [ARM templates DSL](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax),
 serves a specific purpose: resource specification in the Microsoft Azure cloud
 ecosystem. To enhance this DSL’s expressiveness and flexibility, its creators
@@ -27,27 +27,27 @@ introduced an
 [expanded set of built-in functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions)
 and a [limited ability to define user functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax#functions).
 
-As in the previous example, this DSL allows to reference resource templates defined
-in separate .json files. It's syntax for templated JSON values is different (requiring
-familiarity with special meanings of  `[]`, `()`, `{}`, `''` within string values, not
+As in the previous example, this DSL allows referencing resource templates defined
+in separate JSON files. Its syntax for templated JSON values is different (requiring
+familiarity with special meaning of  `[]`, `()`, `{}`, `''` interpolation within string values, not
 `$` and `#` as in the previous example). This JSON extension remains closely tied to its
 problem-oriented use cases and isn’t a general-purpose solution.
 
-Numerous custom JSON extensions, like the two that we discussed above in brief,
-fulfill their purposes effectively. However, each extension’s DSL incurs cognitive
-overhead and long-term maintenance costs.
+Numerous custom JSON extensions, like the two that we briefly introduced above,
+fulfill their purposes effectively. However, each extension’s DSL incurs added complexity
+and long-term maintenance costs.
 
 In this article, we present Data JS — an approach to extending JSON that does not
 introduce a DSL language for templated values and cross-file references. Instead it
-leverages familiar JavaScript syntax and standard modularization techniques. Having a
+leverages familiar JavaScript syntax and standard encapsulation techniques. Having a
 general-purpose core, Data JS enables building problem-oriented applications by
 bridging to various ‘host environments’.
 
-Data JS addresses several key points:
+Data JS addresses several key pain points:
 - It eliminates data redundancy through `const` declarations.
 - It enables modular data structuring via cross-file references, using syntax that is
-well-familiar to JavaScript users. 
-- It allows load-time computations using JavaScript syntax, plus delayed ‘run-time’
+intimately familiar to JavaScript users. 
+- It allows both load-time computations using JavaScript syntax and delayed ‘run-time’
 computations in a host environment.
 - Despite its expressiveness, Data JS maintains security and efficiently manages 
 resource consumption (CPU cycles/memory). Our reference Data JS implementation performs
@@ -72,7 +72,7 @@ const b = [3, m, a]
 export default { foo: [a, b], bar: b }
 ```
 
-In this snippet, a data entity imported from `my_module.d.mjs` is referred as `m`.
+In this snippet, a data entity imported from `my_module.d.mjs` is referred to as `m`.
 When other data entities are used multiple times, defining them via `const`
 declarations eliminates redundancy. The `test.d.mjs` exports exactly one data entity
 for external usage. Notably, Data JS implements commonly used JSON relaxations (as
@@ -94,7 +94,7 @@ JS supports a well-defined subset of ECMAScript, including all operators and a s
 of standard functions (referred to as the ‘standard JS prelude’ below).
 
 As we enhance the capabilities of our reference implementation of Data JS, we plan to:
-- Allow to extend the standard JS prelude with custom external pre-defined objects and
+- Allow extending the standard JS prelude with custom external pre-defined objects and
 functions (creating a ‘host environment’).
 
 - Support user-defined functions that Data JS executes in a well-controlled manner.
@@ -102,7 +102,7 @@ functions (creating a ‘host environment’).
 These enhancements bridge Data JS to
 [FunctionalScript](https://medium.com/@sergeyshandar/list/functional-programming-in-javascript-495efca5536a).
 Loaded Data JS datasets containing user-defined functions form an in-memory structured
-code + data compound; its functions can operate on the host environment ‘at run time’
+code + data compound; its functions can operate in the host environment ‘at run time’
 (in contrast to code executed ‘at load time’).
 
 Our reference implementation of Data JS transforms JavaScript code into bytecode
@@ -119,7 +119,7 @@ snapshot’ is quicker and requires less memory compared to the initial loading,
 involved JavaScript code compilation and load-time execution. This model is somewhat
 analogous to
 [CRaC (Coordinated Restore at Checkpoint)](https://docs.azul.com/core/crac/crac-introduction)
-technology in Java world.
+technology in the Java world.
 
 ### Current status of Data JS
 
