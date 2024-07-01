@@ -3,6 +3,7 @@
 #![allow(clippy::missing_safety_doc)]
 pub mod app;
 pub mod big_numbers;
+pub mod cli;
 pub mod common;
 pub mod js;
 pub mod mem;
