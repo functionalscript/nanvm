@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::common::default::default;
+use crate::{common::default::default, static_ref_default::StaticRefDefault};
 
 pub struct Entry<Num, T>
 where
@@ -21,10 +21,6 @@ pub trait Union {
     fn union(self, other: Self) -> Self;
 }
 
-pub trait StaticRefDefault: 'static {
-    const STATIC_REF_DEFAULT: &'static Self;
-}
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct State<T> {
     pub value: Option<T>,
@@ -32,14 +28,6 @@ pub struct State<T> {
 
 impl<T: 'static> StaticRefDefault for State<T> {
     const STATIC_REF_DEFAULT: &'static Self = &Self { value: None };
-}
-
-impl<T: 'static> StaticRefDefault for Option<T> {
-    const STATIC_REF_DEFAULT: &'static Self = &None;
-}
-
-impl StaticRefDefault for char {
-    const STATIC_REF_DEFAULT: &'static Self = &(0 as char);
 }
 
 impl<T> Union for State<T>
