@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use crate::common::default::default;
 
 pub struct Entry<Num, T>
@@ -138,6 +140,21 @@ where
     }
     res
 }
+
+pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
+    RangeMap {
+        list: vec![Entry {
+            key: char::from_u32(range.start as u32 - 1).unwrap_or(range.start),
+            value: State { value: None },
+        },
+        Entry {
+            key: range.end,
+            value: State { value: Some(value) },
+        }],
+    };
+    todo!()
+}
+
 
 #[cfg(test)]
 mod test {
