@@ -22,7 +22,7 @@ pub trait Union {
 }
 
 pub trait StaticRefDefault: 'static {
-    fn static_ref_default() -> &'static Self;
+    const STATIC_REF_DEFAULT: &'static Self;
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -30,14 +30,16 @@ pub struct State<T> {
     pub value: Option<T>,
 }
 
-impl<T> State<T> {
-    const STATIC_REF_DEFAULT: Self = State { value: None };
+impl<T: 'static> StaticRefDefault for State<T> {
+    const STATIC_REF_DEFAULT: &'static Self = &Self { value: None };
 }
 
-impl<T: 'static> StaticRefDefault for State<T> {
-    fn static_ref_default() -> &'static Self {
-        &Self::STATIC_REF_DEFAULT
-    }
+impl<T: 'static> StaticRefDefault for Option<T> {
+    const STATIC_REF_DEFAULT: &'static Self = &None;
+}
+
+impl StaticRefDefault for char {
+    const STATIC_REF_DEFAULT: &'static Self = &(0 as char);
 }
 
 impl<T> Union for State<T>
@@ -61,13 +63,6 @@ where
     }
 }
 
-impl StaticRefDefault for char {
-    fn static_ref_default() -> &'static Self {
-        const C: char = 0 as char;
-        &C
-    }
-}
-
 impl<Num, T> RangeMap<Num, T>
 where
     Num: PartialOrd,
@@ -79,7 +74,7 @@ where
         let mut e = len - 1;
         loop {
             if b >= len {
-                return T::static_ref_default();
+                return T::STATIC_REF_DEFAULT;
             }
             if e < b {
                 return &self.list.get(b as usize).unwrap().value;
