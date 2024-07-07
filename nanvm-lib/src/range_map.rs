@@ -21,9 +21,23 @@ pub trait Union {
     fn union(self, other: Self) -> Self;
 }
 
+pub trait StaticRefDefault: 'static {
+    fn static_ref_default() -> &'static Self;
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct State<T> {
     pub value: Option<T>,
+}
+
+impl<T> State<T> {
+    const STATIC_REF_DEFAULT: Self = State { value: None };
+}
+
+impl<T: 'static> StaticRefDefault for State<T> {
+    fn static_ref_default() -> &'static Self {
+        &Self::STATIC_REF_DEFAULT
+    }
 }
 
 impl<T> Union for State<T>
@@ -47,20 +61,28 @@ where
     }
 }
 
+impl StaticRefDefault for char {
+    fn static_ref_default() -> &'static Self {
+        const C: char = 0 as char;
+        &C
+    }
+}
+
 impl<Num, T> RangeMap<Num, T>
 where
     Num: PartialOrd,
+    T: StaticRefDefault,
 {
-    pub fn get(&self, key: Num) -> Option<&T> {
+    pub fn get(&self, key: Num) -> &T {
         let len = self.list.len() as i32;
         let mut b = 0;
         let mut e = len - 1;
         loop {
             if b >= len {
-                return None;
+                return T::static_ref_default();
             }
             if e < b {
-                return Some(&self.list.get(b as usize).unwrap().value);
+                return &self.list.get(b as usize).unwrap().value;
             }
             let mid = b + ((e - b) >> 1);
             if key <= self.list.get(mid as usize).unwrap().key {
@@ -143,24 +165,24 @@ where
 
 pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
     RangeMap {
-        list: vec![Entry {
-            key: char::from_u32(range.start as u32 - 1).unwrap_or(range.start),
-            value: State { value: None },
-        },
-        Entry {
-            key: range.end,
-            value: State { value: Some(value) },
-        }],
-    };
-    todo!()
+        list: vec![
+            Entry {
+                key: char::from_u32(range.start as u32 - 1).unwrap_or(range.start),
+                value: State { value: None },
+            },
+            Entry {
+                key: range.end,
+                value: State { value: Some(value) },
+            },
+        ],
+    }
 }
-
 
 #[cfg(test)]
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::{merge, Entry, RangeMap, State};
+    use super::{from_range, merge, Entry, RangeMap, State};
 
     #[test]
     #[wasm_bindgen_test]
@@ -181,19 +203,19 @@ mod test {
         ];
         let rm = RangeMap { list };
         let result = rm.get(5);
-        assert_eq!(result.unwrap(), &'a');
+        assert_eq!(result, &'a');
         let result = rm.get(10);
-        assert_eq!(result.unwrap(), &'a');
+        assert_eq!(result, &'a');
         let result = rm.get(15);
-        assert_eq!(result.unwrap(), &'b');
+        assert_eq!(result, &'b');
         let result = rm.get(20);
-        assert_eq!(result.unwrap(), &'b');
+        assert_eq!(result, &'b');
         let result = rm.get(25);
-        assert_eq!(result.unwrap(), &'c');
+        assert_eq!(result, &'c');
         let result = rm.get(30);
-        assert_eq!(result.unwrap(), &'c');
+        assert_eq!(result, &'c');
         let result = rm.get(35);
-        assert_eq!(result, None);
+        assert_eq!(*result, 0 as char);
     }
 
     #[test]
@@ -202,7 +224,7 @@ mod test {
         let list = vec![];
         let rm: RangeMap<i32, char> = RangeMap { list };
         let result = rm.get(10);
-        assert_eq!(result, None);
+        assert_eq!(*result, 0 as char);
     }
 
     #[test]
@@ -307,5 +329,18 @@ mod test {
             }],
         };
         let _result = merge(a, b);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_from_range() {
+        let state = 'A';
+        let range = 'b'..'d';
+        let rm = from_range(range, state);
+        assert_eq!(rm.get('a'), &State { value: None });
+        assert_eq!(rm.get('b'), &State { value: Some('A') });
+        assert_eq!(rm.get('c'), &State { value: Some('A') });
+        assert_eq!(rm.get('d'), &State { value: Some('A') });
+        //assert_eq!(rm.get('e').unwrap(), &State { value: None });
     }
 }
