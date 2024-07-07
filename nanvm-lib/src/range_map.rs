@@ -341,6 +341,6 @@ mod test {
         assert_eq!(rm.get('b'), &State { value: Some('A') });
         assert_eq!(rm.get('c'), &State { value: Some('A') });
         assert_eq!(rm.get('d'), &State { value: Some('A') });
-        //assert_eq!(rm.get('e').unwrap(), &State { value: None });
+        assert_eq!(rm.get('e'), &State { value: None });
     }
 }
