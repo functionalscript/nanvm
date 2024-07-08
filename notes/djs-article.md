@@ -1,1 +1,143 @@
-## Addressing JSON pain points via Data JS
+## “DJS” JSON Extension: Bridging the Gap to JavaScript w/o DSLs
+
+In this article, we explore a natural approach to enhancing JSON by seamlessly integrating essential
+features using JavaScript constructs. This stands in contrast to introducing custom DSL enhancements
+to JSON.
+
+Apart from addressing human-friendly syntactic enhancements (as tackled by [JSON5](https://json5.org/),
+[Hjson](https://github.com/hjson/hjson-js), and similar approaches), we focus on the following pain points:
+
+1. Duplication Avoidance:
+    - Traditional JSON’s lack of support for directed acyclic data graphs results in verbose, repetitive
+    .json content. This redundancy can lead to copy/paste errors and cognitive overload - while a simple JS
+    “no-DSL” enhancement addresses that major pain point.
+2. Modularization:
+    - Just as code is modularized, programmers naturally desire to modularize data. Again, we aim to address
+    this need with well known standard JS syntax.
+3. Efficient Load-Time Computations:
+    - Our goal is to enable load-time computations while maintaining robust security measures. Once again,
+    there is no custom DSL in our model here: we use standard JS with well-defined restrictions targeting
+    security (which includes well-controlled predictable outcome of load-time computations).
+
+In the rest of this article we name the resulting JSON extension “DJS”.
+
+### Exploring Motivating Examples: JSON Extensions via DSLs
+
+Let's consider few JSON extensions varying on the following points:
+- Does a given extension maintain JSON purity (hiding a DSL within value strings)?
+- Is it a general-purpose or a problem-oriented extension?
+- How expressive is it (especially regarding user-defined functions)?
+
+Motivational examples listed below are chosen rather randomly from a wide field of JSON extensions.
+
+1. [JSON Template Engine](https://github.com/vmware-archive/json-template-engine/blob/master/templating/README.md):
+This tool allows referencing JSON entities within the same or other .json files and
+performing limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` earlier in
+the data, `"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax to wrap a JS-like term).
+A more complicated example, `["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects
+parameterized content of another JSON template in a loop (using a built-in `for_each`function).
+Despite its relative obscurity, this project provides expressive computation capabilities
+for extending JSON in a general-purpose manner - for the price of a unique DSL hidden in
+string values (thus preserving JSON purity). To master this JSON extension one has to learn
+the DSL syntax elements (`${}`, `#`) plus a (compact) set of built-in functions. There is no
+support for user-defined functions.
+
+2. [ARM templates DSL](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax)
+serves a specific purpose: resource specification in the Microsoft Azure cloud
+ecosystem. To enhance this DSL’s expressiveness and flexibility, its creators
+introduced an
+[expanded set of built-in functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions)
+and a [limited ability to define user functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax#functions).
+
+    As in the previous example, this DSL allows referencing resource templates defined
+in separate JSON files. Its syntax for templated JSON values is different (requiring
+familiarity with special meaning of  `[]`, `()`, `{}`, `''` interpolation within string values, not
+`${}` and `#` as in the previous example). This JSON extension remains closely tied to its
+problem-oriented use cases (serving them very well!) and thus isn’t a general-purpose
+solution. It has its custom modularization features and keeps JSON purity (as in the previous
+example, DSL syntax hides in string values plus special meanings of certain key strings).
+
+
+3. [Jsonnet](https://jsonnet.org/) is a well-defined and elaborated configuration language
+that, in fact, provides a rich set of general-purposed JSON manipulation functionality.
+    Unlike to previous examples, Jsonnet diverges from pure JSON syntax. That extended
+JSON-like syntax resembles JavaScript closely but yet is different (example: `local`,
+not `const` for defining constants). Jsonnet allows multi-file modular construction
+of configuration data (again with syntax similar, but different from popular JavaScript
+module syntaxes). Its evaluate-to-JSON semantic has a formal definition; user-defined
+functionality support is powerful enough to define the “rich” Jsonnet language in a form
+of a standard prelude based on a minimalistic core language.
+
+Numerous custom JSON extensions (like ones we discussed above in brief)
+Numerous custom JSON extensions, like the three that we briefly introduced above,
+fulfill their purposes effectively. However, each extension’s DSL incurs added complexity
+and long-term maintenance costs. DJS approach has benefits of reusing familiar
+JavaScript syntax and encapsulation techniques - instead of defining yet another DSL.
+
+### DJS approach to deduplication: constants and modules
+
+Code duplication, often referred to as ‘copy and paste programming’, is an infamous
+anti-pattern. To mitigate it, we modularize our programs and factor out repeated code.
+
+To address data duplication (or excessive data ‘copy and paste’), DJS leverages
+JavaScript’s `const` declarations and standard modularization techniques (either
+CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript module
+syntax. Consider the following example from `test.d.mjs` (where the `.d` sub-extension
+denotes DJS content):
+
+```js
+import m from "my_module.d.mjs"
+const a = "my long string value"
+const b = [3, m, a]
+// Shape the test data object
+export default { foo: [a, b], bar: b }
+```
+
+In this snippet, a data entity imported from `my_module.d.mjs` is referred to as `m`.
+When other data entities are used multiple times, defining them via `const`
+declarations eliminates redundancy. The `test.d.mjs` exports exactly one data entity
+for external usage. Notably, Data JS implements commonly used JSON relaxations (as
+demonstrated in the snippet with a comment and a use of non-quoted identifiers as keys).
+Extensions listed here are elements of ECMAScript standard (as opposite to yet another DSL).
+
+DJS employs relative paths in `import` statements, forming a directed acyclic graph
+of interconnected modules. Upon loading and processing, the resulting data graph can be
+saved in vanilla JSON format (which may be bloated due to loss of deduplication
+benefits) or as a bundled singular `.d.mjs` file. In both cases, the output excludes
+data that are not referred to from the root data object — akin to the “tree-shaking”
+capabilities of JS bundlers.
+
+### “Load-time” and “run-time” computations
+
+In the snippet above, the use of identifiers (referring to constants or imported
+values) represents a simple case of JavaScript expressions in value contexts. DJS
+will support a subset of ECMAScript that includes:
+- in-place value expressions fully compliant with ECMAScript standard;
+- a restricted subset of ECMAScript's standard functions;
+- a restricted form of user-defined functions;
+- an FFI facility for calling host-defined “problem-oriented” native functions.
+
+In our planned reference implementation will support serialization of a loaded DJS graph
+with a set of user's code snippets preserved for delayed “run-time” execution (while other
+“immediate” DJS code gets executed at load time).
+
+### Current status of DJS
+
+Our current DJS implementation features modular loading (deserialization) and saving
+(serialization) - with support of both CommonJS and ECMAScript syntax for
+modules. Constant declarations are used on both sides (of serialization / deserialization),
+plus, the loader supports several JavaScript-compatible syntax relaxations of JSON.
+
+Our next steps involve gradually implementing JavaScript expressions and introducing limited
+user-defined function definitions.
+
+DJS compatibility with CommonJS and ECMAScript module syntax is important in interim. That
+detail allows to experiment with DJS's future target scenarios using an external JavaScript
+facility (Node, Deno, Bun or alike).
+
+In difference with the execution via an external JavaScript engine, our future full-scale
+reference DJS implementation will define DJS's restricted subset of ECMAScript standard
+(to provide security and resource consumption control guarantees).
+
+We intend to share future progress on the DJS project and delve into its design
+details in upcoming articles.
