@@ -34,8 +34,7 @@ Motivational examples listed below are chosen rather randomly from a wide field 
 This tool allows referencing JSON entities within the same or other .json files and
 performing limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` earlier in
 the data, `"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax in a string literal to wrap
-a JS-like term).
-    A more complicated example, `["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects
+a JS-like term). A more complicated example, `["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects
 parameterized content of another JSON template in a loop (using a built-in `for_each` function).
 Despite its relative obscurity, this project provides expressive computation capabilities
 for extending JSON in a general-purpose manner - for the price of a unique DSL hidden in
@@ -49,7 +48,7 @@ ecosystem. To enhance this DSL’s expressiveness and flexibility, its creators
 introduced an
 [expanded set of built-in functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions)
 and a [limited ability to define user functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax#functions).
-    As in the previous example, this DSL allows referencing resource templates defined
+As in the previous example, this DSL allows referencing resource templates defined
 in separate JSON files. Its syntax for templated JSON values is different (requiring
 familiarity with special meaning of  `[]`, `()`, `{}`, `''` interpolation within string values, not
 `${}` and `#` as in the previous example). This JSON extension remains closely tied to its
@@ -60,7 +59,7 @@ example, its DSL syntax hides in string values, plus, certain key strings have s
 
 3. [Jsonnet](https://jsonnet.org/) is a well-defined and elaborated configuration language
 that, in fact, provides a rich set of general-purposed JSON manipulation functionality.
-    Unlike to previous examples, Jsonnet diverges from pure JSON syntax. That extended
+Unlike to previous examples, Jsonnet diverges from pure JSON syntax. Its extended
 JSON-like syntax resembles JavaScript closely but yet is different: for example, it uses its own
 `local` (and not JS's `const`) keyword for defining constants. Jsonnet allows multi-file modular
 construction of configuration data (again with its own syntax that differs from popular JavaScript
@@ -70,7 +69,7 @@ of a standard prelude based on a minimalistic core language.
 
 Numerous custom JSON extensions, like the three that we briefly introduced above,
 fulfill their purposes effectively. However, each extension’s DSL incurs added complexity
-and long-term maintenance costs. DJS approach has benefits of reusing familiar
+and long-term maintenance costs. DJS’s approach has benefits of reusing familiar
 JavaScript syntax and encapsulation techniques - instead of defining yet another DSL.
 
 ### DJS’s approach to deduplication: constants and modules
@@ -94,8 +93,8 @@ export default { foo: [a, b], bar: b }
 
 In this snippet, a data entity imported from `my_module.d.mjs` is referred to as `m`.
 When other data entities are used multiple times, defining them via `const`
-declarations eliminates redundancy. In its last statement `test.d.mjs` exports exactly one data entity
-for external usage. Notably, Data JS implements commonly used JSON relaxations (as
+declarations eliminates redundancy. In its last statement `test.d.mjs` exports exactly one data
+entity for external usage. Notably, Data JS implements commonly used JSON relaxations (as
 demonstrated in the snippet with a comment and a use of non-quoted identifiers as keys).
 Extensions listed here are elements of ECMAScript standard (as opposite to yet another DSL).
 
@@ -114,7 +113,8 @@ will support a subset of ECMAScript that includes:
 - in-place value expressions fully compliant with ECMAScript standard;
 - a restricted subset of ECMAScript's standard functions;
 - a restricted form of user-defined functions;
-- an FFI (foreign function interface) facility for calling host-defined “problem-oriented” native functions.
+- an FFI (foreign function interface) facility for calling host-defined “problem-oriented” native
+functions.
 
 Our reference implementation of DJS will support serialization of a loaded DJS graph
 with a set of user's code snippets preserved for delayed “run-time” execution (while other
