@@ -49,7 +49,7 @@ introduced an
 [expanded set of built-in functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions)
 and a [limited ability to define user functions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax#functions).
 
-    As in the previous example, this DSL allows referencing resource templates defined
+As in the previous example, this DSL allows referencing resource templates defined
 in separate JSON files. Its syntax for templated JSON values is different (requiring
 familiarity with special meaning of  `[]`, `()`, `{}`, `''` interpolation within string values, not
 `${}` and `#` as in the previous example). This JSON extension remains closely tied to its
