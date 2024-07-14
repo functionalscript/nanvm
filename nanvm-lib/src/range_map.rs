@@ -201,6 +201,8 @@ pub fn from_one<T>(c: char, value: T) -> RangeMap<char, State<T>> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
+    use crate::range_map::from_one;
+
     use super::{from_range, merge, merge_list, Entry, RangeMap, State};
 
     #[test]
@@ -408,5 +410,14 @@ mod test {
         assert_eq!(rm.get('c'), &State { value: Some('A') });
         assert_eq!(rm.get('d'), &State { value: Some('A') });
         assert_eq!(rm.get('e'), &State { value: None });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_from_one() {
+        let state = 'A';
+        let rm = from_one('b', state);
+        assert_eq!(rm.get('a'), &State { value: None });
+        assert_eq!(rm.get('b'), &State { value: Some('A') });
     }
 }
