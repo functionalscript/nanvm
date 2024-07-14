@@ -77,6 +77,19 @@ where
     }
 }
 
+pub fn merge_list<Num, T>(list: Vec<RangeMap<Num, T>>) -> RangeMap<Num, T>
+where
+    T: Union,
+    T: Clone,
+    Num: PartialOrd,
+{
+    let mut result = RangeMap { list: vec![] };
+    for x in list {
+        result = merge(x, result);
+    }
+    result
+}
+
 pub fn merge<Num, T>(a: RangeMap<Num, T>, b: RangeMap<Num, T>) -> RangeMap<Num, T>
 where
     T: Union,
@@ -165,7 +178,7 @@ pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::{from_range, merge, Entry, RangeMap, State};
+    use super::{from_range, merge, merge_list, Entry, RangeMap, State};
 
     #[test]
     #[wasm_bindgen_test]
@@ -293,6 +306,53 @@ mod test {
         assert_eq!(result.list[3].value, State { value: None });
         assert_eq!(result.list[4].key, 50);
         assert_eq!(result.list[4].value, State { value: Some('d') });
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_merge_list() {
+        let result: RangeMap<i32, State<char>> = merge_list(vec![]);
+        assert_eq!(result.list.len(), 0);
+
+        let result: RangeMap<i32, State<char>> = merge_list(vec![
+            RangeMap {
+                list: vec![Entry {
+                    key: 10,
+                    value: State { value: Some('a') },
+                }],
+            },
+            RangeMap {
+                list: vec![
+                    Entry {
+                        key: 10,
+                        value: State { value: None },
+                    },
+                    Entry {
+                        key: 20,
+                        value: State { value: Some('b') },
+                    },
+                ],
+            },
+            RangeMap {
+                list: vec![
+                    Entry {
+                        key: 20,
+                        value: State { value: None },
+                    },
+                    Entry {
+                        key: 30,
+                        value: State { value: Some('c') },
+                    },
+                ],
+            },
+        ]);
+        assert_eq!(result.list.len(), 3);
+        assert_eq!(result.list[0].key, 10);
+        assert_eq!(result.list[0].value, State { value: Some('a') });
+        assert_eq!(result.list[1].key, 20);
+        assert_eq!(result.list[1].value, State { value: Some('b') });
+        assert_eq!(result.list[2].key, 30);
+        assert_eq!(result.list[2].value, State { value: Some('c') });
     }
 
     #[test]
