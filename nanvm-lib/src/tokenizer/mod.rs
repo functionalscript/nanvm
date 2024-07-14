@@ -6,7 +6,8 @@ use crate::{
         big_int::{BigInt, Sign},
         big_uint::BigUint,
     },
-    common::{cast::Cast, default::default}, range_map::{RangeMap, State},
+    common::{cast::Cast, default::default},
+    range_map::{RangeMap, State},
 };
 
 #[derive(Debug, PartialEq)]
@@ -362,12 +363,19 @@ trait Transition<T> {
     fn next(&self, state: T) -> (Vec<JsonToken>, TokenizerState);
 }
 
-fn get_next_state<T, F>(state: T, c: char, def: F, rm: RangeMap<char, State<F>>) -> (Vec<JsonToken>, TokenizerState) where F: Transition<T>
+fn get_next_state<T, F: 'static>(
+    state: T,
+    c: char,
+    def: F,
+    rm: RangeMap<char, State<F>>,
+) -> (Vec<JsonToken>, TokenizerState)
+where
+    F: Transition<T>,
 {
     let entry = rm.get(c);
     match &entry.value {
         Some(f) => f.next(state),
-        None => def.next(state)
+        None => def.next(state),
     }
 }
 
