@@ -359,24 +359,21 @@ fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
 }
 
-trait Transition<T> {
-    fn next(&self, state: T) -> (Vec<JsonToken>, TokenizerState);
-}
+type Transition<T> = fn(state: T) -> (Vec<JsonToken>, TokenizerState);
 
-fn get_next_state<T, F>(
+fn get_next_state<T>(
     state: T,
     c: char,
-    def: F,
-    rm: RangeMap<char, State<F>>,
+    def: Transition<T>,
+    rm: RangeMap<char, State<Transition<T>>>,
 ) -> (Vec<JsonToken>, TokenizerState)
 where
-    F: 'static,
-    F: Transition<T>,
+    T: 'static,
 {
     let entry = rm.get(c);
     match &entry.value {
-        Some(f) => f.next(state),
-        None => def.next(state),
+        Some(f) => f(state),
+        None => def(state),
     }
 }
 
