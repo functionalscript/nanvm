@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, mem::take, result};
+use std::{collections::VecDeque, mem::take};
 
 use crate::{
     big_numbers::{
@@ -363,13 +363,14 @@ trait Transition<T> {
     fn next(&self, state: T) -> (Vec<JsonToken>, TokenizerState);
 }
 
-fn get_next_state<T, F: 'static>(
+fn get_next_state<T, F>(
     state: T,
     c: char,
     def: F,
     rm: RangeMap<char, State<F>>,
 ) -> (Vec<JsonToken>, TokenizerState)
 where
+    F: 'static,
     F: Transition<T>,
 {
     let entry = rm.get(c);
