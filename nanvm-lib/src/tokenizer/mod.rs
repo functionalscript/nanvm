@@ -7,7 +7,7 @@ use crate::{
         big_uint::BigUint,
     },
     common::{cast::Cast, default::default},
-    range_map::{RangeMap, State},
+    range_map::{from_one, merge, RangeMap, State},
 };
 
 #[derive(Debug, PartialEq)]
@@ -359,7 +359,7 @@ fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
 }
 
-type Transition<T> = fn(state: T) -> (Vec<JsonToken>, TokenizerState);
+type Transition<T> = fn(state: T, c: char) -> (Vec<JsonToken>, TokenizerState);
 
 fn get_next_state<T>(
     state: T,
@@ -372,8 +372,8 @@ where
 {
     let entry = rm.get(c);
     match &entry.value {
-        Some(f) => f(state),
-        None => def(state),
+        Some(f) => f(state, c),
+        None => def(state, c),
     }
 }
 
@@ -408,15 +408,21 @@ fn tokenize_id(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_string(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '"' => ([JsonToken::String(s)].cast(), TokenizerState::Initial),
-        '\\' => (default(), TokenizerState::ParseEscapeChar(s)),
-        _ => {
+fn tokenize_string(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    get_next_state(
+        s,
+        c,
+        |mut s, c| {
             s.push(c);
             (default(), TokenizerState::ParseString(s))
-        }
-    }
+        },
+        merge(
+            from_one('"', |s, _| {
+                ([JsonToken::String(s)].cast(), TokenizerState::Initial)
+            }),
+            from_one('\\', |s, _| (default(), TokenizerState::ParseEscapeChar(s))),
+        ),
+    )
 }
 
 fn continue_string_state(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
