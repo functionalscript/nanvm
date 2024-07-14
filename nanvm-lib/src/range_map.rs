@@ -174,6 +174,29 @@ pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
     }
 }
 
+pub fn from_one<T>(c: char, value: T) -> RangeMap<char, State<T>> {
+    RangeMap {
+        list: match char::from_u32(c as u32 - 1) {
+            Some(p) => vec![
+                Entry {
+                    key: p,
+                    value: State { value: None },
+                },
+                Entry {
+                    key: c,
+                    value: State { value: Some(value) },
+                },
+            ],
+            None => {
+                vec![Entry {
+                    key: c,
+                    value: State { value: Some(value) },
+                }]
+            }
+        },
+    }
+}
+
 #[cfg(test)]
 mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
