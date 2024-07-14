@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, mem::take};
+use std::{collections::VecDeque, mem::take, result};
 
 use crate::{
     big_numbers::{
@@ -6,7 +6,7 @@ use crate::{
         big_int::{BigInt, Sign},
         big_uint::BigUint,
     },
-    common::{cast::Cast, default::default},
+    common::{cast::Cast, default::default}, range_map::{RangeMap, State},
 };
 
 #[derive(Debug, PartialEq)]
@@ -356,6 +356,19 @@ const fn digit_to_number(c: char) -> u64 {
 
 fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
+}
+
+trait Transition<T> {
+    fn next(&self, state: T) -> (Vec<JsonToken>, TokenizerState);
+}
+
+fn get_next_state<T, F>(state: T, c: char, def: F, rm: RangeMap<char, State<F>>) -> (Vec<JsonToken>, TokenizerState) where F: Transition<T>
+{
+    let entry = rm.get(c);
+    match &entry.value {
+        Some(f) => f.next(state),
+        None => def.next(state)
+    }
 }
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
