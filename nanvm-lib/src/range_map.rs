@@ -1,6 +1,9 @@
 use std::ops::Range;
 
-use crate::{common::default::default, static_ref_default::StaticRefDefault};
+use crate::{
+    common::{cast::Cast, default::default},
+    static_ref_default::StaticRefDefault,
+};
 
 pub struct Entry<Num, T>
 where
@@ -83,7 +86,7 @@ where
     T: Clone,
     Num: PartialOrd,
 {
-    let mut result = RangeMap { list: vec![] };
+    let mut result = RangeMap { list: default() };
     for x in list {
         result = merge(x, result);
     }
@@ -161,7 +164,7 @@ where
 
 pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
     RangeMap {
-        list: vec![
+        list: [
             Entry {
                 key: char::from_u32(range.start as u32 - 1).unwrap_or(range.start),
                 value: State { value: None },
@@ -170,14 +173,15 @@ pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
                 key: range.end,
                 value: State { value: Some(value) },
             },
-        ],
+        ]
+        .cast(),
     }
 }
 
 pub fn from_one<T>(c: char, value: T) -> RangeMap<char, State<T>> {
     RangeMap {
         list: match char::from_u32(c as u32 - 1) {
-            Some(p) => vec![
+            Some(p) => [
                 Entry {
                     key: p,
                     value: State { value: None },
@@ -186,29 +190,33 @@ pub fn from_one<T>(c: char, value: T) -> RangeMap<char, State<T>> {
                     key: c,
                     value: State { value: Some(value) },
                 },
-            ],
-            None => {
-                vec![Entry {
-                    key: c,
-                    value: State { value: Some(value) },
-                }]
-            }
+            ]
+            .cast(),
+            None => [Entry {
+                key: c,
+                value: State { value: Some(value) },
+            }]
+            .cast(),
         },
     }
 }
 
 #[cfg(test)]
 mod test {
+
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::range_map::from_one;
+    use crate::{
+        common::{cast::Cast, default::default},
+        range_map::from_one,
+    };
 
     use super::{from_range, merge, merge_list, Entry, RangeMap, State};
 
     #[test]
     #[wasm_bindgen_test]
     fn test_get() {
-        let list = vec![
+        let list = [
             Entry {
                 key: 10,
                 value: 'a',
@@ -221,7 +229,8 @@ mod test {
                 key: 30,
                 value: 'c',
             },
-        ];
+        ]
+        .cast();
         let rm = RangeMap { list };
         let result = rm.get(5);
         assert_eq!(result, &'a');
@@ -242,7 +251,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_get_from_empty() {
-        let list = vec![];
+        let list = default();
         let rm: RangeMap<i32, char> = RangeMap { list };
         let result = rm.get(10);
         assert_eq!(*result, 0 as char);
@@ -252,23 +261,25 @@ mod test {
     #[wasm_bindgen_test]
     fn test_merge() {
         let a = RangeMap {
-            list: vec![Entry {
+            list: [Entry {
                 key: 10,
                 value: State { value: Some('a') },
-            }],
+            }]
+            .cast(),
         };
-        let b = RangeMap { list: vec![] };
+        let b = RangeMap { list: default() };
         let result = merge(a, b);
         assert_eq!(result.list.len(), 1);
         assert_eq!(result.list[0].key, 10);
         assert_eq!(result.list[0].value, State { value: Some('a') });
 
-        let a = RangeMap { list: vec![] };
+        let a = RangeMap { list: default() };
         let b = RangeMap {
-            list: vec![Entry {
+            list: [Entry {
                 key: 10,
                 value: State { value: Some('a') },
-            }],
+            }]
+            .cast(),
         };
         let result = merge(a, b);
         assert_eq!(result.list.len(), 1);
@@ -276,7 +287,7 @@ mod test {
         assert_eq!(result.list[0].value, State { value: Some('a') });
 
         let a = RangeMap {
-            list: vec![
+            list: [
                 Entry {
                     key: 10,
                     value: State { value: Some('a') },
@@ -293,10 +304,11 @@ mod test {
                     key: 40,
                     value: State { value: None },
                 },
-            ],
+            ]
+            .cast(),
         };
         let b = RangeMap {
-            list: vec![
+            list: [
                 Entry {
                     key: 10,
                     value: State { value: Some('a') },
@@ -317,7 +329,8 @@ mod test {
                     key: 50,
                     value: State { value: Some('d') },
                 },
-            ],
+            ]
+            .cast(),
         };
         let result = merge(a, b);
         assert_eq!(result.list.len(), 5);
@@ -336,41 +349,47 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_merge_list() {
-        let result: RangeMap<i32, State<char>> = merge_list(vec![]);
+        let result: RangeMap<i32, State<char>> = merge_list(default());
         assert_eq!(result.list.len(), 0);
 
-        let result: RangeMap<i32, State<char>> = merge_list(vec![
-            RangeMap {
-                list: vec![Entry {
-                    key: 10,
-                    value: State { value: Some('a') },
-                }],
-            },
-            RangeMap {
-                list: vec![
-                    Entry {
+        let result: RangeMap<i32, State<char>> = merge_list(
+            [
+                RangeMap {
+                    list: [Entry {
                         key: 10,
-                        value: State { value: None },
-                    },
-                    Entry {
-                        key: 20,
-                        value: State { value: Some('b') },
-                    },
-                ],
-            },
-            RangeMap {
-                list: vec![
-                    Entry {
-                        key: 20,
-                        value: State { value: None },
-                    },
-                    Entry {
-                        key: 30,
-                        value: State { value: Some('c') },
-                    },
-                ],
-            },
-        ]);
+                        value: State { value: Some('a') },
+                    }]
+                    .cast(),
+                },
+                RangeMap {
+                    list: [
+                        Entry {
+                            key: 10,
+                            value: State { value: None },
+                        },
+                        Entry {
+                            key: 20,
+                            value: State { value: Some('b') },
+                        },
+                    ]
+                    .cast(),
+                },
+                RangeMap {
+                    list: [
+                        Entry {
+                            key: 20,
+                            value: State { value: None },
+                        },
+                        Entry {
+                            key: 30,
+                            value: State { value: Some('c') },
+                        },
+                    ]
+                    .cast(),
+                },
+            ]
+            .cast(),
+        );
         assert_eq!(result.list.len(), 3);
         assert_eq!(result.list[0].key, 10);
         assert_eq!(result.list[0].value, State { value: Some('a') });
@@ -385,16 +404,18 @@ mod test {
     #[should_panic(expected = "state values should be the same")]
     fn test_merge_panic() {
         let a = RangeMap {
-            list: vec![Entry {
+            list: [Entry {
                 key: 10,
                 value: State { value: Some('a') },
-            }],
+            }]
+            .cast(),
         };
         let b = RangeMap {
-            list: vec![Entry {
+            list: [Entry {
                 key: 20,
                 value: State { value: Some('b') },
-            }],
+            }]
+            .cast(),
         };
         let _result = merge(a, b);
     }
