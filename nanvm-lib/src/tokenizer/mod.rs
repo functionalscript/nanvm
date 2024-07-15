@@ -409,14 +409,20 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_id(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_id_char(c) => {
-            s.push(c);
-            (default(), TokenizerState::ParseId(s))
-        }
-        _ => transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
-    }
+#[allow(clippy::almost_complete_range)]
+fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    get_next_state(
+        s,
+        c,
+        |s, c| transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
+        create_range_map(
+            ['a'..'z', 'A'..'Z', '_'..'_', '$'..'$', '0'..'9'].cast(),
+            |mut s, c| {
+                s.push(c);
+                (default(), TokenizerState::ParseId(s))
+            },
+        ),
+    )
 }
 
 fn tokenize_string(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
