@@ -7,7 +7,7 @@ use crate::{
         big_uint::BigUint,
     },
     common::{cast::Cast, default::default},
-    range_map::{from_one, from_range, merge, RangeMap, State},
+    range_map::{from_one, from_range, merge, merge_list, RangeMap, State},
 };
 
 #[derive(Debug, PartialEq)]
@@ -459,27 +459,40 @@ fn transfer_state(
 }
 
 fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '\"' | '\\' | '/' => continue_string_state(s, c),
-        'b' => continue_string_state(s, '\u{8}'),
-        'f' => continue_string_state(s, '\u{c}'),
-        'n' => continue_string_state(s, '\n'),
-        'r' => continue_string_state(s, '\r'),
-        't' => continue_string_state(s, '\t'),
-        'u' => (
-            default(),
-            TokenizerState::ParseUnicodeChar(ParseUnicodeCharState {
-                s,
-                unicode: 0,
-                index: 0,
-            }),
+    get_next_state(
+        s,
+        c,
+        |s, c| {
+            transfer_state(
+                [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
+                TokenizerState::ParseString(s),
+                c,
+            )
+        },
+        merge_list(
+            [
+                create_range_map(['\"'..'\"', '\\'..'\\', '/'..'/'].cast(), |s, c| {
+                    continue_string_state(s, c)
+                }),
+                from_one('b', |s, _| continue_string_state(s, '\u{8}')),
+                from_one('f', |s, _| continue_string_state(s, '\u{c}')),
+                from_one('n', |s, _| continue_string_state(s, '\n')),
+                from_one('r', |s, _| continue_string_state(s, '\r')),
+                from_one('t', |s, _| continue_string_state(s, '\t')),
+                from_one('u', |s, _| {
+                    (
+                        default(),
+                        TokenizerState::ParseUnicodeChar(ParseUnicodeCharState {
+                            s,
+                            unicode: 0,
+                            index: 0,
+                        }),
+                    )
+                }),
+            ]
+            .cast(),
         ),
-        _ => transfer_state(
-            [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
-            TokenizerState::ParseString(s),
-            c,
-        ),
-    }
+    )
 }
 
 fn tokenize_unicode_char(
