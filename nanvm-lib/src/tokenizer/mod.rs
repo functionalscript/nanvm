@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, mem::take};
+use std::{collections::VecDeque, mem::take, ops::Range};
 
 use crate::{
     big_numbers::{
@@ -7,7 +7,7 @@ use crate::{
         big_uint::BigUint,
     },
     common::{cast::Cast, default::default},
-    range_map::{from_one, merge, RangeMap, State},
+    range_map::{from_one, from_range, merge, RangeMap, State},
 };
 
 #[derive(Debug, PartialEq)]
@@ -357,6 +357,17 @@ const fn digit_to_number(c: char) -> u64 {
 
 fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
+}
+
+fn create_range_map<T>(
+    list: Vec<Range<char>>,
+    t: Transition<T>,
+) -> RangeMap<char, State<Transition<T>>> {
+    let mut result = RangeMap { list: default() };
+    for range in list {
+        result = merge(from_range(range, t), result);
+    }
+    result
 }
 
 type Transition<T> = fn(state: T, c: char) -> (Vec<JsonToken>, TokenizerState);
