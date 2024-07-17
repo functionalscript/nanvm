@@ -1,4 +1,4 @@
-## “DJS” JSON Extension: Bridging the Gap to JavaScript w/o DSLs
+## Bridging the Gap from JSON to JavaScript without DSLs
 
 In this article, we explore a natural approach to enhancing JSON by seamlessly integrating essential
 features using JavaScript constructs. This approach differs from introducing custom DSL enhancements to JSON.
