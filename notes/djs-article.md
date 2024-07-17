@@ -6,23 +6,20 @@ features using JavaScript constructs. This approach differs from introducing cus
 Apart from addressing human-friendly syntactic enhancements (as tackled by [JSON5](https://json5.org/),
 [Hjson](https://github.com/hjson/hjson-js), and similar approaches), we focus on the following pain points:
 
-1. Duplication Avoidance:
-    - Traditional JSON’s lack of support for directed acyclic data graphs results in verbose, repetitive
+- **Duplication Avoidance:** Traditional JSON’s lack of support for directed acyclic data graphs results in verbose, repetitive
     content. This redundancy can lead to copy/paste errors and cognitive overload - while a simple JS
     “no-DSL” enhancement addresses that major pain point.
-2. Modularization:
-    - Just as code is modularized, programmers naturally desire to modularize data. Again, we aim to address
+- **Modularization:** Just as code is modularized, programmers naturally desire to modularize data. Again, we aim to address
     this need with well known standard JS syntax.
-3. Efficient Load-Time Computations:
-    - Our goal is to enable load-time computations while maintaining robust security measures. Once again,
+- **Efficient Load-Time Computations:** Our goal is to enable load-time computations while maintaining robust security measures. Once again,
     there is no custom DSL in our model here: we use standard JS with well-defined restrictions targeting
-    security (which includes well-controlled predictable outcome of load-time computations).
+    security (which includes well-controlled predictable outcomes of load-time computations).
 
-In the rest of this article we name the resulting JSON extension “DJS”.
+In the rest of this article, we name the resulting JSON extension “DJS”.
 
 ### Exploring Motivating Examples: JSON Extensions via DSLs
 
-Let's consider few JSON extensions varying on the following points:
+Let's consider a few JSON extensions varying on the following points:
 - Does a given extension maintain JSON purity (hiding its DSL within strings literals)?
 - Is it a general-purpose or a problem-oriented extension?
 - How expressive is it (especially regarding user-defined functions)?
@@ -63,7 +60,7 @@ JSON-like syntax resembles JavaScript closely but yet is different: for example,
 `local` (and not JS's `const`) keyword for defining constants. Jsonnet allows multi-file modular
 construction of configuration data. Its syntax differs from popular JavaScript modularization
 syntaxes. Its evaluate-to-JSON semantic has a formal definition; Jsonnet's user-defined
-functionality support is powerful enough to define the “rich” Jsonnet language in a form
+functionality support is powerful enough to define the “rich” Jsonnet language in the form
 of a standard prelude based on a minimalistic core language.
 
 Numerous custom JSON extensions, like the three that we briefly introduced above,
@@ -91,10 +88,10 @@ export default { foo: [a, b], bar: b }
 
 In this snippet, we refer to a data entity imported from `my_module.d.mjs` as `m`.
 When other data entities are used multiple times, defining them via `const`
-declarations eliminates redundancy. In its last statement `test.d.mjs` exports exactly one data
+declarations eliminate redundancy. In its last statement `test.d.mjs` exports exactly one data
 entity for external usage. Notably, Data JS implements commonly used JSON relaxations (as
-demonstrated in the snippet with a comment and a use of non-quoted identifiers as keys).
-Extensions listed here are elements of ECMAScript standard (as opposite to yet another DSL).
+demonstrated in the snippet with a comment and the use of non-quoted identifiers as keys).
+Extensions listed here are elements of ECMAScript standard (as opposed to yet another DSL).
 
 DJS employs relative paths in `import` statements, forming a directed acyclic graph
 of interconnected modules. After loading and processing, you can save the resulting data graph
@@ -121,7 +118,7 @@ with a set of user's code snippets preserved for delayed “run-time” executio
 ### Current status of DJS
 
 [Our current DJS implementation](https://github.com/functionalscript/nanvm) features modular loading (deserialization) and saving
-(serialization) - with support of both CommonJS and ECMAScript syntax for
+(serialization) - with the support of both CommonJS and ECMAScript syntax for
 modules. Constant declarations are supported on both sides (loading / saving),
 plus, the loader supports several JavaScript-compatible syntax relaxations of JSON.
 
