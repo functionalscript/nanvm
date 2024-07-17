@@ -1,8 +1,7 @@
 ## “DJS” JSON Extension: Bridging the Gap to JavaScript w/o DSLs
 
 In this article, we explore a natural approach to enhancing JSON by seamlessly integrating essential
-features using JavaScript constructs. This stands in contrast to introducing custom DSL enhancements
-to JSON.
+features using JavaScript constructs. This approach differs from introducing custom DSL enhancements to JSON.
 
 Apart from addressing human-friendly syntactic enhancements (as tackled by [JSON5](https://json5.org/),
 [Hjson](https://github.com/hjson/hjson-js), and similar approaches), we focus on the following pain points:
@@ -36,9 +35,9 @@ performing limited computations. For instance, given `{"x":[{"y":{"z":1}}]}` ear
 the data, `"${x[0].y.z}"` evaluates to `"1"` (using `${}` syntax in a string literal to wrap
 a JS-like term). A more complicated example, `["#for-each", [{"x": 1}, {"x": 2}], "template.json"]`, injects
 parameterized content of another JSON template in a loop (using a built-in `for_each` function).
-Despite its relative obscurity, this project provides expressive computation capabilities
-for extending JSON in a general-purpose manner - for the price of a unique DSL hidden in
-string values (thus preserving JSON purity). To master this JSON extension one has to learn
+Despite its relative obscurity, this project provides expressive computation capabilities for
+extending JSON in a general-purpose manner. It achieves this by using a unique DSL hidden in string
+values, thus preserving JSON purity. To master this JSON extension one has to learn
 the DSL syntax elements (`${}`, `#`) plus a compact set of built-in functions. There is no
 support for user-defined functions.
 
@@ -59,11 +58,11 @@ example, its DSL syntax hides in string values, plus, certain key strings have s
 
 3. [Jsonnet](https://jsonnet.org/) is a well-defined and elaborated configuration language
 that, in fact, provides a rich set of general-purposed JSON manipulation functionality.
-Unlike to previous examples, Jsonnet diverges from pure JSON syntax. Its extended
+Unlike the previous examples, Jsonnet diverges from pure JSON syntax. Its extended
 JSON-like syntax resembles JavaScript closely but yet is different: for example, it uses its own
 `local` (and not JS's `const`) keyword for defining constants. Jsonnet allows multi-file modular
-construction of configuration data (again with its own syntax that differs from popular JavaScript
-modularization syntaxes). Its evaluate-to-JSON semantic has a formal definition; Jsonnet's user-defined
+construction of configuration data. Its syntax differs from popular JavaScript modularization
+syntaxes. Its evaluate-to-JSON semantic has a formal definition; Jsonnet's user-defined
 functionality support is powerful enough to define the “rich” Jsonnet language in a form
 of a standard prelude based on a minimalistic core language.
 
@@ -77,11 +76,10 @@ JavaScript syntax and encapsulation techniques - instead of defining yet another
 Code duplication, often referred to as ‘copy and paste programming’, is an infamous
 anti-pattern. To mitigate it, we modularize our programs and factor out repeated code.
 
-To address data duplication (or excessive data ‘copy and paste’), DJS leverages
-JavaScript’s `const` declarations and standard modularization techniques (either
-CommonJS `.cjs` or ECMAScript `.mjs` modules). In this article, we use ECMAScript module
-syntax. Consider the following example from `test.d.mjs` (where the `.d` sub-extension
-denotes DJS content):
+To address data duplication (or excessive data ‘copy and paste’), DJS leverages JavaScript’s
+`const` declarations and standard modularization techniques (either CommonJS `.cjs`, or ECMAScript
+`.mjs` modules). In this article, we use ECMAScript module syntax. Consider the following example
+from `test.d.mjs` (where the `.d` sub-extension denotes DJS content):
 
 ```js
 import m from "my_module.d.mjs"
@@ -91,7 +89,7 @@ const b = [3, m, a]
 export default { foo: [a, b], bar: b }
 ```
 
-In this snippet, a data entity imported from `my_module.d.mjs` is referred to as `m`.
+In this snippet, we refer to a data entity imported from `my_module.d.mjs` as `m`.
 When other data entities are used multiple times, defining them via `const`
 declarations eliminates redundancy. In its last statement `test.d.mjs` exports exactly one data
 entity for external usage. Notably, Data JS implements commonly used JSON relaxations (as
@@ -99,17 +97,17 @@ demonstrated in the snippet with a comment and a use of non-quoted identifiers a
 Extensions listed here are elements of ECMAScript standard (as opposite to yet another DSL).
 
 DJS employs relative paths in `import` statements, forming a directed acyclic graph
-of interconnected modules. Upon loading and processing, the resulting data graph can be
-saved in vanilla JSON format (which might get bloated due to loss of deduplication
-benefits) or as a bundled singular `.d.mjs` file. In both cases, the output excludes
+of interconnected modules. After loading and processing, you can save the resulting data graph
+either in vanilla JSON format (which might become bloated due to the loss of deduplication benefits)
+or as a bundled singular `.d.mjs` file. In both cases, the output excludes
 data that are not referred to from the root data object — that's akin to the “tree-shaking”
 capabilities of JS bundlers.
 
 ### “Load-time” and “run-time” computations
 
-In the snippet above, the use of identifiers (referring to constants or imported
-values) represents a simple case of using JavaScript expressions in value contexts. DJS
-will support a subset of ECMAScript that includes:
+In the snippet above, we see the use of identifiers (referring to constants or imported values).
+This represents a simple case of using JavaScript expressions in value contexts. DJS will support
+a subset of ECMAScript that includes:
 - in-place value expressions fully compliant with ECMAScript standard;
 - a restricted subset of ECMAScript's standard functions;
 - a restricted form of user-defined functions;
@@ -130,14 +128,14 @@ plus, the loader supports several JavaScript-compatible syntax relaxations of JS
 Our next steps involve gradually implementing JavaScript expressions and introducing limited
 user-defined function definitions.
 
-DJS compatibility with CommonJS and ECMAScript module syntax is important in interim. That
-detail allows to experiment with DJS's future target scenarios using an external JavaScript
-facility (Node, Deno, Bun or alike).
+DJS’s compatibility with both CommonJS and ECMAScript module syntax is crucial during this
+interim phase. That detail allows us to experiment with DJS’s future target scenarios using
+an external JavaScript facility (Node, Deno, Bun, or similar tools).
 
-In difference with the execution via an external JavaScript engine, our future full-scale
+In contrast to executing via an external JavaScript engine, our future full-scale
 reference DJS implementation will define DJS's restricted subset of ECMAScript standard
 (to provide security and resource consumption control guarantees that are hard to achieve when
 using an external JavaScript engine).
 
-We intend to share future progress on the DJS project and delve into its design
-details in upcoming articles.
+Our plan is to share ongoing progress on the DJS project and explore its design details in
+upcoming articles.
