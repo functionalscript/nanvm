@@ -120,7 +120,7 @@ with a set of user's code snippets preserved for delayed “run-time” executio
 
 ### Current status of DJS
 
-Our current DJS implementation features modular loading (deserialization) and saving
+[Our current DJS implementation](https://github.com/functionalscript/nanvm) features modular loading (deserialization) and saving
 (serialization) - with support of both CommonJS and ECMAScript syntax for
 modules. Constant declarations are supported on both sides (loading / saving),
 plus, the loader supports several JavaScript-compatible syntax relaxations of JSON.
