@@ -1,6 +1,6 @@
 # NaNVM
 
-A VM for FunctionalScript
+A VM for [FunctionalScript](https://github.com/functionalscript/functionalscript).
 
 ## Prerequisites
 
@@ -54,5 +54,5 @@ nanvm nanvm-lib/test/test_cache_b.d.mjs sample.json
 From CommonJS module to ESM module
 
 ```console
-cargo run nanvm-lib/test/test_import_main.d.cjs sample.d.mjs
+nanvm nanvm-lib/test/test_import_main.d.cjs sample.d.mjs
 ```
