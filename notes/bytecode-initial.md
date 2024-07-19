@@ -25,3 +25,21 @@ export default f(m1, m2)
 ```
 
 In this case, we can parse a module without parsing `module1.d.mjs` and `module1.m.js`.
+
+Every function has two arrays, which can be referenced from a function body:
+- args, an immutable array.
+- locals, works as a stack.
+
+Function body commands:
+
+```ts
+type Body = { local: Expression[], result: Expression }
+type ExpressionType = `localRef` | `argRef` | `object` | `array` | `const`
+type Expression =
+    [`localRef`, number] |
+    [`argRef`, number] |
+    [`const`, number|string|bool|null]
+    [`object`, Property[]]
+    [`array`, Expression[]]
+type Property = [string, Expression] 
+```
