@@ -92,7 +92,7 @@ type Property = (string, Expression);
 enum Expression {
     local_ref(uint32),
     arg_ref(uint32),
-    value(JSAny)
+    value(JSAny),
     object(Vec<Property>),
     array(Vec<Expression>),
 }
