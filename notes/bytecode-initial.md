@@ -30,21 +30,23 @@ Every function has two arrays, which can be referenced from a function body:
 - args, an immutable array.
 - locals, works as a stack.
 
-Function body commands:
+## Module Type
 
 ```ts
-type Body = {
-    local: Expression[],
-    return: Expression
-}
-type ExpressionType = `localRef` | `argRef` | `object` | `array` | `const`
+type Property = [string, Expression]
+
 type Expression =
     [`localRef`, number] |
     [`argRef`, number] |
     [`value`, number|string|bool|null]
     [`object`, Property[]]
     [`array`, Expression[]]
-type Property = [string, Expression]
+
+type Body = {
+    local: Expression[],
+    return: Expression
+}
+
 type Module = {
     import: string[],
     body: Body,
