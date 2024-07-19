@@ -33,7 +33,10 @@ Every function has two arrays, which can be referenced from a function body:
 Function body commands:
 
 ```ts
-type Body = { local: Expression[], retun: Expression }
+type Body = {
+    local: Expression[],
+    return: Expression
+}
 type ExpressionType = `localRef` | `argRef` | `object` | `array` | `const`
 type Expression =
     [`localRef`, number] |
@@ -41,7 +44,11 @@ type Expression =
     [`value`, number|string|bool|null]
     [`object`, Property[]]
     [`array`, Expression[]]
-type Property = [string, Expression] 
+type Property = [string, Expression]
+type Module = {
+    import: string[],
+    body: Body,
+}
 ```
 
 Then a body of this function 
@@ -72,5 +79,29 @@ should be represented as:
         ["a", ["localRef", 0]],
         ["b", ["localRef", 1]]
     ]]
+}
+```
+
+And the whole module:
+
+```json
+{
+    "import": ["module1.d.mjs", "module2.d.mjs"],
+    "body": {
+        "local": [
+            ["object", [
+                ["m2", ["argRef", 1]],
+                ["f", ["value", true]]
+            ]],
+            ["array", [
+                ["value", 3],
+                ["argRef", 0]
+            ]]
+        ],
+        "return": ["object", [
+            ["a", ["localRef", 0]],
+            ["b", ["localRef", 1]]
+        ]]
+    }
 }
 ```
