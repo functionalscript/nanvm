@@ -82,7 +82,7 @@ should be represented as:
 }
 ```
 
-And the whole module:
+## Example of a JSON representation of the DJS module
 
 ```json
 {
