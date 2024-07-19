@@ -56,10 +56,10 @@ type Module = {
 Then a body of this function 
 
 ```js
-const f = (...args) => {
-    const _0 = { m2: args[1], f: true }
-    const _1 = [3, args[0]]
-    return { a: _0, b: _1 }
+const f = (a0, a1) => {
+    const c0 = { m2: a1, f: true }
+    const c1 = [3, a0]
+    return { a: c0, b: c1 }
 }
 ```
 
