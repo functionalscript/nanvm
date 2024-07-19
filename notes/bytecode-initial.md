@@ -84,6 +84,30 @@ should be represented as:
 }
 ```
 
+## Rust Module Type
+
+```rust
+type Property = (string, Expression);
+
+enum Expression {
+    local_ref(uint32),
+    arg_ref(uint32),
+    value(JSAny)
+    object(Vec<Property>),
+    array(Vec<Expression>),
+}
+
+struct Body {
+    local: Vec<Expression>,
+    return: Expression,
+}
+
+struct Module {
+    import: Vec<string>,
+    body: Body,
+}
+```
+
 ## Example of a JSON representation of the DJS module
 
 ```json
