@@ -33,13 +33,44 @@ Every function has two arrays, which can be referenced from a function body:
 Function body commands:
 
 ```ts
-type Body = { local: Expression[], result: Expression }
+type Body = { local: Expression[], retun: Expression }
 type ExpressionType = `localRef` | `argRef` | `object` | `array` | `const`
 type Expression =
     [`localRef`, number] |
     [`argRef`, number] |
-    [`const`, number|string|bool|null]
+    [`value`, number|string|bool|null]
     [`object`, Property[]]
     [`array`, Expression[]]
 type Property = [string, Expression] 
+```
+
+Then a body of this function 
+
+```js
+const f = (...args) => {
+    const _0 = { m2: args[1], f: true }
+    const _1 = [3, args[0]]
+    return { a: _0, b: _1 }
+}
+```
+
+should be represented as:
+
+```json
+{
+    "local": [
+        ["object", [
+            ["m2", ["argRef", 1]],
+            ["f", ["value", true]]
+        ]],
+        ["array", [
+            ["value", 3],
+            ["argRef", 0]
+        ]]
+    ],
+    "return": ["object", [
+        ["a", ["localRef", 0]],
+        ["b", ["localRef", 1]]
+    ]]
+}
 ```
