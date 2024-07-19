@@ -1,72 +1,27 @@
 I think we should start with the current DJS file. We can assume that one DJS file is a function that returns an object. If we skip `import` statements, we can see that it looks like a body of the function:
 
 ```js
-const a = "a"
-const b = 3
+import m1 from "module1.d.mjs"
+import m2 from "module2.d.mjs"
+
+const a = { m2 }
+const b = [3, m1]
+
 export default { a, b }
 ```
 
 can be seen as
 
 ```js
-const f = () => {
-    const a = "a"
-    const b = 3
-    return { a, b }
+const f = (...args) => {
+    const _0 = { m2: args[1] }
+    const _1 = [3, args[0]]
+    return { a: _0, b: _1 }
 }
-export default f()
+
+import m1 from "module1.d.mjs"
+import m2 from "module2.d.mjs"
+export default f(m1, m2)
 ```
 
-So, a minimal function contains multiple sequential statements and a `return` statement at the end. Each statement creates a named constant.
-
-`import` should be outside the scope of the function.
-
-```js
-import m from "module.cjs"
-const a = "a"
-const b = [3, m]
-export default { a, b }
-```
-
-will be interpreted as
-
-```js
-import m from "module.cjs"
-export default () => {
-    const a = "a"
-    const b = [3, m]
-    return { a, b }
-}()
-```
-
-It should help as to introduce more complicated expressions into DJS. For example, this DJS code:
-
-```js
-import m from "module.cjs"
-const a = "a" 
-const b = [3 + 4, m[12 - 6]]
-export default { a, b }
-```
-
-will be parsed as
-
-```js
-import m from "module.cjs"
-export default () => {
-    const a = "a" 
-    const b = [3 + 4, m[12 - 6]]
-    return { a, b }
-}()
-```
-
-Actually, it's more like this:
-
-```js
-import moduleCjs from "module.cjs"
-export default () => {
-    const m = moduleCjs
-    const a = "a" 
-    const b = [3 + 4, m[12 - 6]]
-    return { a, b }
-}()
-```
+In this case, we can parse a module without parsing `module1.d.mjs` and `module1.m.js`.
