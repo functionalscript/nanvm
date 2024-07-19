@@ -100,12 +100,12 @@ enum Expression {
 struct Body {
     local: Vec<Expression>,
     return: Expression,
-}
+};
 
 struct Module {
     import: Vec<string>,
     body: Body,
-}
+};
 ```
 
 ## Example of a JSON representation of the DJS module
