@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::RangeInclusive;
 
 use crate::{
     common::{cast::Cast, default::default},
@@ -162,15 +162,15 @@ where
     res
 }
 
-pub fn from_range<T>(range: Range<char>, value: T) -> RangeMap<char, State<T>> {
+pub fn from_range<T>(range: RangeInclusive<char>, value: T) -> RangeMap<char, State<T>> {
     RangeMap {
         list: [
             Entry {
-                key: char::from_u32(range.start as u32 - 1).unwrap_or(range.start),
+                key: char::from_u32(*range.start() as u32 - 1).unwrap_or(*range.start()),
                 value: State { value: None },
             },
             Entry {
-                key: range.end,
+                key: *range.end(),
                 value: State { value: Some(value) },
             },
         ]
@@ -424,7 +424,7 @@ mod test {
     #[wasm_bindgen_test]
     fn test_from_range() {
         let state = 'A';
-        let range = 'b'..'d';
+        let range = 'b'..='d';
         let rm = from_range(range, state);
         assert_eq!(rm.get('a'), &State { value: None });
         assert_eq!(rm.get('b'), &State { value: Some('A') });

@@ -1,4 +1,8 @@
-use std::{collections::VecDeque, mem::take, ops::Range};
+use std::{
+    collections::VecDeque,
+    mem::take,
+    ops::RangeInclusive,
+};
 
 use crate::{
     big_numbers::{
@@ -361,7 +365,7 @@ fn start_number(s: Sign, c: char) -> IntegerState {
 }
 
 fn create_range_map<T>(
-    list: Vec<Range<char>>,
+    list: Vec<RangeInclusive<char>>,
     t: Transition<T>,
 ) -> RangeMap<char, State<Transition<T>>> {
     let mut result = RangeMap { list: default() };
@@ -417,7 +421,7 @@ fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
         c,
         |s, c| transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
         create_range_map(
-            ['a'..'z', 'A'..'Z', '_'..'_', '$'..'$', '0'..'9'].cast(),
+            ['a'..='z', 'A'..='Z', '_'..='_', '$'..='$', '0'..='9'].cast(),
             |mut s, c| {
                 s.push(c);
                 (default(), TokenizerState::ParseId(s))
@@ -472,7 +476,7 @@ fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) 
         },
         merge_list(
             [
-                create_range_map(['\"'..'\"', '\\'..'\\', '/'..'/'].cast(), |s, c| {
+                create_range_map(['\"'..='\"', '\\'..='\\', '/'..='/'].cast(), |s, c| {
                     continue_string_state(s, c)
                 }),
                 from_one('b', |s, _| continue_string_state(s, '\u{8}')),
@@ -515,15 +519,15 @@ fn tokenize_unicode_char(
         merge_list(
             [
                 from_range(
-                    '0'..'9',
+                    '0'..='9',
                     (|state, c| state.push(c as u32 - '0' as u32)) as Func,
                 ),
                 from_range(
-                    'a'..'f',
+                    'a'..='f',
                     (|state, c| state.push(c as u32 - ('a' as u32 - 10))) as Func,
                 ),
                 from_range(
-                    'A'..'F',
+                    'A'..='F',
                     (|state, c| state.push(c as u32 - ('A' as u32 - 10))) as Func,
                 ),
             ]
