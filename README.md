@@ -1,90 +1,58 @@
 # NaNVM
 
-## Float64
+A VM for [FunctionalScript](https://github.com/functionalscript/functionalscript).
 
-|Sign, 1|Exponent, 11|Fraction, 52    |Value   |
-|-------|------------|----------------|--------|
-|0      |000         |0_0000_0000_0000|number  |
-|       |...         |                |number  |
-|       |7FF         |0_0000_0000_0000|+Inf    |
-|       |            |...             |reserved|
-|       |            |8_0000_0000_0000|NaN     |
-|       |            |...             |reserved|
-|1      |000         |0_0000_0000_0000|number  |
-|       |...         |                |number  |
-|       |7FF         |0_0000_0000_0000|-Inf    |
-|       |            |...             |reserved|
+## Prerequisites
 
-## Value
+- [Rust](https://www.rust-lang.org/tools/install).
+- For Windows, you may need Visual C++. You can get either
+  - by installing [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/),
+  - or adding [Desktop development with C++](https://learn.microsoft.com/en-us/cpp/build/vscpp-step-0-installation?view=msvc-170) to Visual Studio.
 
-`exponent == 0x7FF` is used for special values (53 bits):
+## Installation
 
-|Special value, 53 bits|Value   |# of values  |
-|----------------------|--------|-------------|
-|00_0000_0000_0000     |+Inf    |     1       |
-|...                   |reserved|2^51-1       |
-|08_0000_0000_0000     |Nan     |     1       |
-|...                   |reserver|2^51-1       |
-|10_0000_0000_0000     |-Inf    |     1       |
-|...                   |reserved|2^52-1       |
+To install the latest stable version from [crates.io](https://crates.io/crates/nanvm), run:
 
-## Pointers
-
-`45` bits = `48` bits - `3` bits of alignment.
-
-We need, at least, two types of pointers:
-- `&string`,
-- `&object`.
-
-`null` is a separate value, so our pointers have `2^45 - 1` values.
-
-## Array Index
-
-`2^32 - 1` values.
-
-## Bool
-
-`2` values.
-
-## Number Extension
-
-|prefix            |           |
-|------------------|-----------|
-|0111_1111_1111_0  |Infinity   |
-|0111_1111_1111_1  |NaN        |
-|1111_1111_1111_0  |-Infinity  |
-|1111_1111_1111_1  |Extension  |
-
-### Extension Types
-
-```rust
-const EXTENSION_MASK: u64 = 0xFFF8_0000_0000_0000;
-
-const PTR_MASK: u64 = EXTENSION | 0x4_0000_0000_0000;
-const NULL: u64 = PTR_MASK;
-
-const STR_MASK: u64 = EXTENSION | 0x2_0000_0000_0000;
-
-const STR_PTR_MASK: u64 = PTR_MASK | STR_MASK;
-
-const FALSE: u64 = EXTENSION;
-const TRUE: u64 = FALSE | 1;
+```console
+cargo install nanvm
 ```
 
-## String
+To install the current version from the `main` branch, run:
 
-```rust
-type String16 = Rc<[u16]>;
+```console
+cargo install --git https://github.com/functionalscript/nanvm
 ```
 
-## Object
+To unininstall the `nanvm`, run:
 
-```rust
-type Object = Rc<[Value]>
+```console
+cargo uninstall nanvm
 ```
 
-## Array
+## Command Line Interface
 
-```rust
-type Array = Rc<[Value]>;
+Converting DJS module into one file.
+
+```console
+nanvm INPUT_FILE OUTPUT_FILE
+```
+
+### Examples
+
+From JSON to JSON:
+
+```console
+nanvm notes/sample.json sample.json
+```
+
+From ESM module to JSON:
+
+```console
+nanvm nanvm-lib/test/test_cache_b.d.mjs sample.json
+```
+
+From CommonJS module to ESM module
+
+```console
+nanvm nanvm-lib/test/test_import_main.d.cjs sample.d.mjs
 ```
