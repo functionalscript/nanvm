@@ -295,8 +295,6 @@ impl ExpState {
 }
 
 const CP_0: u32 = 0x30;
-const CP_SMALL_A: u32 = 0x61;
-const CP_CAPITAL_A: u32 = 0x41;
 
 const fn is_new_line(c: char) -> bool {
     matches!(c, '\n')
@@ -498,34 +496,50 @@ fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) 
     )
 }
 
+#[allow(clippy::almost_complete_range)]
 fn tokenize_unicode_char(
     state: ParseUnicodeCharState,
     c: char,
 ) -> (Vec<JsonToken>, TokenizerState) {
-    // get_next_state(
-    //     state,
-    //     c,
-    //     |state, c| {
-    //         transfer_state(
-    //             [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
-    //             TokenizerState::ParseString(state.s),
-    //             c)
-    //     },
-    //     merge_list([
-    //         from_range('0'..'9', |state: ParseUnicodeCharState, c: char| {
-    //             state.push(c as u32 - CP_0)
-    //         })
-    //     ].cast()))
-    match c {
-        '0'..='9' => state.push(c as u32 - CP_0),
-        'a'..='f' => state.push(c as u32 - (CP_SMALL_A - 10)),
-        'A'..='F' => state.push(c as u32 - (CP_CAPITAL_A - 10)),
-        _ => transfer_state(
-            [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
-            TokenizerState::ParseString(state.s),
-            c,
+    type Func = fn(state: ParseUnicodeCharState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        state,
+        c,
+        |state, c| {
+            transfer_state(
+                [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
+                TokenizerState::ParseString(state.s),
+                c,
+            )
+        },
+        merge_list(
+            [
+                from_range(
+                    '0'..'9',
+                    (|state, c| state.push(c as u32 - '0' as u32)) as Func,
+                ),
+                from_range(
+                    'a'..'f',
+                    (|state, c| state.push(c as u32 - ('a' as u32 - 10))) as Func,
+                ),
+                from_range(
+                    'A'..'F',
+                    (|state, c| state.push(c as u32 - ('A' as u32 - 10))) as Func,
+                ),
+            ]
+            .cast(),
         ),
-    }
+    )
+    // match c {
+    //     '0'..='9' => state.push(c as u32 - CP_0),
+    //     'a'..='f' => state.push(c as u32 - (CP_SMALL_A - 10)),
+    //     'A'..='F' => state.push(c as u32 - (CP_CAPITAL_A - 10)),
+    //     _ => transfer_state(
+    //         [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
+    //         TokenizerState::ParseString(state.s),
+    //         c,
+    //     ),
+    // }
 }
 
 fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
