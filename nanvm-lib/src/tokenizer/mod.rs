@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, mem::take};
+use std::{collections::VecDeque, mem::take, ops::RangeInclusive};
 
 use crate::{
     big_numbers::{
@@ -7,7 +7,7 @@ use crate::{
         big_uint::BigUint,
     },
     common::{cast::Cast, default::default},
-    range_map::{from_one, merge, RangeMap, State},
+    range_map::{from_one, from_range, merge, merge_list, RangeMap, State},
 };
 
 #[derive(Debug, PartialEq)]
@@ -295,8 +295,6 @@ impl ExpState {
 }
 
 const CP_0: u32 = 0x30;
-const CP_SMALL_A: u32 = 0x61;
-const CP_CAPITAL_A: u32 = 0x41;
 
 const fn is_new_line(c: char) -> bool {
     matches!(c, '\n')
@@ -342,6 +340,9 @@ const fn is_id_char(c: char) -> bool {
     }
 }
 
+const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
+const OPERATOR_CHARS: [char; 11] = ['{', '}', '[', ']', ':', ',', '=', '.', ';', '(', ')'];
+
 fn is_terminal_for_number(c: char) -> bool {
     match c {
         '"' | '/' => true,
@@ -357,6 +358,29 @@ const fn digit_to_number(c: char) -> u64 {
 
 fn start_number(s: Sign, c: char) -> IntegerState {
     IntegerState::from_difit(s, c)
+}
+
+fn create_range_map<T>(
+    list: Vec<RangeInclusive<char>>,
+    t: Transition<T>,
+) -> RangeMap<char, State<Transition<T>>> {
+    let mut result = RangeMap { list: default() };
+    for range in list {
+        result = merge(from_range(range, t), result);
+    }
+    result
+}
+
+fn one(c: char) -> RangeInclusive<char> {
+    RangeInclusive::new(c, c)
+}
+
+fn set(arr: &[char]) -> Vec<RangeInclusive<char>> {
+    let mut result = Vec::new();
+    for c in arr {
+        result.push(one(*c));
+    }
+    result
 }
 
 type Transition<T> = fn(state: T, c: char) -> (Vec<JsonToken>, TokenizerState);
@@ -398,14 +422,19 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-fn tokenize_id(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_id_char(c) => {
-            s.push(c);
-            (default(), TokenizerState::ParseId(s))
-        }
-        _ => transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
-    }
+fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    get_next_state(
+        s,
+        c,
+        |s, c| transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
+        create_range_map(
+            ['a'..='z', 'A'..='Z', one('_'), one('$'), '0'..='9'].cast(),
+            |mut s, c| {
+                s.push(c);
+                (default(), TokenizerState::ParseId(s))
+            },
+        ),
+    )
 }
 
 fn tokenize_string(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
@@ -442,48 +471,113 @@ fn transfer_state(
 }
 
 fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '\"' | '\\' | '/' => continue_string_state(s, c),
-        'b' => continue_string_state(s, '\u{8}'),
-        'f' => continue_string_state(s, '\u{c}'),
-        'n' => continue_string_state(s, '\n'),
-        'r' => continue_string_state(s, '\r'),
-        't' => continue_string_state(s, '\t'),
-        'u' => (
-            default(),
-            TokenizerState::ParseUnicodeChar(ParseUnicodeCharState {
-                s,
-                unicode: 0,
-                index: 0,
-            }),
+    get_next_state(
+        s,
+        c,
+        |s, c| {
+            transfer_state(
+                [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
+                TokenizerState::ParseString(s),
+                c,
+            )
+        },
+        merge_list(
+            [
+                create_range_map(set(&['\"', '\\', '/']), continue_string_state),
+                from_one('b', |s, _| continue_string_state(s, '\u{8}')),
+                from_one('f', |s, _| continue_string_state(s, '\u{c}')),
+                from_one('n', |s, _| continue_string_state(s, '\n')),
+                from_one('r', |s, _| continue_string_state(s, '\r')),
+                from_one('t', |s, _| continue_string_state(s, '\t')),
+                from_one('u', |s, _| {
+                    (
+                        default(),
+                        TokenizerState::ParseUnicodeChar(ParseUnicodeCharState {
+                            s,
+                            unicode: 0,
+                            index: 0,
+                        }),
+                    )
+                }),
+            ]
+            .cast(),
         ),
-        _ => transfer_state(
-            [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
-            TokenizerState::ParseString(s),
-            c,
-        ),
-    }
+    )
 }
 
 fn tokenize_unicode_char(
     state: ParseUnicodeCharState,
     c: char,
 ) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '0'..='9' => state.push(c as u32 - CP_0),
-        'a'..='f' => state.push(c as u32 - (CP_SMALL_A - 10)),
-        'A'..='F' => state.push(c as u32 - (CP_CAPITAL_A - 10)),
-        _ => transfer_state(
-            [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
-            TokenizerState::ParseString(state.s),
-            c,
+    type Func = fn(state: ParseUnicodeCharState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        state,
+        c,
+        |state, c| {
+            transfer_state(
+                [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
+                TokenizerState::ParseString(state.s),
+                c,
+            )
+        },
+        merge_list(
+            [
+                from_range(
+                    '0'..='9',
+                    (|state, c| state.push(c as u32 - '0' as u32)) as Func,
+                ),
+                from_range(
+                    'a'..='f',
+                    (|state, c| state.push(c as u32 - ('a' as u32 - 10))) as Func,
+                ),
+                from_range(
+                    'A'..='F',
+                    (|state, c| state.push(c as u32 - ('A' as u32 - 10))) as Func,
+                ),
+            ]
+            .cast(),
         ),
-    }
+    )
 }
 
 fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    // get_next_state(
+    //     s,
+    //     c,
+    //     |s, c| { tokenize_invalid_number(c) },
+    //     merge_list([
+    //         from_range('0'..'9', |s, c| {tokenize_invalid_number(c)}),
+    //         from_one('.', |s, c| {(
+    //             default(),
+    //             TokenizerState::ParseFracBegin(IntegerState {
+    //                 s,
+    //                 b: BigUint::ZERO,
+    //             }),
+    //         )}),
+    //         create_range_map(['e'..'e', 'E'..'E'].cast(), |s,c| {
+    //             (
+    //                 default(),
+    //                 TokenizerState::ParseExpBegin(ExpState {
+    //                     s,
+    //                     b: BigUint::ZERO,
+    //                     fe: 0,
+    //                     es: Sign::Positive,
+    //                     e: 0,
+    //                 }),
+    //             )
+    //         }),
+    //         from_one('n', |s, c| {(
+    //             default(),
+    //             TokenizerState::ParseBigInt(IntegerState {
+    //                 s,
+    //                 b: BigUint::ZERO,
+    //             }),
+    //         )}),
+
+    //     ].cast())
+    // )
+
     match c {
-        '0'..='9' => tokenize_invalid_number(c),
         '.' => (
             default(),
             TokenizerState::ParseFracBegin(IntegerState {
