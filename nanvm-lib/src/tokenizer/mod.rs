@@ -530,16 +530,6 @@ fn tokenize_unicode_char(
             .cast(),
         ),
     )
-    // match c {
-    //     '0'..='9' => state.push(c as u32 - CP_0),
-    //     'a'..='f' => state.push(c as u32 - (CP_SMALL_A - 10)),
-    //     'A'..='F' => state.push(c as u32 - (CP_CAPITAL_A - 10)),
-    //     _ => transfer_state(
-    //         [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
-    //         TokenizerState::ParseString(state.s),
-    //         c,
-    //     ),
-    // }
 }
 
 fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
