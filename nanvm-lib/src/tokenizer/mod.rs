@@ -1,8 +1,4 @@
-use std::{
-    collections::VecDeque,
-    mem::take,
-    ops::RangeInclusive,
-};
+use std::{collections::VecDeque, mem::take, ops::RangeInclusive};
 
 use crate::{
     big_numbers::{
@@ -375,6 +371,18 @@ fn create_range_map<T>(
     result
 }
 
+fn one(c: char) -> RangeInclusive<char> {
+    RangeInclusive::new(c, c)
+}
+
+fn set(arr: &[char]) -> Vec<RangeInclusive<char>> {
+    let mut result = Vec::new();
+    for c in arr {
+        result.push(one(*c));
+    }
+    result
+}
+
 type Transition<T> = fn(state: T, c: char) -> (Vec<JsonToken>, TokenizerState);
 
 fn get_next_state<T>(
@@ -420,7 +428,7 @@ fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
         c,
         |s, c| transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
         create_range_map(
-            ['a'..='z', 'A'..='Z', '_'..='_', '$'..='$', '0'..='9'].cast(),
+            ['a'..='z', 'A'..='Z', one('_'), one('$'), '0'..='9'].cast(),
             |mut s, c| {
                 s.push(c);
                 (default(), TokenizerState::ParseId(s))
@@ -475,9 +483,7 @@ fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) 
         },
         merge_list(
             [
-                create_range_map(['\"'..='\"', '\\'..='\\', '/'..='/'].cast(), |s, c| {
-                    continue_string_state(s, c)
-                }),
+                create_range_map(set(&['\"', '\\', '/']), continue_string_state),
                 from_one('b', |s, _| continue_string_state(s, '\u{8}')),
                 from_one('f', |s, _| continue_string_state(s, '\u{c}')),
                 from_one('n', |s, _| continue_string_state(s, '\n')),
