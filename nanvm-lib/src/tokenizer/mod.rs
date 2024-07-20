@@ -414,7 +414,6 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
     }
 }
 
-#[allow(clippy::almost_complete_range)]
 fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
     get_next_state(
         s,
@@ -500,7 +499,6 @@ fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) 
     )
 }
 
-#[allow(clippy::almost_complete_range)]
 fn tokenize_unicode_char(
     state: ParseUnicodeCharState,
     c: char,
