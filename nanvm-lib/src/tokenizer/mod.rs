@@ -343,6 +343,14 @@ const fn is_id_char(c: char) -> bool {
 const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
 const OPERATOR_CHARS: [char; 11] = ['{', '}', '[', ']', ':', ',', '=', '.', ';', '(', ')'];
 
+fn terminal_for_number() -> Vec<RangeInclusive<char>> {
+    let c = WHITE_SPACE_CHARS
+        .into_iter()
+        .chain(OPERATOR_CHARS.into_iter())
+        .chain(['"', '/'].into_iter());
+    set(c)
+}
+
 fn is_terminal_for_number(c: char) -> bool {
     match c {
         '"' | '/' => true,
@@ -375,10 +383,10 @@ fn one(c: char) -> RangeInclusive<char> {
     RangeInclusive::new(c, c)
 }
 
-fn set(arr: &[char]) -> Vec<RangeInclusive<char>> {
+fn set(arr: impl IntoIterator<Item = char>) -> Vec<RangeInclusive<char>> {
     let mut result = Vec::new();
     for c in arr {
-        result.push(one(*c));
+        result.push(one(c));
     }
     result
 }
@@ -483,7 +491,7 @@ fn tokenize_escape_char(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) 
         },
         merge_list(
             [
-                create_range_map(set(&['\"', '\\', '/']), continue_string_state),
+                create_range_map(set(['\"', '\\', '/']), continue_string_state),
                 from_one('b', |s, _| continue_string_state(s, '\u{8}')),
                 from_one('f', |s, _| continue_string_state(s, '\u{c}')),
                 from_one('n', |s, _| continue_string_state(s, '\n')),
@@ -541,74 +549,57 @@ fn tokenize_unicode_char(
 }
 
 fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    // get_next_state(
-    //     s,
-    //     c,
-    //     |s, c| { tokenize_invalid_number(c) },
-    //     merge_list([
-    //         from_range('0'..'9', |s, c| {tokenize_invalid_number(c)}),
-    //         from_one('.', |s, c| {(
-    //             default(),
-    //             TokenizerState::ParseFracBegin(IntegerState {
-    //                 s,
-    //                 b: BigUint::ZERO,
-    //             }),
-    //         )}),
-    //         create_range_map(['e'..'e', 'E'..'E'].cast(), |s,c| {
-    //             (
-    //                 default(),
-    //                 TokenizerState::ParseExpBegin(ExpState {
-    //                     s,
-    //                     b: BigUint::ZERO,
-    //                     fe: 0,
-    //                     es: Sign::Positive,
-    //                     e: 0,
-    //                 }),
-    //             )
-    //         }),
-    //         from_one('n', |s, c| {(
-    //             default(),
-    //             TokenizerState::ParseBigInt(IntegerState {
-    //                 s,
-    //                 b: BigUint::ZERO,
-    //             }),
-    //         )}),
-
-    //     ].cast())
-    // )
-
-    match c {
-        '.' => (
-            default(),
-            TokenizerState::ParseFracBegin(IntegerState {
-                s,
-                b: BigUint::ZERO,
-            }),
+    type Func = fn(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        s,
+        c,
+        (|s, c| tokenize_invalid_number(c)) as Func,
+        merge_list(
+            [
+                from_one(
+                    '.',
+                    (|s, c| {
+                        (
+                            default(),
+                            TokenizerState::ParseFracBegin(IntegerState {
+                                s,
+                                b: BigUint::ZERO,
+                            }),
+                        )
+                    }) as Func,
+                ),
+                create_range_map(set(['e', 'E']), |s, c| {
+                    (
+                        default(),
+                        TokenizerState::ParseExpBegin(ExpState {
+                            s,
+                            b: BigUint::ZERO,
+                            fe: 0,
+                            es: Sign::Positive,
+                            e: 0,
+                        }),
+                    )
+                }),
+                from_one('n', |s, c| {
+                    (
+                        default(),
+                        TokenizerState::ParseBigInt(IntegerState {
+                            s,
+                            b: BigUint::ZERO,
+                        }),
+                    )
+                }),
+                create_range_map(terminal_for_number(), |s, c| {
+                    transfer_state(
+                        [JsonToken::Number(default())].cast(),
+                        TokenizerState::Initial,
+                        c,
+                    )
+                }),
+            ]
+            .cast(),
         ),
-        'e' | 'E' => (
-            default(),
-            TokenizerState::ParseExpBegin(ExpState {
-                s,
-                b: BigUint::ZERO,
-                fe: 0,
-                es: Sign::Positive,
-                e: 0,
-            }),
-        ),
-        'n' => (
-            default(),
-            TokenizerState::ParseBigInt(IntegerState {
-                s,
-                b: BigUint::ZERO,
-            }),
-        ),
-        c if is_terminal_for_number(c) => transfer_state(
-            [JsonToken::Number(default())].cast(),
-            TokenizerState::Initial,
-            c,
-        ),
-        _ => tokenize_invalid_number(c),
-    }
+    )
 }
 
 fn tokenize_integer(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
