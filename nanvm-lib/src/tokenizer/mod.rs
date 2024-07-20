@@ -342,6 +342,9 @@ const fn is_id_char(c: char) -> bool {
     }
 }
 
+const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
+const OPERATOR_CHARS: [char; 11] = ['{', '}', '[', ']', ':', ',', '=', '.', ';', '(', ')'];
+
 fn is_terminal_for_number(c: char) -> bool {
     match c {
         '"' | '/' => true,
@@ -508,7 +511,7 @@ fn tokenize_unicode_char(
     //             TokenizerState::ParseString(state.s),
     //             c)
     //     },
-    //     merge_list([            
+    //     merge_list([
     //         from_range('0'..'9', |state: ParseUnicodeCharState, c: char| {
     //             state.push(c as u32 - CP_0)
     //         })
@@ -526,8 +529,43 @@ fn tokenize_unicode_char(
 }
 
 fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    // get_next_state(
+    //     s,
+    //     c,
+    //     |s, c| { tokenize_invalid_number(c) },
+    //     merge_list([
+    //         from_range('0'..'9', |s, c| {tokenize_invalid_number(c)}),
+    //         from_one('.', |s, c| {(
+    //             default(),
+    //             TokenizerState::ParseFracBegin(IntegerState {
+    //                 s,
+    //                 b: BigUint::ZERO,
+    //             }),
+    //         )}),
+    //         create_range_map(['e'..'e', 'E'..'E'].cast(), |s,c| {
+    //             (
+    //                 default(),
+    //                 TokenizerState::ParseExpBegin(ExpState {
+    //                     s,
+    //                     b: BigUint::ZERO,
+    //                     fe: 0,
+    //                     es: Sign::Positive,
+    //                     e: 0,
+    //                 }),
+    //             )
+    //         }),
+    //         from_one('n', |s, c| {(
+    //             default(),
+    //             TokenizerState::ParseBigInt(IntegerState {
+    //                 s,
+    //                 b: BigUint::ZERO,
+    //             }),
+    //         )}),
+
+    //     ].cast())
+    // )
+
     match c {
-        '0'..='9' => tokenize_invalid_number(c),
         '.' => (
             default(),
             TokenizerState::ParseFracBegin(IntegerState {
