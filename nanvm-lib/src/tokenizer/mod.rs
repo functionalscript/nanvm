@@ -499,6 +499,20 @@ fn tokenize_unicode_char(
     state: ParseUnicodeCharState,
     c: char,
 ) -> (Vec<JsonToken>, TokenizerState) {
+    // get_next_state(
+    //     state,
+    //     c,
+    //     |state, c| {
+    //         transfer_state(
+    //             [JsonToken::ErrorToken(ErrorType::InvalidHex)].cast(),
+    //             TokenizerState::ParseString(state.s),
+    //             c)
+    //     },
+    //     merge_list([            
+    //         from_range('0'..'9', |state: ParseUnicodeCharState, c: char| {
+    //             state.push(c as u32 - CP_0)
+    //         })
+    //     ].cast()))
     match c {
         '0'..='9' => state.push(c as u32 - CP_0),
         'a'..='f' => state.push(c as u32 - (CP_SMALL_A - 10)),
