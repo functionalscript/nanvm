@@ -341,13 +341,13 @@ const fn is_id_char(c: char) -> bool {
 }
 
 const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
-const OPERATOR_CHARS: [char; 11] = ['{', '}', '[', ']', ':', ',', '=', '.', ';', '(', ')'];
+const OPERATOR_CHARS: [char; 10] = ['{', '}', '[', ']', ':', ',', '=', ';', '(', ')'];
 
 fn terminal_for_number() -> Vec<RangeInclusive<char>> {
     let c = WHITE_SPACE_CHARS
         .into_iter()
-        .chain(OPERATOR_CHARS.into_iter())
-        .chain(['"', '/'].into_iter());
+        .chain(OPERATOR_CHARS)
+        .chain(['"', '/']);
     set(c)
 }
 
@@ -553,12 +553,12 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
     get_next_state(
         s,
         c,
-        (|s, c| tokenize_invalid_number(c)) as Func,
+        (|_, c| tokenize_invalid_number(c)) as Func,
         merge_list(
             [
                 from_one(
                     '.',
-                    (|s, c| {
+                    (|s, _| {
                         (
                             default(),
                             TokenizerState::ParseFracBegin(IntegerState {
@@ -568,7 +568,7 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
                         )
                     }) as Func,
                 ),
-                create_range_map(set(['e', 'E']), |s, c| {
+                create_range_map(set(['e', 'E']), |s, _| {
                     (
                         default(),
                         TokenizerState::ParseExpBegin(ExpState {
@@ -580,7 +580,7 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
                         }),
                     )
                 }),
-                from_one('n', |s, c| {
+                from_one('n', |s, _| {
                     (
                         default(),
                         TokenizerState::ParseBigInt(IntegerState {
@@ -589,7 +589,7 @@ fn tokenize_zero(s: Sign, c: char) -> (Vec<JsonToken>, TokenizerState) {
                         }),
                     )
                 }),
-                create_range_map(terminal_for_number(), |s, c| {
+                create_range_map(terminal_for_number(), |_, c| {
                     transfer_state(
                         [JsonToken::Number(default())].cast(),
                         TokenizerState::Initial,
