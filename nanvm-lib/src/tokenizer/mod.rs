@@ -342,6 +342,15 @@ const fn is_id_char(c: char) -> bool {
 
 const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
 const OPERATOR_CHARS: [char; 10] = ['{', '}', '[', ']', ':', ',', '=', ';', '(', ')'];
+const OPERATOR_CHARS_WITH_DOT: [char; 11] = ['{', '}', '[', ']', ':', ',', '=', '.', ';', '(', ')'];
+
+fn id_start() -> Vec<RangeInclusive<char>> {
+    ['a'..='z', 'A'..='Z', one('_'), one('$')].cast()
+}
+
+fn id() -> Vec<RangeInclusive<char>> {
+    ['a'..='z', 'A'..='Z', one('_'), one('$'), '0'..='9'].cast()
+}
 
 fn terminal_for_number() -> Vec<RangeInclusive<char>> {
     let c = WHITE_SPACE_CHARS
@@ -410,24 +419,46 @@ where
 }
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_operator(c) => (default(), TokenizerState::ParseOperator(c.to_string())),
-        '1'..='9' => (
-            default(),
-            TokenizerState::ParseInt(start_number(Sign::Positive, c)),
+    type Func = fn(s: char, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        default(),
+        c,
+        (|_, _| {
+            (
+                [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
+                TokenizerState::Initial,
+            )
+        }) as Func,
+        merge_list(
+            [
+                create_range_map(set(OPERATOR_CHARS_WITH_DOT), |_, c| {
+                    (default(), TokenizerState::ParseOperator(c.to_string()))
+                }),
+                from_range('1'..='9', |_, c| {
+                    (
+                        default(),
+                        TokenizerState::ParseInt(start_number(Sign::Positive, c)),
+                    )
+                }),
+                from_one('"', |_, _| {
+                    (default(), TokenizerState::ParseString(String::default()))
+                }),
+                from_one('0', |_, _| {
+                    (default(), TokenizerState::ParseZero(Sign::Positive))
+                }),
+                from_one('-', |_, _| (default(), TokenizerState::ParseMinus)),
+                create_range_map(id_start(), |_, c| {
+                    (default(), TokenizerState::ParseId(c.to_string()))
+                }),
+                from_one('\n', |_, _| (default(), TokenizerState::ParseNewLine)),
+                create_range_map(set([' ', '\t', '\r']), |_, _| {
+                    (default(), TokenizerState::Initial)
+                }),
+                from_one('/', |_, _| (default(), TokenizerState::ParseCommentStart)),
+            ]
+            .cast(),
         ),
-        '"' => (default(), TokenizerState::ParseString(String::default())),
-        '0' => (default(), TokenizerState::ParseZero(Sign::Positive)),
-        '-' => (default(), TokenizerState::ParseMinus),
-        c if is_id_start(c) => (default(), TokenizerState::ParseId(c.to_string())),
-        c if is_new_line(c) => (default(), TokenizerState::ParseNewLine),
-        c if is_white_space(c) => (default(), TokenizerState::Initial),
-        '/' => (default(), TokenizerState::ParseCommentStart),
-        _ => (
-            [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
-            TokenizerState::Initial,
-        ),
-    }
+    )
 }
 
 fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
@@ -435,13 +466,10 @@ fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
         s,
         c,
         |s, c| transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
-        create_range_map(
-            ['a'..='z', 'A'..='Z', one('_'), one('$'), '0'..='9'].cast(),
-            |mut s, c| {
-                s.push(c);
-                (default(), TokenizerState::ParseId(s))
-            },
-        ),
+        create_range_map(id(), |mut s, c| {
+            s.push(c);
+            (default(), TokenizerState::ParseId(s))
+        }),
     )
 }
 
