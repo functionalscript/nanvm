@@ -296,21 +296,6 @@ impl ExpState {
 
 const CP_0: u32 = 0x30;
 
-const fn is_new_line(c: char) -> bool {
-    matches!(c, '\n')
-}
-
-const fn is_white_space(c: char) -> bool {
-    matches!(c, ' ' | '\n' | '\t' | '\r')
-}
-
-fn is_operator(c: char) -> bool {
-    matches!(
-        c,
-        '{' | '}' | '[' | ']' | ':' | ',' | '=' | '.' | ';' | '(' | ')'
-    )
-}
-
 fn operator_to_token(s: String) -> Option<JsonToken> {
     match s.as_str() {
         "{" => Some(JsonToken::ObjectBegin),
@@ -328,18 +313,6 @@ fn operator_to_token(s: String) -> Option<JsonToken> {
     }
 }
 
-const fn is_id_start(c: char) -> bool {
-    matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
-}
-
-const fn is_id_char(c: char) -> bool {
-    match c {
-        '0'..='9' => true,
-        c if is_id_start(c) => true,
-        _ => false,
-    }
-}
-
 const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
 const OPERATOR_CHARS: [char; 10] = ['{', '}', '[', ']', ':', ',', '=', ';', '(', ')'];
 
@@ -347,7 +320,7 @@ fn id_start() -> Vec<RangeInclusive<char>> {
     ['a'..='z', 'A'..='Z', one('_'), one('$')].cast()
 }
 
-fn id() -> Vec<RangeInclusive<char>> {
+fn id_char() -> Vec<RangeInclusive<char>> {
     ['a'..='z', 'A'..='Z', one('_'), one('$'), '0'..='9'].cast()
 }
 
@@ -362,15 +335,6 @@ fn terminal_for_number() -> Vec<RangeInclusive<char>> {
         .chain(OPERATOR_CHARS)
         .chain(['"', '/']);
     set(c)
-}
-
-fn is_terminal_for_number(c: char) -> bool {
-    match c {
-        '"' | '/' => true,
-        c if is_white_space(c) => true,
-        c if is_operator(c) => true,
-        _ => false,
-    }
 }
 
 const fn digit_to_number(c: char) -> u64 {
@@ -470,7 +434,7 @@ fn tokenize_id(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
         s,
         c,
         |s, c| transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c),
-        create_range_map(id(), |mut s, c| {
+        create_range_map(id_char(), |mut s, c| {
             s.push(c);
             (default(), TokenizerState::ParseId(s))
         }),
