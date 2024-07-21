@@ -342,7 +342,6 @@ const fn is_id_char(c: char) -> bool {
 
 const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
 const OPERATOR_CHARS: [char; 10] = ['{', '}', '[', ']', ':', ',', '=', ';', '(', ')'];
-const OPERATOR_CHARS_WITH_DOT: [char; 11] = ['{', '}', '[', ']', ':', ',', '=', '.', ';', '(', ')'];
 
 fn id_start() -> Vec<RangeInclusive<char>> {
     ['a'..='z', 'A'..='Z', one('_'), one('$')].cast()
@@ -350,6 +349,11 @@ fn id_start() -> Vec<RangeInclusive<char>> {
 
 fn id() -> Vec<RangeInclusive<char>> {
     ['a'..='z', 'A'..='Z', one('_'), one('$'), '0'..='9'].cast()
+}
+
+fn operator_chars_with_dot() -> Vec<RangeInclusive<char>> {
+    let c = OPERATOR_CHARS.into_iter().chain(['.']);
+    set(c)
 }
 
 fn terminal_for_number() -> Vec<RangeInclusive<char>> {
@@ -419,9 +423,9 @@ where
 }
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    type Func = fn(s: char, c: char) -> (Vec<JsonToken>, TokenizerState);
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
     get_next_state(
-        default(),
+        (),
         c,
         (|_, _| {
             (
@@ -431,7 +435,7 @@ fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
         }) as Func,
         merge_list(
             [
-                create_range_map(set(OPERATOR_CHARS_WITH_DOT), |_, c| {
+                create_range_map(operator_chars_with_dot(), |_, c| {
                     (default(), TokenizerState::ParseOperator(c.to_string()))
                 }),
                 from_range('1'..='9', |_, c| {
@@ -699,9 +703,9 @@ fn tokenize_frac(s: FloatState, c: char) -> (Vec<JsonToken>, TokenizerState) {
 }
 
 fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    type Func = fn(s: char, c: char) -> (Vec<JsonToken>, TokenizerState);
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
     get_next_state(
-        default(),
+        (),
         c,
         (|_, c| tokenize_invalid_number(c)) as Func,
         merge(
