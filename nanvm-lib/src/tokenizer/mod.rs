@@ -657,24 +657,45 @@ fn tokenize_integer(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState
 }
 
 fn tokenize_frac_begin(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '0'..='9' => (
-            default(),
-            TokenizerState::ParseFrac(s.into_float_state().add_digit(c)),
+    type Func = fn(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        s,
+        c,
+        (|_, c| tokenize_invalid_number(c)) as Func,
+        from_range(
+            '0'..='9',
+            (|s, c| {
+                (
+                    default(),
+                    TokenizerState::ParseFrac(s.into_float_state().add_digit(c)),
+                )
+            }) as Func,
         ),
-        _ => tokenize_invalid_number(c),
-    }
+    )
 }
 
 fn tokenize_frac(s: FloatState, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '0'..='9' => (default(), TokenizerState::ParseFrac(s.add_digit(c))),
-        'e' | 'E' => (default(), TokenizerState::ParseExpBegin(s.into_exp_state())),
-        c if is_terminal_for_number(c) => {
-            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
-        }
-        _ => tokenize_invalid_number(c),
-    }
+    type Func = fn(s: FloatState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        s,
+        c,
+        (|_, c| tokenize_invalid_number(c)) as Func,
+        merge_list(
+            [
+                from_range(
+                    '0'..='9',
+                    (|s, c| (default(), TokenizerState::ParseFrac(s.add_digit(c)))) as Func,
+                ),
+                create_range_map(set(['e', 'E']), |s, _| {
+                    (default(), TokenizerState::ParseExpBegin(s.into_exp_state()))
+                }),
+                create_range_map(terminal_for_number(), |s, c| {
+                    transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
+                }),
+            ]
+            .cast(),
+        ),
+    )
 }
 
 fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
