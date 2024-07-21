@@ -790,43 +790,76 @@ fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
 }
 
 fn tokenize_new_line(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_white_space(c) => (default(), TokenizerState::ParseNewLine),
-        _ => transfer_state([JsonToken::NewLine].cast(), TokenizerState::Initial, c),
-    }
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        (),
+        c,
+        (|_, c| transfer_state([JsonToken::NewLine].cast(), TokenizerState::Initial, c)) as Func,
+        create_range_map(set(WHITE_SPACE_CHARS), |_, _| {
+            (default(), TokenizerState::ParseNewLine)
+        }),
+    )
 }
 
 fn tokenize_comment_start(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '/' => (default(), TokenizerState::ParseSinglelineComment),
-        '*' => (default(), TokenizerState::ParseMultilineComment),
-        _ => (
-            [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
-            TokenizerState::Initial,
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        (),
+        c,
+        (|_, _| {
+            (
+                [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
+                TokenizerState::Initial,
+            )
+        }) as Func,
+        merge(
+            from_one('/', |_, _| {
+                (default(), TokenizerState::ParseSinglelineComment)
+            }),
+            from_one('*', |_, _| {
+                (default(), TokenizerState::ParseMultilineComment)
+            }),
         ),
-    }
+    )
 }
 
 fn tokenize_singleline_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_new_line(c) => (default(), TokenizerState::ParseNewLine),
-        _ => (default(), TokenizerState::ParseSinglelineComment),
-    }
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        (),
+        c,
+        (|_, _| (default(), TokenizerState::ParseSinglelineComment)) as Func,
+        create_range_map(set(WHITE_SPACE_CHARS), |_, _| {
+            (default(), TokenizerState::ParseNewLine)
+        }),
+    )
 }
 
 fn tokenize_multiline_comment(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
-        _ => (default(), TokenizerState::ParseMultilineComment),
-    }
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        (),
+        c,
+        (|_, _| (default(), TokenizerState::ParseMultilineComment)) as Func,
+        from_one('*', |_, _| {
+            (default(), TokenizerState::ParseMultilineCommentAsterix)
+        }),
+    )
 }
 
 fn tokenize_multiline_comment_asterix(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '/' => (default(), TokenizerState::Initial),
-        '*' => (default(), TokenizerState::ParseMultilineCommentAsterix),
-        _ => (default(), TokenizerState::ParseMultilineComment),
-    }
+    type Func = fn(s: (), c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        (),
+        c,
+        (|_, _| (default(), TokenizerState::ParseMultilineComment)) as Func,
+        merge(
+            from_one('/', |_, _| (default(), TokenizerState::Initial)),
+            from_one('*', |_, _| {
+                (default(), TokenizerState::ParseMultilineCommentAsterix)
+            }),
+        ),
+    )
 }
 
 fn tokenize_operator(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
