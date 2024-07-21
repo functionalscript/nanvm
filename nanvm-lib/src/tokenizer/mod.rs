@@ -863,8 +863,14 @@ fn tokenize_multiline_comment_asterix(c: char) -> (Vec<JsonToken>, TokenizerStat
 }
 
 fn tokenize_operator(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_operator(c) => {
+    get_next_state(
+        s,
+        c,
+        |s, c| {
+            let token = operator_to_token(s).unwrap();
+            transfer_state([token].cast(), TokenizerState::Initial, c)
+        },
+        create_range_map(operator_chars_with_dot(), |s, c| {
             let mut next_string = s.clone();
             next_string.push(c);
             match operator_to_token(next_string) {
@@ -878,12 +884,8 @@ fn tokenize_operator(s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
                     transfer_state([token].cast(), TokenizerState::Initial, c)
                 }
             }
-        }
-        _ => {
-            let token = operator_to_token(s).unwrap();
-            transfer_state([token].cast(), TokenizerState::Initial, c)
-        }
-    }
+        }),
+    )
 }
 
 pub fn tokenize(input: String) -> Vec<JsonToken> {
