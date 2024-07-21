@@ -699,14 +699,24 @@ fn tokenize_frac(s: FloatState, c: char) -> (Vec<JsonToken>, TokenizerState) {
 }
 
 fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '0' => (default(), TokenizerState::ParseZero(Sign::Negative)),
-        '1'..='9' => (
-            default(),
-            TokenizerState::ParseInt(start_number(Sign::Negative, c)),
+    type Func = fn(s: char, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        default(),
+        c,
+        (|_, c| tokenize_invalid_number(c)) as Func,
+        merge(
+            from_one(
+                '0',
+                (|_, _| (default(), TokenizerState::ParseZero(Sign::Negative))) as Func,
+            ),
+            from_range('1'..='9', |s, c| {
+                (
+                    default(),
+                    TokenizerState::ParseInt(start_number(Sign::Negative, c)),
+                )
+            }),
         ),
-        _ => tokenize_invalid_number(c),
-    }
+    )
 }
 
 fn tokenize_exp_begin(mut s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
