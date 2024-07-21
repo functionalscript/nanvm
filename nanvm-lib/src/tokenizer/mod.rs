@@ -766,12 +766,15 @@ fn tokenize_exp(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
 }
 
 fn tokenize_big_int(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        c if is_terminal_for_number(c) => {
-            transfer_state([s.into_big_int_token()].cast(), TokenizerState::Initial, c)
-        }
-        _ => tokenize_invalid_number(c),
-    }
+    type Func = fn(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        s,
+        c,
+        (|_, c| tokenize_invalid_number(c)) as Func,
+        create_range_map(terminal_for_number(), |s, c| {
+            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
+        }),
+    )
 }
 
 fn tokenize_invalid_number(c: char) -> (Vec<JsonToken>, TokenizerState) {
