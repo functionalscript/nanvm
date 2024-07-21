@@ -709,7 +709,7 @@ fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
                 '0',
                 (|_, _| (default(), TokenizerState::ParseZero(Sign::Negative))) as Func,
             ),
-            from_range('1'..='9', |s, c| {
+            from_range('1'..='9', |_, c| {
                 (
                     default(),
                     TokenizerState::ParseInt(start_number(Sign::Negative, c)),
@@ -719,29 +719,50 @@ fn tokenize_minus(c: char) -> (Vec<JsonToken>, TokenizerState) {
     )
 }
 
-fn tokenize_exp_begin(mut s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
-        '+' => (default(), TokenizerState::ParseExpSign(s)),
-        '-' => (default(), {
-            s.es = Sign::Negative;
-            TokenizerState::ParseExpSign(s)
-        }),
-        c if is_terminal_for_number(c) => {
-            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
-        }
-        _ => tokenize_invalid_number(c),
-    }
+fn tokenize_exp_begin(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
+    type Func = fn(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        s,
+        c,
+        (|_, c| tokenize_invalid_number(c)) as Func,
+        merge_list(
+            [
+                from_range(
+                    '0'..='9',
+                    (|s, c| (default(), TokenizerState::ParseExp(s.add_digit(c)))) as Func,
+                ),
+                from_one('+', |s, _| (default(), TokenizerState::ParseExpSign(s))),
+                from_one('-', |mut s, _| {
+                    (default(), {
+                        s.es = Sign::Negative;
+                        TokenizerState::ParseExpSign(s)
+                    })
+                }),
+                create_range_map(terminal_for_number(), |s, c| {
+                    transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
+                }),
+            ]
+            .cast(),
+        ),
+    )
 }
 
 fn tokenize_exp(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState) {
-    match c {
-        '0'..='9' => (default(), TokenizerState::ParseExp(s.add_digit(c))),
-        c if is_terminal_for_number(c) => {
-            transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
-        }
-        _ => tokenize_invalid_number(c),
-    }
+    type Func = fn(s: ExpState, c: char) -> (Vec<JsonToken>, TokenizerState);
+    get_next_state(
+        s,
+        c,
+        (|_, c| tokenize_invalid_number(c)) as Func,
+        merge(
+            from_range(
+                '0'..='9',
+                (|s, c| (default(), TokenizerState::ParseExp(s.add_digit(c)))) as Func,
+            ),
+            create_range_map(terminal_for_number(), |s, c| {
+                transfer_state([s.into_token()].cast(), TokenizerState::Initial, c)
+            }),
+        ),
+    )
 }
 
 fn tokenize_big_int(s: IntegerState, c: char) -> (Vec<JsonToken>, TokenizerState) {
