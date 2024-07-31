@@ -1,8 +1,8 @@
-use crate::js::any::Any;
+use crate::js::{any::Any, js_string::JsStringRef};
 use crate::mem::manager::Dealloc;
 use std::string::String;
 
-type Property<D> = (String, Expression<D>);
+type Property<D> = (JsStringRef<D>, Expression<D>);
 
 enum Expression<D: Dealloc> {
     LocalRef(u32),
