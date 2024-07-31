@@ -14,14 +14,25 @@ struct Array(JSAny);
 
 ## Modifying JSAny
 
+```js
+const X = void 0
+// typedef X === `undefined`
+```
+
 ```rust
-trait TypeScriptType { ... }
-struct JSAny<D: Dealloc, T: TypeScriptType> {
+trait TsType {}
+
+struct Unknown();
+impl TsType for Unknown {}
+
+struct JSAny<D: Dealloc, T: TsType = Unknown> {
    ...,
    _p: PhantomData<T>,
 }
 
-impl<D: Dealloc, T: TypeScriptType> JSAny<D, TSArray<T>> {
+struct Array<T: TsType>();
+
+impl<D: Dealloc, T: TsType> JSAny<D, Array<T>> {
    fn at(self, i: i32) -> JSAny<D, T>;
 }
 ```
