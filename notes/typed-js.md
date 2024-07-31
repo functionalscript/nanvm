@@ -32,6 +32,13 @@ impl<D: Dealloc, T: TsType> JSAny<D, Array<T>> {
 }
 ```
 
+## Combining
+
+```rust
+#[repr(transparent)]
+struct TSAny<D, T: TsType = Unknown>(JSAny<D>, PhantomData<T>);
+```
+
 ## Notes about JS
 
 ```js
