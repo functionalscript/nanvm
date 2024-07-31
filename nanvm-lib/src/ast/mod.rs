@@ -1,6 +1,5 @@
 use crate::js::{any::Any, js_string::JsStringRef};
 use crate::mem::manager::Dealloc;
-use std::string::String;
 
 type Property<D> = (JsStringRef<D>, Expression<D>);
 
@@ -18,6 +17,6 @@ struct Body<D: Dealloc> {
 }
 
 struct Module<D: Dealloc> {
-    import: Vec<String>,
+    import: Vec<JsStringRef<D>>,
     body: Body<D>,
 }
