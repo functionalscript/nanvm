@@ -14,7 +14,8 @@ host's intrinsics).
 - The `ast::Module` result of one module parsing process, as well as results of processing of
 several interconnected modules (by the lazy loader), can be used directly in unit tests.
 - The result of the first phase of lazy loader process can be serialized out for the purpose of
-pretty-printing (akin to `cargo fmt`) of loaded modules.
+pretty-printing (akin to `cargo fmt`) of loaded modules. After an additional step, we can serialize
+a "tree-shaked" bundle similarly to use cases of webpack and other bundlers. 
 - The lazy loader itself can be split into separate phases, with the first phase performing superficial
 parsing, while a latter phase resolves simple inter-module dependencies (example: a const definition
 in module a can simply refer to a const definition in a module b that can be resolved w/o denial-of-service
