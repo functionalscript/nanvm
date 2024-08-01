@@ -3,7 +3,7 @@
 ## Wrappers
 
 Thin wrappers. Requirement:
-- size and alignment MUST be the same as JSAny.
+- The size and alignment MUST be the same as those of JSAny.
 
 https://doc.rust-lang.org/nomicon/other-reprs.html
 
