@@ -32,7 +32,7 @@ impl<D: Dealloc, T: TsType> JSAny<D, Array<T>> {
 }
 ```
 
-## Combining
+## Use current JSAny and one thin wrapper TSAny with `T` parameter
 
 ```rust
 // `TSAny` has the same binary layout as `JSAny`, but `TSAny` also contains additional compile-time type information (restrictions). 
