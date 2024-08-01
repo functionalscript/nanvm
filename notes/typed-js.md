@@ -35,6 +35,7 @@ impl<D: Dealloc, T: TsType> JSAny<D, Array<T>> {
 ## Combining
 
 ```rust
+// `TSAny` has the same binary layout as `JSAny`, but `TSAny` also contains additional compile-time type information (restrictions). 
 #[repr(transparent)]
 struct TSAny<D, T: TsType = Unknown>(JSAny<D>, PhantomData<T>);
 ```
