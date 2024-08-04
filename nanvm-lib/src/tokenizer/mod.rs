@@ -370,6 +370,33 @@ fn set(arr: impl IntoIterator<Item = char>) -> Vec<RangeInclusive<char>> {
 
 type Transition<T> = fn(state: T, c: char) -> (Vec<JsonToken>, TokenizerState);
 
+struct TransitionMap<T> {
+    def: Transition<T>,
+    rm: RangeMap<char, State<Transition<T>>>
+}
+
+struct TransitionMaps {
+    initial: TransitionMap<()>,
+    id: TransitionMap<String>,
+    string: TransitionMap<String>,
+    escape_char: TransitionMap<String>,
+    unicode_char: TransitionMap<String>,    
+    zero: TransitionMap<Sign>,
+    int: TransitionMap<IntegerState>,
+    minus: TransitionMap<()>,
+    frac_begin: TransitionMap<IntegerState>,
+    frac: TransitionMap<FloatState>,
+    exp_begin: TransitionMap<ExpState>,
+    exp: TransitionMap<ExpState>,
+    big_int: TransitionMap<IntegerState>,
+    new_line: TransitionMap<()>,
+    comment_start: TransitionMap<()>,
+    singleline_comment: TransitionMap<()>,
+    multiline_comment: TransitionMap<()>,
+    multiline_comment_asterix: TransitionMap<()>,
+    operator: TransitionMap<String>    
+}
+
 fn get_next_state<T>(
     state: T,
     c: char,
@@ -384,6 +411,16 @@ where
         Some(f) => f(state, c),
         None => def(state, c),
     }
+}
+
+fn get_next_state_new<T>(
+    state: T,
+    c: char,
+    tm: TransitionMap<T>,
+) -> (Vec<JsonToken>, TokenizerState)
+where
+    T: 'static, {
+    get_next_state(state, c, tm.def, tm.rm)
 }
 
 fn tokenize_initial(c: char) -> (Vec<JsonToken>, TokenizerState) {
