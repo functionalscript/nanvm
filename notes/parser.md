@@ -31,3 +31,26 @@ trait Parser {
 
 MyParser::sync_parse("export default = { a: 5 }")
 ```
+
+```rust
+struct Parser { ... }
+
+impl Parser {
+    const fn new() -> Self { ... }
+
+    const fn push(self, token: Token) -> Self { ... }
+
+    const fn end(self) -> ParsedModule { ... }
+
+    const fn sync_parse(it: &[char]) -> ParsedModule {
+        /// ....
+        while ... {
+        }
+    }
+}
+
+const MODULE: Parser = Parser::sync_parse(inline_file!("my.f.js"));
+
+MyParser::sync_parse("export default = { a: 5 }")
+```
+
