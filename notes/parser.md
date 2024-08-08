@@ -42,15 +42,13 @@ impl Parser {
 
     const fn end(self) -> ParsedModule { ... }
 
-    const fn sync_parse(it: &[char]) -> ParsedModule {
+    const fn sync_parse(it: &[char]) -> Module {
         /// ....
         while ... {
         }
     }
 }
 
-const MODULE: Parser = Parser::sync_parse(inline_file!("my.f.js"));
-
-MyParser::sync_parse("export default = { a: 5 }")
+const MODULE: ModuleParser = Parser::sync_parse(inline_file!("my.f.js"));
 ```
 
