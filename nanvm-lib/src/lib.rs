@@ -4,6 +4,7 @@
 pub mod app;
 pub mod ast;
 pub mod big_numbers;
+pub mod cli;
 pub mod common;
 pub mod js;
 pub mod mem;
