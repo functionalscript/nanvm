@@ -1,8 +1,3 @@
-pub mod path;
-// Analyzer is a temporary name of a refactored parser that will be merged with the main parser.
-// It uses src/ast APIs.
-pub mod analyzer;
-
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Display,
@@ -24,6 +19,11 @@ use crate::{
 };
 
 use self::path::{concat, split};
+
+pub mod path;
+// Analyzer is a temporary name of a refactored parser that will be merged with the main parser.
+// It uses src/ast APIs.
+pub mod analyzer;
 
 pub enum JsonElement<D: Dealloc> {
     None,

@@ -42,7 +42,7 @@ pub enum ErrorType {
 }
 
 #[derive(Default)]
-enum TokenizerState {
+pub enum TokenizerState {
     #[default]
     Initial,
     ParseId(String),
@@ -99,7 +99,7 @@ impl TokenizerState {
         }
     }
 
-    fn push_mut(&mut self, c: char, tm: &TransitionMaps) -> Vec<JsonToken> {
+    pub fn push_mut(&mut self, c: char, tm: &TransitionMaps) -> Vec<JsonToken> {
         let tokens;
         (tokens, *self) = take(self).push(c, tm);
         tokens
@@ -139,7 +139,7 @@ impl TokenizerState {
     }
 }
 
-struct ParseUnicodeCharState {
+pub struct ParseUnicodeCharState {
     s: String,
     unicode: u32,
     index: u8,
@@ -169,7 +169,7 @@ impl ParseUnicodeCharState {
     }
 }
 
-struct IntegerState {
+pub struct IntegerState {
     s: Sign,
     b: BigUint,
 }
@@ -236,7 +236,7 @@ impl IntegerState {
     }
 }
 
-struct FloatState {
+pub struct FloatState {
     s: Sign,
     b: BigUint,
     fe: i64,
@@ -271,7 +271,7 @@ impl FloatState {
     }
 }
 
-struct ExpState {
+pub struct ExpState {
     s: Sign,
     b: BigUint,
     fe: i64,
@@ -384,7 +384,7 @@ struct TransitionMap<T> {
     rm: RangeMap<char, State<Transition<T>>>,
 }
 
-struct TransitionMaps {
+pub struct TransitionMaps {
     initial: TransitionMap<()>,
     id: TransitionMap<String>,
     string: TransitionMap<String>,
@@ -406,7 +406,7 @@ struct TransitionMaps {
     operator: TransitionMap<String>,
 }
 
-fn create_transition_maps() -> TransitionMaps {
+pub fn create_transition_maps() -> TransitionMaps {
     TransitionMaps {
         initial: create_initial_transitions(),
         id: create_id_transitions(),
