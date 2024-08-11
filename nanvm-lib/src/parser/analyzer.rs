@@ -1,8 +1,8 @@
+use super::DataType;
 use crate::ast::Module;
 use crate::common::default::default;
 use crate::mem::manager::Dealloc;
 use crate::tokenizer::{create_transition_maps, TokenizerState, TransitionMaps};
-use super::DataType;
 
 #[derive(Default)]
 pub struct AnalyzerParameters {
