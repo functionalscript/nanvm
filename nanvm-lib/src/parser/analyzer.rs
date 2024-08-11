@@ -13,6 +13,7 @@ pub struct AnalyzerParameters {
 pub enum AnalyzerDiagnostic {
     #[default]
     OK,
+    // TODO: add error, warning diagnostics.
 }
 
 pub struct AnalyzerResults<D: Dealloc> {
@@ -24,6 +25,7 @@ pub struct AnalyzerState<D: Dealloc> {
     parameters: AnalyzerParameters,
     tokenizer_state: TokenizerState,
     tokenizer_maps: TransitionMaps,
+    // TODO: add line number, column number tracking fields (needed for diagnostics).
     module: Module<D>,
     diagnostics: Vec<AnalyzerDiagnostic>,
 }
@@ -42,7 +44,7 @@ impl<D: Dealloc> AnalyzerState<D> {
     /// Updates analyzer state with a next input character; the result is the current count of errors.
     fn push_mut(&mut self, c: char) -> usize {
         for _token in self.tokenizer_state.push_mut(c, &self.tokenizer_maps) {
-            // TODO: process the token
+            // TODO: process the token.
         }
         self.diagnostics.len()
     }
