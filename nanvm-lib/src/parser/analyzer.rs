@@ -25,12 +25,15 @@ pub struct AnalyzerState<D: Dealloc> {
     parameters: AnalyzerParameters,
     tokenizer_state: TokenizerState,
     tokenizer_maps: TransitionMaps,
+    diagnostics_len: usize,
     // TODO: add line number, column number tracking fields (needed for diagnostics).
     module: Module<D>,
     diagnostics: Vec<AnalyzerDiagnostic>,
 }
 
 impl<D: Dealloc> AnalyzerState<D> {
+    /// Creates a new analyzer staring state. The caller should check `diagnostics` for errors
+    /// immediately after creation (since `parameters` value can be inconsistent).
     pub fn new(parameters: AnalyzerParameters) -> Self {
         Self {
             parameters,
@@ -38,15 +41,20 @@ impl<D: Dealloc> AnalyzerState<D> {
             tokenizer_maps: create_transition_maps(),
             module: default(),
             diagnostics: default(),
+            diagnostics_len: 0,
         }
     }
 
-    /// Updates analyzer state with a next input character; the result is the current count of errors.
+    /// Updates analyzer state with a next input character; the result is the increment in the count
+    /// of `diagnostics`. It's up to the caller to check what was added at the end of `diagnostics`
+    ///  - are there any fatal errors, from the point of view of the current parsing session?
     fn push_mut(&mut self, c: char) -> usize {
         for _token in self.tokenizer_state.push_mut(c, &self.tokenizer_maps) {
             // TODO: process the token.
         }
-        self.diagnostics.len()
+        let prior_diagnostics_len = self.diagnostics_len;
+        self.diagnostics_len = self.diagnostics.len();
+        self.diagnostics_len - prior_diagnostics_len
     }
 
     /// Completes the analysis.
