@@ -1,3 +1,5 @@
+use std::iter;
+
 use crate::{
     common::bit_subset64::BitSubset64,
     mem::{
@@ -15,7 +17,7 @@ use super::{bitset::BIG_INT, ref_cast::RefCast};
 
 pub struct JsBigIntHeader {
     len: usize,
-    first: i64,
+    ms: i64,
 }
 
 pub type JsBigInt = FlexibleArray<u64, JsBigIntHeader>;
@@ -36,15 +38,19 @@ impl<D: Dealloc> RefCast<D> for JsBigInt {
 
 pub fn new_big_int<M: Manager, I: ExactSizeIterator<Item = u64>>(
     m: M,
-    first: i64,
+    ms: i64,
     i: impl IntoIterator<IntoIter = I>,
 ) -> JsBigIntMutRef<M::Dealloc> {
     let items = i.into_iter();
     m.new(FlexibleArrayConstructor::new(
         JsBigIntHeader {
             len: items.len(),
-            first,
+            ms,
         },
         items,
     ))
+}
+
+pub fn from_i64<M: Manager>(m: M, ms: i64) -> JsBigIntMutRef<M::Dealloc> {
+    new_big_int(m, ms, iter::empty::<u64>())
 }
