@@ -54,6 +54,13 @@ pub fn new_big_int<M: Manager, I: ExactSizeIterator<Item = u64>>(
     ))
 }
 
+pub fn zero<M: Manager>(m: M) -> JsBigIntMutRef<M::Dealloc> {
+    new_big_int(m, Sign::Positive, iter::empty())
+}
+
 pub fn from_u64<M: Manager>(m: M, sign: Sign, n: u64) -> JsBigIntMutRef<M::Dealloc> {
+    if n == 0 {
+        return zero(m);
+    }
     new_big_int(m, sign, iter::once(n))
 }
