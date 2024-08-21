@@ -100,7 +100,7 @@ pub enum JsonElement<D: Dealloc> {
     Any(Any<D>),
 }
 
-pub struct AnyStateStruct<D: Dealloc> {
+pub struct AnyState<D: Dealloc> {
     pub data_type: DataType,
     pub status: ParsingStatus,
     pub current: JsonElement<D>,
@@ -108,9 +108,9 @@ pub struct AnyStateStruct<D: Dealloc> {
     pub consts: BTreeMap<String, Any<D>>,
 }
 
-impl<D: Dealloc> Default for AnyStateStruct<D> {
+impl<D: Dealloc> Default for AnyState<D> {
     fn default() -> Self {
-        AnyStateStruct {
+        AnyState {
             data_type: default(),
             status: ParsingStatus::Initial,
             current: JsonElement::None,
@@ -121,33 +121,72 @@ impl<D: Dealloc> Default for AnyStateStruct<D> {
 }
 
 pub struct AnySuccess<D: Dealloc> {
-    pub state: AnyStateStruct<D>,
+    pub state: AnyState<D>,
     pub value: Any<D>,
 }
 
 pub enum AnyResult<D: Dealloc> {
-    Continue(AnyStateStruct<D>),
+    Continue(AnyState<D>),
     Success(AnySuccess<D>),
     Error(ParseError),
 }
 
-impl<D: Dealloc> AnyStateStruct<D> {
+#[derive(Debug)]
+pub enum RootStatus {
+    Initial,
+    Export,
+    Module,
+    ModuleDot,
+    ModuleDotExports,
+    Const,
+    ConstId(String),
+    Import,
+    ImportId(String),
+    ImportIdFrom(String),
+}
+
+pub struct RootState<D: Dealloc> {
+    pub status: RootStatus,
+    pub state: AnyState<D>,
+    pub new_line: bool,
+}
+
+#[derive(Debug)]
+pub struct ParseResult<D: Dealloc> {
+    pub data_type: DataType,
+    pub any: Any<D>,
+}
+
+pub struct ConstState<D: Dealloc> {
+    pub key: String,
+    pub state: AnyState<D>,
+}
+
+pub enum JsonState<D: Dealloc> {
+    ParseRoot(RootState<D>),
+    ParseConst(ConstState<D>),
+    ParseModule(AnyState<D>),
+    Result(ParseResult<D>),
+    Error(ParseError),
+}
+
+impl<D: Dealloc> AnyState<D> {
     pub fn set_djs(self) -> Self {
-        AnyStateStruct {
+        AnyState {
             data_type: DataType::Djs,
             ..self
         }
     }
 
     pub fn set_mjs(self) -> Self {
-        AnyStateStruct {
+        AnyState {
             data_type: DataType::Mjs,
             ..self
         }
     }
 
     pub fn set_cjs(self) -> Self {
-        AnyStateStruct {
+        AnyState {
             data_type: DataType::Cjs,
             ..self
         }
@@ -155,7 +194,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
 
     pub fn parse_import_begin(self, token: JsonToken) -> AnyResult<D> {
         match token {
-            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyStateStruct {
+            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
                 status: ParsingStatus::ImportValue,
                 ..self
             }),
@@ -177,7 +216,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyStateStruct {
+                let new_state = AnyState {
                     status: ParsingStatus::Initial,
                     current,
                     ..self
@@ -191,7 +230,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
     pub fn push_value(self, value: Any<D>) -> AnyResult<D> {
         match self.current {
             JsonElement::None => AnyResult::Success(AnySuccess {
-                state: AnyStateStruct {
+                state: AnyState {
                     status: ParsingStatus::Initial,
                     ..self
                 },
@@ -200,7 +239,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
             JsonElement::Stack(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
-                    AnyResult::Continue(AnyStateStruct {
+                    AnyResult::Continue(AnyState {
                         status: ParsingStatus::ArrayValue,
                         current: JsonElement::Stack(JsonStackElement::Array(arr)),
                         ..self
@@ -212,7 +251,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
                         map: stack_obj.map,
                         key: String::default(),
                     };
-                    AnyResult::Continue(AnyStateStruct {
+                    AnyResult::Continue(AnyState {
                         status: ParsingStatus::ObjectValue,
                         current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
                         ..self
@@ -227,7 +266,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
-        AnyResult::Continue(AnyStateStruct {
+        AnyResult::Continue(AnyState {
             data_type: DataType::Cjs,
             status: ParsingStatus::ImportBegin,
             current: JsonElement::None,
@@ -242,7 +281,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
                     map: stack_obj.map,
                     key: s,
                 };
-                AnyResult::Continue(AnyStateStruct {
+                AnyResult::Continue(AnyState {
                     status: ParsingStatus::ObjectKey,
                     current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
                     ..self
@@ -257,7 +296,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
-        AnyResult::Continue(AnyStateStruct {
+        AnyResult::Continue(AnyState {
             status: ParsingStatus::ArrayBegin,
             current: JsonElement::Stack(new_top),
             ..self
@@ -272,7 +311,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top)
         }
-        AnyResult::Continue(AnyStateStruct {
+        AnyResult::Continue(AnyState {
             status: ParsingStatus::ObjectBegin,
             current: JsonElement::Stack(new_top),
             ..self
@@ -281,7 +320,7 @@ impl<D: Dealloc> AnyStateStruct<D> {
 
     pub fn parse_object_key(self, token: JsonToken) -> AnyResult<D> {
         match token {
-            JsonToken::Colon => AnyResult::Continue(AnyStateStruct {
+            JsonToken::Colon => AnyResult::Continue(AnyState {
                 status: ParsingStatus::ObjectColon,
                 ..self
             }),

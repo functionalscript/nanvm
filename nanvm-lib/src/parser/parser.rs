@@ -15,7 +15,10 @@ use crate::{
     tokenizer::{tokenize, JsonToken},
 };
 
-use super::shared::{AnyResult, AnyStateStruct, DataType, ParseError, ParsingStatus};
+use super::shared::{
+    AnyResult, AnyState, ConstState, DataType, JsonState, ParseError, ParseResult, ParsingStatus,
+    RootState, RootStatus,
+};
 use super::{
     path::{concat, split},
     shared::{JsonElement, JsonStackElement},
@@ -58,9 +61,12 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
     }
 }
 
-pub trait AnyState<M: Manager> {
-    fn parse_for_module<I: Io>(self, context: &mut Context<M, I>, token: JsonToken)
-        -> JsonState<M>;
+pub trait AnyStateExtension<M: Manager> {
+    fn parse_for_module<I: Io>(
+        self,
+        context: &mut Context<M, I>,
+        token: JsonToken,
+    ) -> JsonState<M::Dealloc>;
     fn parse_import_value<I: Io>(
         self,
         context: &mut Context<M, I>,
@@ -76,45 +82,6 @@ pub trait AnyState<M: Manager> {
     fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-}
-
-#[derive(Debug)]
-pub struct ParseResult<M: Manager> {
-    pub data_type: DataType,
-    pub any: Any<M::Dealloc>,
-}
-
-#[derive(Debug)]
-pub enum RootStatus {
-    Initial,
-    Export,
-    Module,
-    ModuleDot,
-    ModuleDotExports,
-    Const,
-    ConstId(String),
-    Import,
-    ImportId(String),
-    ImportIdFrom(String),
-}
-
-pub struct RootState<D: Dealloc> {
-    pub status: RootStatus,
-    pub state: AnyStateStruct<D>,
-    pub new_line: bool,
-}
-
-pub struct ConstState<M: Manager> {
-    pub key: String,
-    pub state: AnyStateStruct<M::Dealloc>,
-}
-
-pub enum JsonState<M: Manager> {
-    ParseRoot(RootState<M::Dealloc>),
-    ParseConst(ConstState<M>),
-    ParseModule(AnyStateStruct<M::Dealloc>),
-    Result(ParseResult<M>),
-    Error(ParseError),
 }
 
 fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
@@ -150,11 +117,11 @@ impl JsonToken {
     }
 }
 
-fn parse_root_state<M: Manager, I: Io>(
+fn root_state_parse<M: Manager, I: Io>(
     mut root_state: RootState<M::Dealloc>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> JsonState<M> {
+) -> JsonState<M::Dealloc> {
     match root_state.status {
         RootStatus::Initial => match token {
             JsonToken::NewLine => JsonState::ParseRoot(RootState {
@@ -308,38 +275,40 @@ fn parse_root_state<M: Manager, I: Io>(
     }
 }
 
-impl<M: Manager> ConstState<M> {
-    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
-        match token {
-            JsonToken::Semicolon => todo!(),
-            _ => {
-                let result = self.state.parse(context, token);
-                match result {
-                    AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
-                        key: self.key,
-                        state,
-                    }),
-                    AnyResult::Success(mut success) => {
-                        success.state.consts.insert(self.key, success.value);
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Initial,
-                            state: success.state,
-                            new_line: false,
-                        })
-                    }
-                    AnyResult::Error(error) => JsonState::Error(error),
+fn const_state_parse<M: Manager, I: Io>(
+    const_state: ConstState<M::Dealloc>,
+    context: &mut Context<M, I>,
+    token: JsonToken,
+) -> JsonState<M::Dealloc> {
+    match token {
+        JsonToken::Semicolon => todo!(),
+        _ => {
+            let result = const_state.state.parse(context, token);
+            match result {
+                AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
+                    key: const_state.key,
+                    state,
+                }),
+                AnyResult::Success(mut success) => {
+                    success.state.consts.insert(const_state.key, success.value);
+                    JsonState::ParseRoot(RootState {
+                        status: RootStatus::Initial,
+                        state: success.state,
+                        new_line: false,
+                    })
                 }
+                AnyResult::Error(error) => JsonState::Error(error),
             }
         }
     }
 }
 
-impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
+impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
     fn parse_for_module<I: Io>(
         self,
         context: &mut Context<M, I>,
         token: JsonToken,
-    ) -> JsonState<M> {
+    ) -> JsonState<M::Dealloc> {
         let result = self.parse(context, token);
         match result {
             AnyResult::Continue(state) => JsonState::ParseModule(state),
@@ -360,12 +329,10 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             JsonToken::String(s) => {
                 let current_path = concat(split(&context.path).0, s.as_str());
                 if let Some(any) = context.module_cache.complete.get(&current_path) {
-                    return AnyResult::Continue(AnyStateStruct {
-                        data_type: self.data_type,
+                    return AnyResult::Continue(AnyState {
                         status: ParsingStatus::ImportEnd,
                         current: JsonElement::Any(any.clone()),
-                        stack: self.stack,
-                        consts: self.consts,
+                        ..self
                     });
                 }
                 if context.module_cache.progress.contains(&current_path) {
@@ -384,12 +351,10 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                                     .module_cache
                                     .complete
                                     .insert(current_path, r.any.clone());
-                                AnyResult::Continue(AnyStateStruct {
-                                    data_type: self.data_type,
+                                AnyResult::Continue(AnyState {
                                     status: ParsingStatus::ImportEnd,
                                     current: JsonElement::Any(r.any),
-                                    stack: self.stack,
-                                    consts: self.consts,
+                                    ..self
                                 })
                             }
                             Err(e) => AnyResult::Error(e),
@@ -428,7 +393,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyStateStruct { current, ..self };
+                let new_state = AnyState { current, ..self };
                 new_state.push_value(Any::move_from(js_array))
             }
             _ => unreachable!(),
@@ -448,7 +413,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyStateStruct { current, ..self };
+                let new_state = AnyState { current, ..self };
                 new_state.push_value(Any::move_from(js_object))
             }
             _ => unreachable!(),
@@ -508,12 +473,9 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
     fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
-            JsonToken::Comma => AnyResult::Continue(AnyStateStruct {
-                data_type: self.data_type,
+            JsonToken::Comma => AnyResult::Continue(AnyState {
                 status: ParsingStatus::ArrayComma,
-                current: self.current,
-                stack: self.stack,
-                consts: self.consts,
+                ..self
             }),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
@@ -531,12 +493,9 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
     fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
-            JsonToken::Comma => AnyResult::Continue(AnyStateStruct {
-                data_type: self.data_type,
+            JsonToken::Comma => AnyResult::Continue(AnyState {
                 status: ParsingStatus::ObjectComma,
-                current: self.current,
-                stack: self.stack,
-                consts: self.consts,
+                ..self
             }),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
@@ -551,33 +510,39 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
     }
 }
 
-impl<M: Manager> JsonState<M> {
-    fn push<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
-        if token == JsonToken::NewLine {
-            return match self {
-                JsonState::ParseRoot(state) => parse_root_state(state, context, token),
-                _ => self,
-            };
-        }
-        match self {
-            JsonState::ParseRoot(state) => parse_root_state(state, context, token),
-            JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
-            JsonState::ParseModule(state) => state.parse_for_module(context, token),
-            JsonState::ParseConst(state) => state.parse(context, token),
-            _ => self,
-        }
+fn json_state_push<M: Manager, I: Io>(
+    json_state: JsonState<M::Dealloc>,
+    context: &mut Context<M, I>,
+    token: JsonToken,
+) -> JsonState<M::Dealloc> {
+    if token == JsonToken::NewLine {
+        return match json_state {
+            JsonState::ParseRoot(state) => root_state_parse(state, context, token),
+            _ => json_state,
+        };
     }
-
-    fn end(self) -> Result<ParseResult<M>, ParseError> {
-        match self {
-            JsonState::Result(result) => Ok(result),
-            JsonState::Error(error) => Err(error),
-            _ => Err(ParseError::UnexpectedEnd),
-        }
+    match json_state {
+        JsonState::ParseRoot(state) => root_state_parse(state, context, token),
+        JsonState::Result(_) => JsonState::Error(ParseError::UnexpectedToken),
+        JsonState::ParseModule(state) => state.parse_for_module(context, token),
+        JsonState::ParseConst(state) => const_state_parse(state, context, token),
+        _ => json_state,
     }
 }
 
-pub fn parse<M: Manager, I: Io>(context: &mut Context<M, I>) -> Result<ParseResult<M>, ParseError> {
+fn json_state_end<M: Manager>(
+    json_state: JsonState<M::Dealloc>,
+) -> Result<ParseResult<M::Dealloc>, ParseError> {
+    match json_state {
+        JsonState::Result(result) => Ok(result),
+        JsonState::Error(error) => Err(error),
+        _ => Err(ParseError::UnexpectedEnd),
+    }
+}
+
+pub fn parse<M: Manager, I: Io>(
+    context: &mut Context<M, I>,
+) -> Result<ParseResult<M::Dealloc>, ParseError> {
     context.module_cache.progress.insert(context.path.clone());
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
@@ -592,16 +557,16 @@ pub fn parse<M: Manager, I: Io>(context: &mut Context<M, I>) -> Result<ParseResu
 pub fn parse_with_tokens<M: Manager, I: Io>(
     context: &mut Context<M, I>,
     iter: impl Iterator<Item = JsonToken>,
-) -> Result<ParseResult<M>, ParseError> {
-    let mut state: JsonState<M> = JsonState::ParseRoot(RootState {
+) -> Result<ParseResult<M::Dealloc>, ParseError> {
+    let mut state = JsonState::ParseRoot(RootState {
         status: RootStatus::Initial,
         state: default(),
         new_line: true,
     });
     for token in iter {
-        state = state.push(context, token);
+        state = json_state_push(state, context, token);
     }
-    state.end()
+    json_state_end::<M>(state)
 }
 
 #[cfg(test)]
@@ -636,7 +601,7 @@ mod test {
     fn parse_with_virtual_io<M: Manager>(
         manager: M,
         iter: impl Iterator<Item = JsonToken>,
-    ) -> Result<ParseResult<M>, ParseError> {
+    ) -> Result<ParseResult<M::Dealloc>, ParseError> {
         parse_with_tokens(
             &mut create_test_context(manager, &virtual_io(), &mut default()),
             iter,
