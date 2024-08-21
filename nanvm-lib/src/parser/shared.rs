@@ -1,7 +1,13 @@
 use crate::{
     common::{cast::Cast, default::default},
-    js::any::Any,
-    mem::manager::Dealloc,
+    js::{
+        any::Any,
+        js_array::new_array,
+        js_object::new_object,
+        js_string::{new_string, JsStringRef},
+        null::Null,
+    },
+    mem::manager::{Dealloc, Manager},
     tokenizer::JsonToken,
 };
 use std::collections::BTreeMap;
@@ -118,6 +124,51 @@ pub struct AnyState<D: Dealloc> {
     pub current: JsonElement<D>,
     pub stack: Vec<JsonStackElement<D>>,
     pub consts: BTreeMap<String, Any<D>>,
+}
+
+pub trait AnyStateExtension<M: Manager> {
+    fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
+    fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
+    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+}
+
+fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
+    new_string(manager, s.encode_utf16().collect::<Vec<_>>()).to_ref()
+}
+
+fn try_id_to_any<M: Manager>(
+    s: &str,
+    _manager: M,
+    consts: &BTreeMap<String, Any<M::Dealloc>>,
+) -> Option<Any<M::Dealloc>> {
+    match s {
+        "null" => Some(Any::move_from(Null())),
+        "true" => Some(Any::move_from(true)),
+        "false" => Some(Any::move_from(false)),
+        s if consts.contains_key(s) => Some(consts.get(s).unwrap().clone()),
+        _ => None,
+    }
+}
+
+impl JsonToken {
+    fn try_to_any<M: Manager>(
+        self,
+        manager: M,
+        consts: &BTreeMap<String, Any<M::Dealloc>>,
+    ) -> Option<Any<M::Dealloc>> {
+        match self {
+            JsonToken::Number(f) => Some(Any::move_from(f)),
+            JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
+            JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
+            _ => None,
+        }
+    }
 }
 
 impl DataType {
@@ -324,6 +375,132 @@ impl<D: Dealloc> AnyState<D> {
                 status: ParsingStatus::ObjectColon,
                 ..self
             }),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
+}
+
+impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
+    fn end_array(mut self, manager: M) -> AnyResult<M::Dealloc> {
+        match self.current {
+            JsonElement::Stack(JsonStackElement::Array(array)) => {
+                let js_array = new_array(manager, array).to_ref();
+                let current = match self.stack.pop() {
+                    Some(element) => JsonElement::Stack(element),
+                    None => JsonElement::None,
+                };
+                let new_state = AnyState { current, ..self };
+                new_state.push_value(Any::move_from(js_array))
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn end_object(mut self, manager: M) -> AnyResult<M::Dealloc> {
+        match self.current {
+            JsonElement::Stack(JsonStackElement::Object(object)) => {
+                let vec = object
+                    .map
+                    .into_iter()
+                    .map(|kv| (to_js_string(manager, kv.0), kv.1))
+                    .collect::<Vec<_>>();
+                let js_object = new_object(manager, vec).to_ref();
+                let current = match self.stack.pop() {
+                    Some(element) => JsonElement::Stack(element),
+                    None => JsonElement::None,
+                };
+                let new_state = AnyState { current, ..self };
+                new_state.push_value(Any::move_from(js_object))
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::ArrayBegin => self.begin_array(),
+            JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::Id(s) if self.data_type.is_cjs_compatible() && s == "require" => {
+                self.begin_import()
+            }
+            _ => {
+                let option_any = token.try_to_any(manager, &self.consts);
+                match option_any {
+                    Some(any) => self.push_value(any),
+                    None => AnyResult::Error(ParseError::UnexpectedToken),
+                }
+            }
+        }
+    }
+
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::ArrayBegin => self.begin_array(),
+            JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
+                self.begin_import()
+            }
+            JsonToken::ArrayEnd => self.end_array(manager),
+            _ => {
+                let option_any = token.try_to_any(manager, &self.consts);
+                match option_any {
+                    Some(any) => self.push_value(any),
+                    None => AnyResult::Error(ParseError::UnexpectedToken),
+                }
+            }
+        }
+    }
+
+    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::ArrayBegin => self.begin_array(),
+            JsonToken::ArrayEnd => self.end_array(manager),
+            JsonToken::ObjectBegin => self.begin_object(),
+            _ => {
+                let option_any = token.try_to_any(manager, &self.consts);
+                match option_any {
+                    Some(any) => self.push_value(any),
+                    None => AnyResult::Error(ParseError::UnexpectedToken),
+                }
+            }
+        }
+    }
+
+    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::ArrayEnd => self.end_array(manager),
+            JsonToken::Comma => AnyResult::Continue(AnyState {
+                status: ParsingStatus::ArrayComma,
+                ..self
+            }),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
+
+    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::String(s) => self.push_key(s),
+            JsonToken::Id(s) if self.data_type.is_djs() => self.push_key(s),
+            JsonToken::ObjectEnd => self.end_object(manager),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
+
+    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::ObjectEnd => self.end_object(manager),
+            JsonToken::Comma => AnyResult::Continue(AnyState {
+                status: ParsingStatus::ObjectComma,
+                ..self
+            }),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
+
+    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
+        match token {
+            JsonToken::String(s) => self.push_key(s),
+            JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
