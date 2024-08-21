@@ -156,11 +156,8 @@ impl<D: Dealloc> AnyStateStruct<D> {
     pub fn parse_import_begin(self, token: JsonToken) -> AnyResult<D> {
         match token {
             JsonToken::OpeningParenthesis => AnyResult::Continue(AnyStateStruct {
-                data_type: self.data_type,
                 status: ParsingStatus::ImportValue,
-                current: self.current,
-                stack: self.stack,
-                consts: self.consts,
+                ..self
             }),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
@@ -195,11 +192,8 @@ impl<D: Dealloc> AnyStateStruct<D> {
         match self.current {
             JsonElement::None => AnyResult::Success(AnySuccess {
                 state: AnyStateStruct {
-                    data_type: self.data_type,
                     status: ParsingStatus::Initial,
-                    current: self.current,
-                    stack: self.stack,
-                    consts: self.consts,
+                    ..self
                 },
                 value,
             }),
@@ -207,11 +201,9 @@ impl<D: Dealloc> AnyStateStruct<D> {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
                     AnyResult::Continue(AnyStateStruct {
-                        data_type: self.data_type,
                         status: ParsingStatus::ArrayValue,
                         current: JsonElement::Stack(JsonStackElement::Array(arr)),
-                        stack: self.stack,
-                        consts: self.consts,
+                        ..self
                     })
                 }
                 JsonStackElement::Object(mut stack_obj) => {
@@ -221,11 +213,9 @@ impl<D: Dealloc> AnyStateStruct<D> {
                         key: String::default(),
                     };
                     AnyResult::Continue(AnyStateStruct {
-                        data_type: self.data_type,
                         status: ParsingStatus::ObjectValue,
                         current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
-                        stack: self.stack,
-                        consts: self.consts,
+                        ..self
                     })
                 }
             },
@@ -253,14 +243,24 @@ impl<D: Dealloc> AnyStateStruct<D> {
                     key: s,
                 };
                 AnyResult::Continue(AnyStateStruct {
-                    data_type: self.data_type,
                     status: ParsingStatus::ObjectKey,
                     current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
-                    stack: self.stack,
-                    consts: self.consts,
+                    ..self
                 })
             }
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
+    }
+
+    pub fn begin_array(mut self) -> AnyResult<D> {
+        let new_top = JsonStackElement::Array(Vec::default());
+        if let JsonElement::Stack(top) = self.current {
+            self.stack.push(top);
+        }
+        AnyResult::Continue(AnyStateStruct {
+            status: ParsingStatus::ArrayBegin,
+            current: JsonElement::Stack(new_top),
+            ..self
+        })
     }
 }

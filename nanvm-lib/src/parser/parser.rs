@@ -67,7 +67,6 @@ pub trait AnyState<M: Manager> {
         token: JsonToken,
     ) -> AnyResult<M::Dealloc>;
     fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn begin_array(self) -> AnyResult<M::Dealloc>;
     fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
     fn begin_object(self) -> AnyResult<M::Dealloc>;
     fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
@@ -427,18 +426,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         }
     }
 
-    fn begin_array(mut self) -> AnyResult<M::Dealloc> {
-        let new_top = JsonStackElement::Array(Vec::default());
-        if let JsonElement::Stack(top) = self.current {
-            self.stack.push(top);
-        }
-        AnyResult::Continue(AnyStateStruct {
-            status: ParsingStatus::ArrayBegin,
-            current: JsonElement::Stack(new_top),
-            ..self
-        })
-    }
-
     fn end_array(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Array(array)) => {
@@ -494,9 +481,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
 
     fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ArrayBegin => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_array(self)
-            }
+            JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => {
                 <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
             }
@@ -515,9 +500,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
 
     fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ArrayBegin => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_array(self)
-            }
+            JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => {
                 <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
             }
@@ -537,9 +520,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
 
     fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ArrayBegin => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_array(self)
-            }
+            JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ArrayEnd => self.end_array(manager),
             JsonToken::ObjectBegin => {
                 <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
