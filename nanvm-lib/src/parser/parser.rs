@@ -67,7 +67,6 @@ pub trait AnyState<M: Manager> {
         token: JsonToken,
     ) -> AnyResult<M::Dealloc>;
     fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn push_key(self, s: String) -> AnyResult<M::Dealloc>;
     fn begin_array(self) -> AnyResult<M::Dealloc>;
     fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
     fn begin_object(self) -> AnyResult<M::Dealloc>;
@@ -428,25 +427,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         }
     }
 
-    fn push_key(self, s: String) -> AnyResult<M::Dealloc> {
-        match self.current {
-            JsonElement::Stack(JsonStackElement::Object(stack_obj)) => {
-                let new_stack_obj = JsonStackObject {
-                    map: stack_obj.map,
-                    key: s,
-                };
-                AnyResult::Continue(AnyStateStruct {
-                    data_type: self.data_type,
-                    status: ParsingStatus::ObjectKey,
-                    current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
-                    stack: self.stack,
-                    consts: self.consts,
-                })
-            }
-            _ => AnyResult::Error(ParseError::UnexpectedToken),
-        }
-    }
-
     fn begin_array(mut self) -> AnyResult<M::Dealloc> {
         let new_top = JsonStackElement::Array(Vec::default());
         if let JsonElement::Stack(top) = self.current {
@@ -590,12 +570,8 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
 
     fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::String(s) => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_key(self, s)
-            }
-            JsonToken::Id(s) if self.data_type.is_djs() => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_key(self, s)
-            }
+            JsonToken::String(s) => self.push_key(s),
+            JsonToken::Id(s) if self.data_type.is_djs() => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
@@ -630,9 +606,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
 
     fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::String(s) => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_key(self, s)
-            }
+            JsonToken::String(s) => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }

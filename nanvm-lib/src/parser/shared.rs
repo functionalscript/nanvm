@@ -244,4 +244,23 @@ impl<D: Dealloc> AnyStateStruct<D> {
             ..self
         })
     }
+
+    pub fn push_key(self, s: String) -> AnyResult<D> {
+        match self.current {
+            JsonElement::Stack(JsonStackElement::Object(stack_obj)) => {
+                let new_stack_obj = JsonStackObject {
+                    map: stack_obj.map,
+                    key: s,
+                };
+                AnyResult::Continue(AnyStateStruct {
+                    data_type: self.data_type,
+                    status: ParsingStatus::ObjectKey,
+                    current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
+                    stack: self.stack,
+                    consts: self.consts,
+                })
+            }
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
 }
