@@ -165,4 +165,71 @@ impl<D: Dealloc> AnyStateStruct<D> {
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
+
+    pub fn parse_import_end(self, token: JsonToken) -> AnyResult<D> {
+        match token {
+            JsonToken::ClosingParenthesis => self.end_import(),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
+        }
+    }
+
+    pub fn end_import(mut self) -> AnyResult<D> {
+        match self.current {
+            JsonElement::Any(any) => {
+                let current = match self.stack.pop() {
+                    Some(element) => JsonElement::Stack(element),
+                    None => JsonElement::None,
+                };
+                let new_state = AnyStateStruct {
+                    status: ParsingStatus::Initial,
+                    current,
+                    ..self
+                };
+                new_state.push_value(any)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn push_value(self, value: Any<D>) -> AnyResult<D> {
+        match self.current {
+            JsonElement::None => AnyResult::Success(AnySuccess {
+                state: AnyStateStruct {
+                    data_type: self.data_type,
+                    status: ParsingStatus::Initial,
+                    current: self.current,
+                    stack: self.stack,
+                    consts: self.consts,
+                },
+                value,
+            }),
+            JsonElement::Stack(top) => match top {
+                JsonStackElement::Array(mut arr) => {
+                    arr.push(value);
+                    AnyResult::Continue(AnyStateStruct {
+                        data_type: self.data_type,
+                        status: ParsingStatus::ArrayValue,
+                        current: JsonElement::Stack(JsonStackElement::Array(arr)),
+                        stack: self.stack,
+                        consts: self.consts,
+                    })
+                }
+                JsonStackElement::Object(mut stack_obj) => {
+                    stack_obj.map.insert(stack_obj.key, value);
+                    let new_stack_obj = JsonStackObject {
+                        map: stack_obj.map,
+                        key: String::default(),
+                    };
+                    AnyResult::Continue(AnyStateStruct {
+                        data_type: self.data_type,
+                        status: ParsingStatus::ObjectValue,
+                        current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
+                        stack: self.stack,
+                        consts: self.consts,
+                    })
+                }
+            },
+            _ => todo!(),
+        }
+    }
 }

@@ -15,7 +15,7 @@ use crate::{
     tokenizer::{tokenize, JsonToken},
 };
 
-use super::shared::{AnyResult, AnyStateStruct, AnySuccess, DataType, ParseError, ParsingStatus};
+use super::shared::{AnyResult, AnyStateStruct, DataType, ParseError, ParsingStatus};
 use super::{
     path::{concat, split},
     shared::{JsonElement, JsonStackElement, JsonStackObject},
@@ -66,11 +66,8 @@ pub trait AnyState<M: Manager> {
         context: &mut Context<M, I>,
         token: JsonToken,
     ) -> AnyResult<M::Dealloc>;
-    fn parse_import_end(self, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn begin_import(self) -> AnyResult<M::Dealloc>;
-    fn end_import(self) -> AnyResult<M::Dealloc>;
-    fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M::Dealloc>;
     fn push_key(self, s: String) -> AnyResult<M::Dealloc>;
     fn begin_array(self) -> AnyResult<M::Dealloc>;
     fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
@@ -410,15 +407,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         }
     }
 
-    fn parse_import_end(self, token: JsonToken) -> AnyResult<M::Dealloc> {
-        match token {
-            JsonToken::ClosingParenthesis => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::end_import(self)
-            }
-            _ => AnyResult::Error(ParseError::WrongRequireStatement),
-        }
-    }
-
     fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc> {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
@@ -437,11 +425,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
             ParsingStatus::ImportBegin => self.parse_import_begin(token),
             ParsingStatus::ImportValue => self.parse_import_value(context, token),
-            ParsingStatus::ImportEnd => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::parse_import_end(
-                    self, token,
-                )
-            }
+            ParsingStatus::ImportEnd => self.parse_import_end(token),
         }
     }
 
@@ -456,68 +440,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             stack: self.stack,
             consts: self.consts,
         })
-    }
-
-    fn end_import(mut self) -> AnyResult<M::Dealloc> {
-        match self.current {
-            JsonElement::Any(any) => {
-                let current = match self.stack.pop() {
-                    Some(element) => JsonElement::Stack(element),
-                    None => JsonElement::None,
-                };
-                let new_state = AnyStateStruct {
-                    data_type: self.data_type,
-                    status: ParsingStatus::Initial,
-                    current,
-                    stack: self.stack,
-                    consts: self.consts,
-                };
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(new_state, any)
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M::Dealloc> {
-        match self.current {
-            JsonElement::None => AnyResult::Success(AnySuccess {
-                state: AnyStateStruct {
-                    data_type: self.data_type,
-                    status: ParsingStatus::Initial,
-                    current: self.current,
-                    stack: self.stack,
-                    consts: self.consts,
-                },
-                value,
-            }),
-            JsonElement::Stack(top) => match top {
-                JsonStackElement::Array(mut arr) => {
-                    arr.push(value);
-                    AnyResult::Continue(AnyStateStruct {
-                        data_type: self.data_type,
-                        status: ParsingStatus::ArrayValue,
-                        current: JsonElement::Stack(JsonStackElement::Array(arr)),
-                        stack: self.stack,
-                        consts: self.consts,
-                    })
-                }
-                JsonStackElement::Object(mut stack_obj) => {
-                    stack_obj.map.insert(stack_obj.key, value);
-                    let new_stack_obj = JsonStackObject {
-                        map: stack_obj.map,
-                        key: String::default(),
-                    };
-                    AnyResult::Continue(AnyStateStruct {
-                        data_type: self.data_type,
-                        status: ParsingStatus::ObjectValue,
-                        current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
-                        stack: self.stack,
-                        consts: self.consts,
-                    })
-                }
-            },
-            _ => todo!(),
-        }
     }
 
     fn push_key(self, s: String) -> AnyResult<M::Dealloc> {
@@ -545,11 +467,9 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             self.stack.push(top);
         }
         AnyResult::Continue(AnyStateStruct {
-            data_type: self.data_type,
             status: ParsingStatus::ArrayBegin,
             current: JsonElement::Stack(new_top),
-            stack: self.stack,
-            consts: self.consts,
+            ..self
         })
     }
 
@@ -561,17 +481,8 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyStateStruct {
-                    data_type: self.data_type,
-                    status: self.status,
-                    current,
-                    stack: self.stack,
-                    consts: self.consts,
-                };
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
-                    new_state,
-                    Any::move_from(js_array),
-                )
+                let new_state = AnyStateStruct { current, ..self };
+                new_state.push_value(Any::move_from(js_array))
             }
             _ => unreachable!(),
         }
@@ -608,17 +519,8 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyStateStruct {
-                    data_type: self.data_type,
-                    status: self.status,
-                    current,
-                    stack: self.stack,
-                    consts: self.consts,
-                };
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
-                    new_state,
-                    Any::move_from(js_object),
-                )
+                let new_state = AnyStateStruct { current, ..self };
+                new_state.push_value(Any::move_from(js_object))
             }
             _ => unreachable!(),
         }
@@ -638,11 +540,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
-                    Some(any) => {
-                        <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
-                            self, any,
-                        )
-                    }
+                    Some(any) => self.push_value(any),
                     None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
@@ -664,11 +562,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
-                    Some(any) => {
-                        <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
-                            self, any,
-                        )
-                    }
+                    Some(any) => self.push_value(any),
                     None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
@@ -687,11 +581,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
-                    Some(any) => {
-                        <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
-                            self, any,
-                        )
-                    }
+                    Some(any) => self.push_value(any),
                     None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
