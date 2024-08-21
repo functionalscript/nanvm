@@ -1,14 +1,3 @@
-use std::collections::{BTreeMap, BTreeSet};
-
-use io_trait::Io;
-
-use crate::{
-    common::default::default,
-    js::any::Any,
-    mem::manager::{Dealloc, Manager},
-    tokenizer::{tokenize, JsonToken},
-};
-
 use super::shared::{
     AnyResult, AnyState, AnyStateExtension, ConstState, JsonState, ParseError, ParseResult,
     ParsingStatus, RootState, RootStatus,
@@ -17,6 +6,14 @@ use super::{
     path::{concat, split},
     shared::JsonElement,
 };
+use crate::{
+    common::default::default,
+    js::any::Any,
+    mem::manager::{Dealloc, Manager},
+    tokenizer::{tokenize, JsonToken},
+};
+use io_trait::Io;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub struct ModuleCache<D: Dealloc> {
     pub complete: BTreeMap<String, Any<D>>,
