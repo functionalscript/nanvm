@@ -88,3 +88,9 @@ pub struct JsonStackObject<D: Dealloc> {
     pub map: BTreeMap<String, Any<D>>,
     pub key: String,
 }
+
+pub enum JsonElement<D: Dealloc> {
+    None,
+    Stack(JsonStackElement<D>),
+    Any(Any<D>),
+}

@@ -18,14 +18,8 @@ use crate::{
 use super::shared::{DataType, ParseError, ParsingStatus};
 use super::{
     path::{concat, split},
-    shared::{JsonStackElement, JsonStackObject},
+    shared::{JsonElement, JsonStackElement, JsonStackObject},
 };
-
-pub enum JsonElement<D: Dealloc> {
-    None,
-    Stack(JsonStackElement<D>),
-    Any(Any<D>),
-}
 
 pub struct ModuleCache<D: Dealloc> {
     pub complete: BTreeMap<String, Any<D>>,
