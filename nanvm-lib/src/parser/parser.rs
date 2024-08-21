@@ -61,7 +61,6 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
 pub trait AnyState<M: Manager> {
     fn parse_for_module<I: Io>(self, context: &mut Context<M, I>, token: JsonToken)
         -> JsonState<M>;
-    fn parse_import_begin(self, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_import_value<I: Io>(
         self,
         context: &mut Context<M, I>,
@@ -360,19 +359,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         }
     }
 
-    fn parse_import_begin(self, token: JsonToken) -> AnyResult<M::Dealloc> {
-        match token {
-            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyStateStruct {
-                data_type: self.data_type,
-                status: ParsingStatus::ImportValue,
-                current: self.current,
-                stack: self.stack,
-                consts: self.consts,
-            }),
-            _ => AnyResult::Error(ParseError::WrongRequireStatement),
-        }
-    }
-
     fn parse_import_value<I: Io>(
         self,
         context: &mut Context<M, I>,
@@ -449,9 +435,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             }
             ParsingStatus::ObjectValue => self.parse_object_next(context.manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
-            ParsingStatus::ImportBegin => <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
-                M,
-            >>::parse_import_begin(self, token),
+            ParsingStatus::ImportBegin => self.parse_import_begin(token),
             ParsingStatus::ImportValue => self.parse_import_value(context, token),
             ParsingStatus::ImportEnd => {
                 <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::parse_import_end(

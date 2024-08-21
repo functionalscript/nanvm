@@ -2,6 +2,7 @@ use crate::{
     common::{cast::Cast, default::default},
     js::any::Any,
     mem::manager::Dealloc,
+    tokenizer::JsonToken,
 };
 use std::collections::BTreeMap;
 use std::fmt::Display;
@@ -149,6 +150,19 @@ impl<D: Dealloc> AnyStateStruct<D> {
         AnyStateStruct {
             data_type: DataType::Cjs,
             ..self
+        }
+    }
+
+    pub fn parse_import_begin(self, token: JsonToken) -> AnyResult<D> {
+        match token {
+            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyStateStruct {
+                data_type: self.data_type,
+                status: ParsingStatus::ImportValue,
+                current: self.current,
+                stack: self.stack,
+                consts: self.consts,
+            }),
+            _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
 }
