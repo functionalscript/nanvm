@@ -58,28 +58,59 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
     }
 }
 
-pub struct AnyState<M: Manager> {
+pub struct AnyStateStruct<D: Dealloc> {
     pub data_type: DataType,
     pub status: ParsingStatus,
-    pub current: JsonElement<M::Dealloc>,
-    pub stack: Vec<JsonStackElement<M::Dealloc>>,
-    pub consts: BTreeMap<String, Any<M::Dealloc>>,
+    pub current: JsonElement<D>,
+    pub stack: Vec<JsonStackElement<D>>,
+    pub consts: BTreeMap<String, Any<D>>,
 }
 
-pub struct AnySuccess<M: Manager> {
-    pub state: AnyState<M>,
-    pub value: Any<M::Dealloc>,
-}
-
-pub enum AnyResult<M: Manager> {
-    Continue(AnyState<M>),
-    Success(AnySuccess<M>),
+pub enum AnyResult<D: Dealloc> {
+    Continue(AnyStateStruct<D>),
+    Success(AnySuccess<D>),
     Error(ParseError),
 }
 
-impl<M: Manager> Default for AnyState<M> {
+pub trait AnyState<M: Manager> {
+    fn set_djs(self) -> Self;
+    fn set_data_type(self, data_type: DataType) -> Self;
+    fn parse_for_module<I: Io>(self, context: &mut Context<M, I>, token: JsonToken)
+        -> JsonState<M>;
+    fn parse_import_begin(self, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_import_value<I: Io>(
+        self,
+        context: &mut Context<M, I>,
+        token: JsonToken,
+    ) -> AnyResult<M::Dealloc>;
+    fn parse_import_end(self, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn begin_import(self) -> AnyResult<M::Dealloc>;
+    fn end_import(self) -> AnyResult<M::Dealloc>;
+    fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M::Dealloc>;
+    fn push_key(self, s: String) -> AnyResult<M::Dealloc>;
+    fn begin_array(self) -> AnyResult<M::Dealloc>;
+    fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
+    fn begin_object(self) -> AnyResult<M::Dealloc>;
+    fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
+    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_key(self, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+}
+
+pub struct AnySuccess<D: Dealloc> {
+    pub state: AnyStateStruct<D>,
+    pub value: Any<D>,
+}
+
+impl<D: Dealloc> Default for AnyStateStruct<D> {
     fn default() -> Self {
-        AnyState {
+        AnyStateStruct {
             data_type: default(),
             status: ParsingStatus::Initial,
             current: JsonElement::None,
@@ -111,19 +142,19 @@ pub enum RootStatus {
 
 pub struct RootState<M: Manager> {
     pub status: RootStatus,
-    pub state: AnyState<M>,
+    pub state: AnyStateStruct<M::Dealloc>,
     pub new_line: bool,
 }
 
 pub struct ConstState<M: Manager> {
     pub key: String,
-    pub state: AnyState<M>,
+    pub state: AnyStateStruct<M::Dealloc>,
 }
 
 pub enum JsonState<M: Manager> {
     ParseRoot(RootState<M>),
     ParseConst(ConstState<M>),
-    ParseModule(AnyState<M>),
+    ParseModule(AnyStateStruct<M::Dealloc>),
     Result(ParseResult<M>),
     Error(ParseError),
 }
@@ -161,64 +192,72 @@ impl JsonToken {
     }
 }
 
-impl<M: Manager> AnyState<M> {
-    fn default(data_type: DataType) -> Self {
-        AnyState {
-            data_type,
-            status: ParsingStatus::Initial,
-            current: JsonElement::None,
-            stack: [].cast(),
-            consts: default(),
-        }
-    }
-}
-
 impl<M: Manager> RootState<M> {
     fn parse<I: Io>(mut self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         match self.status {
-            RootStatus::Initial => match token {
-                JsonToken::NewLine => JsonState::ParseRoot(RootState {
-                    status: RootStatus::Initial,
-                    state: self.state,
-                    new_line: true,
-                }),
-                JsonToken::Id(s) => match self.new_line {
-                    true => match s.as_ref() {
-                        "const" => JsonState::ParseRoot(RootState {
-                            status: RootStatus::Const,
-                            state: self.state.set_djs(),
-                            new_line: false,
-                        }),
-                        "export" if self.state.data_type.is_mjs_compatible() => {
-                            JsonState::ParseRoot(RootState {
-                                status: RootStatus::Export,
-                                state: self.state.set_data_type(DataType::Mjs),
-                                new_line: false,
-                            })
-                        }
-                        "module" if self.state.data_type.is_cjs_compatible() => {
-                            JsonState::ParseRoot(RootState {
-                                status: RootStatus::Module,
-                                state: self.state.set_data_type(DataType::Cjs),
-                                new_line: false,
-                            })
-                        }
-                        "import" if self.state.data_type.is_mjs_compatible() => {
-                            JsonState::ParseRoot(RootState {
-                                status: RootStatus::Import,
-                                state: self.state.set_data_type(DataType::Mjs),
-                                new_line: false,
-                            })
-                        }
-                        _ => self.state.parse_for_module(context, JsonToken::Id(s)),
+            RootStatus::Initial => {
+                match token {
+                    JsonToken::NewLine => JsonState::ParseRoot(RootState {
+                        status: RootStatus::Initial,
+                        state: self.state,
+                        new_line: true,
+                    }),
+                    JsonToken::Id(s) => match self.new_line {
+                        true => match s.as_ref() {
+                            "const" => {
+                                JsonState::ParseRoot(RootState {
+                                    status: RootStatus::Const,
+                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
+                                        M,
+                                    >>::set_djs(
+                                        self.state
+                                    ),
+                                    new_line: false,
+                                })
+                            }
+                            "export" if self.state.data_type.is_mjs_compatible() => {
+                                JsonState::ParseRoot(RootState {
+                                    status: RootStatus::Export,
+                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
+                                        M,
+                                    >>::set_data_type(
+                                        self.state, DataType::Mjs
+                                    ),
+                                    new_line: false,
+                                })
+                            }
+                            "module" if self.state.data_type.is_cjs_compatible() => {
+                                JsonState::ParseRoot(RootState {
+                                    status: RootStatus::Module,
+                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
+                                        M,
+                                    >>::set_data_type(
+                                        self.state, DataType::Cjs
+                                    ),
+                                    new_line: false,
+                                })
+                            }
+                            "import" if self.state.data_type.is_mjs_compatible() => {
+                                JsonState::ParseRoot(RootState {
+                                    status: RootStatus::Import,
+                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
+                                        M,
+                                    >>::set_data_type(
+                                        self.state, DataType::Mjs
+                                    ),
+                                    new_line: false,
+                                })
+                            }
+                            _ => self.state.parse_for_module(context, JsonToken::Id(s)),
+                        },
+                        false => JsonState::Error(ParseError::NewLineExpected),
                     },
-                    false => JsonState::Error(ParseError::NewLineExpected),
-                },
-                _ => match self.new_line {
-                    true => self.state.parse_for_module(context, token),
-                    false => JsonState::Error(ParseError::NewLineExpected),
-                },
-            },
+                    _ => match self.new_line {
+                        true => self.state.parse_for_module(context, token),
+                        false => JsonState::Error(ParseError::NewLineExpected),
+                    },
+                }
+            }
             RootStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
                     "default" => JsonState::ParseModule(self.state),
@@ -355,9 +394,9 @@ impl<M: Manager> ConstState<M> {
     }
 }
 
-impl<M: Manager> AnyState<M> {
+impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
     fn set_djs(self) -> Self {
-        AnyState {
+        AnyStateStruct {
             data_type: self.data_type.to_djs(),
             status: self.status,
             current: self.current,
@@ -367,7 +406,7 @@ impl<M: Manager> AnyState<M> {
     }
 
     fn set_data_type(self, data_type: DataType) -> Self {
-        AnyState {
+        AnyStateStruct {
             data_type,
             status: self.status,
             current: self.current,
@@ -392,9 +431,9 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_import_begin(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_begin(self, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
+            JsonToken::OpeningParenthesis => AnyResult::Continue(AnyStateStruct {
                 data_type: self.data_type,
                 status: ParsingStatus::ImportValue,
                 current: self.current,
@@ -409,12 +448,12 @@ impl<M: Manager> AnyState<M> {
         self,
         context: &mut Context<M, I>,
         token: JsonToken,
-    ) -> AnyResult<M> {
+    ) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::String(s) => {
                 let current_path = concat(split(&context.path).0, s.as_str());
                 if let Some(any) = context.module_cache.complete.get(&current_path) {
-                    return AnyResult::Continue(AnyState {
+                    return AnyResult::Continue(AnyStateStruct {
                         data_type: self.data_type,
                         status: ParsingStatus::ImportEnd,
                         current: JsonElement::Any(any.clone()),
@@ -438,7 +477,7 @@ impl<M: Manager> AnyState<M> {
                                     .module_cache
                                     .complete
                                     .insert(current_path, r.any.clone());
-                                AnyResult::Continue(AnyState {
+                                AnyResult::Continue(AnyStateStruct {
                                     data_type: self.data_type,
                                     status: ParsingStatus::ImportEnd,
                                     current: JsonElement::Any(r.any),
@@ -449,21 +488,23 @@ impl<M: Manager> AnyState<M> {
                             Err(e) => AnyResult::Error(e),
                         }
                     }
-                    Err(_) => AnyResult::Error(ParseError::CannotReadFile),
+                    Err(_) => AnyResult::<M::Dealloc>::Error(ParseError::CannotReadFile),
                 }
             }
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
 
-    fn parse_import_end(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_import_end(self, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ClosingParenthesis => self.end_import(),
+            JsonToken::ClosingParenthesis => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::end_import(self)
+            }
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
     }
 
-    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M> {
+    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc> {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
                 self.parse_value(context.manager, token)
@@ -472,20 +513,30 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ArrayValue => self.parse_array_value(context.manager, token),
             ParsingStatus::ArrayComma => self.parse_array_comma(context.manager, token),
             ParsingStatus::ObjectBegin => self.parse_object_begin(context.manager, token),
-            ParsingStatus::ObjectKey => self.parse_object_key(token),
+            ParsingStatus::ObjectKey => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::parse_object_key(
+                    self, token,
+                )
+            }
             ParsingStatus::ObjectValue => self.parse_object_next(context.manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
-            ParsingStatus::ImportBegin => self.parse_import_begin(token),
+            ParsingStatus::ImportBegin => <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
+                M,
+            >>::parse_import_begin(self, token),
             ParsingStatus::ImportValue => self.parse_import_value(context, token),
-            ParsingStatus::ImportEnd => self.parse_import_end(token),
+            ParsingStatus::ImportEnd => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::parse_import_end(
+                    self, token,
+                )
+            }
         }
     }
 
-    fn begin_import(mut self) -> AnyResult<M> {
+    fn begin_import(mut self) -> AnyResult<M::Dealloc> {
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
-        AnyResult::Continue(AnyState {
+        AnyResult::Continue(AnyStateStruct {
             data_type: DataType::Cjs,
             status: ParsingStatus::ImportBegin,
             current: JsonElement::None,
@@ -494,30 +545,30 @@ impl<M: Manager> AnyState<M> {
         })
     }
 
-    fn end_import(mut self) -> AnyResult<M> {
+    fn end_import(mut self) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Any(any) => {
                 let current = match self.stack.pop() {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyState {
+                let new_state = AnyStateStruct {
                     data_type: self.data_type,
                     status: ParsingStatus::Initial,
                     current,
                     stack: self.stack,
                     consts: self.consts,
                 };
-                new_state.push_value(any)
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(new_state, any)
             }
             _ => unreachable!(),
         }
     }
 
-    fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M> {
+    fn push_value(self, value: Any<M::Dealloc>) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::None => AnyResult::Success(AnySuccess {
-                state: AnyState {
+                state: AnyStateStruct {
                     data_type: self.data_type,
                     status: ParsingStatus::Initial,
                     current: self.current,
@@ -529,7 +580,7 @@ impl<M: Manager> AnyState<M> {
             JsonElement::Stack(top) => match top {
                 JsonStackElement::Array(mut arr) => {
                     arr.push(value);
-                    AnyResult::Continue(AnyState {
+                    AnyResult::Continue(AnyStateStruct {
                         data_type: self.data_type,
                         status: ParsingStatus::ArrayValue,
                         current: JsonElement::Stack(JsonStackElement::Array(arr)),
@@ -543,7 +594,7 @@ impl<M: Manager> AnyState<M> {
                         map: stack_obj.map,
                         key: String::default(),
                     };
-                    AnyResult::Continue(AnyState {
+                    AnyResult::Continue(AnyStateStruct {
                         data_type: self.data_type,
                         status: ParsingStatus::ObjectValue,
                         current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
@@ -556,14 +607,14 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn push_key(self, s: String) -> AnyResult<M> {
+    fn push_key(self, s: String) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Object(stack_obj)) => {
                 let new_stack_obj = JsonStackObject {
                     map: stack_obj.map,
                     key: s,
                 };
-                AnyResult::Continue(AnyState {
+                AnyResult::Continue(AnyStateStruct {
                     data_type: self.data_type,
                     status: ParsingStatus::ObjectKey,
                     current: JsonElement::Stack(JsonStackElement::Object(new_stack_obj)),
@@ -575,12 +626,12 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn begin_array(mut self) -> AnyResult<M> {
+    fn begin_array(mut self) -> AnyResult<M::Dealloc> {
         let new_top = JsonStackElement::Array(Vec::default());
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top);
         }
-        AnyResult::Continue(AnyState {
+        AnyResult::Continue(AnyStateStruct {
             data_type: self.data_type,
             status: ParsingStatus::ArrayBegin,
             current: JsonElement::Stack(new_top),
@@ -589,7 +640,7 @@ impl<M: Manager> AnyState<M> {
         })
     }
 
-    fn end_array(mut self, manager: M) -> AnyResult<M> {
+    fn end_array(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Array(array)) => {
                 let js_array = new_array(manager, array).to_ref();
@@ -597,20 +648,23 @@ impl<M: Manager> AnyState<M> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyState {
+                let new_state = AnyStateStruct {
                     data_type: self.data_type,
                     status: self.status,
                     current,
                     stack: self.stack,
                     consts: self.consts,
                 };
-                new_state.push_value(Any::move_from(js_array))
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
+                    new_state,
+                    Any::move_from(js_array),
+                )
             }
             _ => unreachable!(),
         }
     }
 
-    fn begin_object(mut self) -> AnyResult<M> {
+    fn begin_object(mut self) -> AnyResult<M::Dealloc> {
         let new_top: JsonStackElement<<M as Manager>::Dealloc> =
             JsonStackElement::Object(JsonStackObject {
                 map: BTreeMap::default(),
@@ -619,7 +673,7 @@ impl<M: Manager> AnyState<M> {
         if let JsonElement::Stack(top) = self.current {
             self.stack.push(top)
         }
-        AnyResult::Continue(AnyState {
+        AnyResult::Continue(AnyStateStruct {
             data_type: self.data_type,
             status: ParsingStatus::ObjectBegin,
             current: JsonElement::Stack(new_top),
@@ -628,7 +682,7 @@ impl<M: Manager> AnyState<M> {
         })
     }
 
-    fn end_object(mut self, manager: M) -> AnyResult<M> {
+    fn end_object(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Object(object)) => {
                 let vec = object
@@ -641,73 +695,100 @@ impl<M: Manager> AnyState<M> {
                     Some(element) => JsonElement::Stack(element),
                     None => JsonElement::None,
                 };
-                let new_state = AnyState {
+                let new_state = AnyStateStruct {
                     data_type: self.data_type,
                     status: self.status,
                     current,
                     stack: self.stack,
                     consts: self.consts,
                 };
-                new_state.push_value(Any::move_from(js_object))
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
+                    new_state,
+                    Any::move_from(js_object),
+                )
             }
             _ => unreachable!(),
         }
     }
 
-    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ArrayBegin => self.begin_array(),
-            JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::ArrayBegin => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_array(self)
+            }
+            JsonToken::ObjectBegin => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
+            }
             JsonToken::Id(s) if self.data_type.is_cjs_compatible() && s == "require" => {
-                self.begin_import()
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_import(self)
             }
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
-                    Some(any) => self.push_value(any),
+                    Some(any) => {
+                        <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
+                            self, any,
+                        )
+                    }
                     None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
         }
     }
 
-    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ArrayBegin => self.begin_array(),
-            JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::ArrayBegin => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_array(self)
+            }
+            JsonToken::ObjectBegin => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
+            }
             JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
-                self.begin_import()
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_import(self)
             }
             JsonToken::ArrayEnd => self.end_array(manager),
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
-                    Some(any) => self.push_value(any),
+                    Some(any) => {
+                        <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
+                            self, any,
+                        )
+                    }
                     None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
         }
     }
 
-    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::ArrayBegin => self.begin_array(),
+            JsonToken::ArrayBegin => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_array(self)
+            }
             JsonToken::ArrayEnd => self.end_array(manager),
-            JsonToken::ObjectBegin => self.begin_object(),
+            JsonToken::ObjectBegin => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
+            }
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {
-                    Some(any) => self.push_value(any),
+                    Some(any) => {
+                        <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_value(
+                            self, any,
+                        )
+                    }
                     None => AnyResult::Error(ParseError::UnexpectedToken),
                 }
             }
         }
     }
 
-    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
-            JsonToken::Comma => AnyResult::Continue(AnyState {
+            JsonToken::Comma => AnyResult::Continue(AnyStateStruct {
                 data_type: self.data_type,
                 status: ParsingStatus::ArrayComma,
                 current: self.current,
@@ -718,18 +799,22 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::String(s) => self.push_key(s),
-            JsonToken::Id(s) if self.data_type.is_djs() => self.push_key(s),
+            JsonToken::String(s) => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_key(self, s)
+            }
+            JsonToken::Id(s) if self.data_type.is_djs() => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_key(self, s)
+            }
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }
 
-    fn parse_object_key(self, token: JsonToken) -> AnyResult<M> {
+    fn parse_object_key(self, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::Colon => AnyResult::Continue(AnyState {
+            JsonToken::Colon => AnyResult::Continue(AnyStateStruct {
                 data_type: self.data_type,
                 status: ParsingStatus::ObjectColon,
                 current: self.current,
@@ -740,10 +825,10 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
-            JsonToken::Comma => AnyResult::Continue(AnyState {
+            JsonToken::Comma => AnyResult::Continue(AnyStateStruct {
                 data_type: self.data_type,
                 status: ParsingStatus::ObjectComma,
                 current: self.current,
@@ -754,9 +839,11 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
-            JsonToken::String(s) => self.push_key(s),
+            JsonToken::String(s) => {
+                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::push_key(self, s)
+            }
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
@@ -845,7 +932,7 @@ mod test {
         Context::new(manager, io, default(), module_cache)
     }
 
-    fn parse_with_virutal_io<M: Manager>(
+    fn parse_with_virtual_io<M: Manager>(
         manager: M,
         iter: impl Iterator<Item = JsonToken>,
     ) -> Result<ParseResult<M>, ParseError> {
@@ -879,7 +966,7 @@ mod test {
         let json_str = include_str!("../../test/test-json.json");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
     }
@@ -890,14 +977,14 @@ mod test {
         let json_str = include_str!("../../test/test-djs.d.cjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Cjs);
 
         let json_str = include_str!("../../test/test-djs.d.mjs");
         let tokens = tokenize(json_str.to_owned());
         let local = Local::default();
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Mjs);
     }
@@ -912,7 +999,7 @@ mod test {
     fn test_const_with_manager<M: Manager>(manager: M) {
         let json_str = include_str!("../../test/test-const.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -927,12 +1014,12 @@ mod test {
 
         let json_str = include_str!("../../test/test-const-error.d.cjs.txt");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let json_str = include_str!("../../test/test-const-error-new-line.d.cjs.txt");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ParseError::NewLineExpected);
     }
@@ -947,7 +1034,7 @@ mod test {
     fn test_stack_with_manager<M: Manager>(manager: M) {
         let json_str = include_str!("../../test/test-stack.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1117,12 +1204,12 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_cicular_error() {
+    fn test_circular_error() {
         let local = Local::default();
-        test_cicular_error_with_manager(&local);
+        test_circular_error_with_manager(&local);
     }
 
-    fn test_cicular_error_with_manager<M: Manager>(manager: M) {
+    fn test_circular_error_with_manager<M: Manager>(manager: M) {
         let io: VirtualIo = VirtualIo::new(&[]);
 
         let main = include_str!("../../test/test_circular_1.d.cjs.txt");
@@ -1229,7 +1316,7 @@ mod test {
         let local = Local::default();
         let json_str = include_str!("../../test/test-trailing-comma.d.cjs");
         let tokens = tokenize(json_str.to_owned());
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
     }
 
@@ -1247,7 +1334,7 @@ mod test {
                 JsonToken::ObjectEnd,
             ];
             {
-                let result = parse_with_virutal_io(&local, tokens.into_iter());
+                let result = parse_with_virtual_io(&local, tokens.into_iter());
                 assert!(result.is_ok());
                 let _result_unwrap = result.unwrap();
             }
@@ -1269,7 +1356,7 @@ mod test {
                 JsonToken::ObjectEnd,
             ];
             {
-                let result = parse_with_virutal_io(&local, tokens.into_iter());
+                let result = parse_with_virtual_io(&local, tokens.into_iter());
                 assert!(result.is_ok());
                 let result_unwrap = result.unwrap().any;
                 let _result_unwrap = result_unwrap.try_move::<JsObjectRef<_>>();
@@ -1283,7 +1370,7 @@ mod test {
     fn test_data_type() {
         let local = Local::default();
         let tokens = [JsonToken::Id(String::from("null"))];
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Json);
     }
@@ -1297,7 +1384,7 @@ mod test {
             JsonToken::Id(String::from("default")),
             JsonToken::Id(String::from("null")),
         ];
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Mjs);
 
@@ -1309,7 +1396,7 @@ mod test {
             JsonToken::Equals,
             JsonToken::Id(String::from("null")),
         ];
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().data_type, DataType::Cjs);
     }
@@ -1327,7 +1414,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result.unwrap().any.try_move::<JsObjectRef<_>>().unwrap();
         let items = result_unwrap.items();
@@ -1344,7 +1431,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(&local, tokens.into_iter());
+        let result = parse_with_virtual_io(&local, tokens.into_iter());
         assert!(result.is_err());
     }
 
@@ -1362,27 +1449,27 @@ mod test {
 
     fn test_valid_with_manager<M: Manager>(manager: M) {
         let tokens = [JsonToken::Id(String::from("null"))];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.get_type(), Type::Null);
 
         let tokens = [JsonToken::Id(String::from("true"))];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(true));
 
         let tokens = [JsonToken::Id(String::from("false"))];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(false));
 
         let tokens = [JsonToken::Number(0.1)];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().any.try_move(), Ok(0.1));
 
         let tokens = [JsonToken::String(String::from("abc"))];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result = result.unwrap().any.try_move::<JsStringRef<M::Dealloc>>();
         assert!(result.is_ok());
@@ -1391,7 +1478,7 @@ mod test {
         assert_eq!(items, [0x61, 0x62, 0x63]);
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::ArrayEnd];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1408,7 +1495,7 @@ mod test {
             JsonToken::Id(String::from("true")),
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1429,7 +1516,7 @@ mod test {
             JsonToken::Comma,
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
 
         let tokens = [
@@ -1447,7 +1534,7 @@ mod test {
             JsonToken::Number(2.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1469,7 +1556,7 @@ mod test {
         assert_eq!(value2.try_move(), Ok(2.0));
 
         let tokens = [JsonToken::ObjectBegin, JsonToken::ObjectEnd];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result_unwrap = result
             .unwrap()
@@ -1487,7 +1574,7 @@ mod test {
             JsonToken::ObjectEnd,
         ];
         {
-            let result = parse_with_virutal_io(manager, tokens.into_iter());
+            let result = parse_with_virtual_io(manager, tokens.into_iter());
             assert!(result.is_ok());
             let result_unwrap = result.unwrap();
             let result_unwrap = result_unwrap
@@ -1516,15 +1603,15 @@ mod test {
 
     fn test_invalid_with_manager<M: Manager>(manager: M) {
         let tokens = [];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ErrorToken(ErrorType::InvalidNumber)];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::Comma, JsonToken::ArrayEnd];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1533,7 +1620,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1544,7 +1631,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1552,11 +1639,11 @@ mod test {
             JsonToken::ArrayEnd,
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::String(String::default())];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1565,15 +1652,15 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::Colon, JsonToken::ArrayEnd];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ArrayEnd];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1581,7 +1668,7 @@ mod test {
             JsonToken::Comma,
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1591,7 +1678,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1600,7 +1687,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1611,7 +1698,7 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1626,7 +1713,7 @@ mod test {
             JsonToken::Number(1.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1634,7 +1721,7 @@ mod test {
             JsonToken::ObjectEnd,
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1643,7 +1730,7 @@ mod test {
             JsonToken::Colon,
             JsonToken::Number(0.0),
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1654,11 +1741,11 @@ mod test {
             JsonToken::Number(0.0),
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [JsonToken::ObjectEnd];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1667,7 +1754,7 @@ mod test {
             JsonToken::ArrayEnd,
             JsonToken::ObjectEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
 
         let tokens = [
@@ -1676,7 +1763,7 @@ mod test {
             JsonToken::ObjectEnd,
             JsonToken::ArrayEnd,
         ];
-        let result = parse_with_virutal_io(manager, tokens.into_iter());
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_err());
     }
 }
