@@ -62,12 +62,6 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
 }
 
 pub trait AnyStateExtension<M: Manager> {
-    fn parse_import_value<I: Io>(
-        self,
-        context: &mut Context<M, I>,
-        token: JsonToken,
-    ) -> AnyResult<M::Dealloc>;
-    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
     fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
     fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
@@ -278,7 +272,7 @@ fn const_state_parse<M: Manager, I: Io>(
     match token {
         JsonToken::Semicolon => todo!(),
         _ => {
-            let result = const_state.state.parse(context, token);
+            let result = any_state_parse(const_state.state, context, token);
             match result {
                 AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
                     key: const_state.key,
@@ -303,7 +297,7 @@ fn any_state_parse_for_module<M: Manager, I: Io>(
     context: &mut Context<M, I>,
     token: JsonToken,
 ) -> JsonState<M::Dealloc> {
-    let result = any_state.parse(context, token);
+    let result = any_state_parse(any_state, context, token);
     match result {
         AnyResult::Continue(state) => JsonState::ParseModule(state),
         AnyResult::Success(success) => JsonState::Result(ParseResult {
@@ -314,72 +308,76 @@ fn any_state_parse_for_module<M: Manager, I: Io>(
     }
 }
 
-impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
-    fn parse_import_value<I: Io>(
-        self,
-        context: &mut Context<M, I>,
-        token: JsonToken,
-    ) -> AnyResult<M::Dealloc> {
-        match token {
-            JsonToken::String(s) => {
-                let current_path = concat(split(&context.path).0, s.as_str());
-                if let Some(any) = context.module_cache.complete.get(&current_path) {
-                    return AnyResult::Continue(AnyState {
-                        status: ParsingStatus::ImportEnd,
-                        current: JsonElement::Any(any.clone()),
-                        ..self
-                    });
-                }
-                if context.module_cache.progress.contains(&current_path) {
-                    return AnyResult::Error(ParseError::CircularDependency);
-                }
-                context.module_cache.progress.insert(current_path.clone());
-                let read_result = context.io.read_to_string(current_path.as_str());
-                match read_result {
-                    Ok(s) => {
-                        let tokens = tokenize(s);
-                        let res = parse_with_tokens(context, tokens.into_iter());
-                        match res {
-                            Ok(r) => {
-                                context.module_cache.progress.remove(&current_path);
-                                context
-                                    .module_cache
-                                    .complete
-                                    .insert(current_path, r.any.clone());
-                                AnyResult::Continue(AnyState {
-                                    status: ParsingStatus::ImportEnd,
-                                    current: JsonElement::Any(r.any),
-                                    ..self
-                                })
-                            }
-                            Err(e) => AnyResult::Error(e),
+fn any_state_parse_import_value<M: Manager, I: Io>(
+    any_state: AnyState<M::Dealloc>,
+    context: &mut Context<M, I>,
+    token: JsonToken,
+) -> AnyResult<M::Dealloc> {
+    match token {
+        JsonToken::String(s) => {
+            let current_path = concat(split(&context.path).0, s.as_str());
+            if let Some(any) = context.module_cache.complete.get(&current_path) {
+                return AnyResult::Continue(AnyState {
+                    status: ParsingStatus::ImportEnd,
+                    current: JsonElement::Any(any.clone()),
+                    ..any_state
+                });
+            }
+            if context.module_cache.progress.contains(&current_path) {
+                return AnyResult::Error(ParseError::CircularDependency);
+            }
+            context.module_cache.progress.insert(current_path.clone());
+            let read_result = context.io.read_to_string(current_path.as_str());
+            match read_result {
+                Ok(s) => {
+                    let tokens = tokenize(s);
+                    let res = parse_with_tokens(context, tokens.into_iter());
+                    match res {
+                        Ok(r) => {
+                            context.module_cache.progress.remove(&current_path);
+                            context
+                                .module_cache
+                                .complete
+                                .insert(current_path, r.any.clone());
+                            AnyResult::Continue(AnyState {
+                                status: ParsingStatus::ImportEnd,
+                                current: JsonElement::Any(r.any),
+                                ..any_state
+                            })
                         }
+                        Err(e) => AnyResult::Error(e),
                     }
-                    Err(_) => AnyResult::<M::Dealloc>::Error(ParseError::CannotReadFile),
                 }
+                Err(_) => AnyResult::<M::Dealloc>::Error(ParseError::CannotReadFile),
             }
-            _ => AnyResult::Error(ParseError::WrongRequireStatement),
         }
+        _ => AnyResult::Error(ParseError::WrongRequireStatement),
     }
+}
 
-    fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc> {
-        match self.status {
-            ParsingStatus::Initial | ParsingStatus::ObjectColon => {
-                self.parse_value(context.manager, token)
-            }
-            ParsingStatus::ArrayBegin => self.parse_array_begin(context.manager, token),
-            ParsingStatus::ArrayValue => self.parse_array_value(context.manager, token),
-            ParsingStatus::ArrayComma => self.parse_array_comma(context.manager, token),
-            ParsingStatus::ObjectBegin => self.parse_object_begin(context.manager, token),
-            ParsingStatus::ObjectKey => self.parse_object_key(token),
-            ParsingStatus::ObjectValue => self.parse_object_next(context.manager, token),
-            ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
-            ParsingStatus::ImportBegin => self.parse_import_begin(token),
-            ParsingStatus::ImportValue => self.parse_import_value(context, token),
-            ParsingStatus::ImportEnd => self.parse_import_end(token),
+fn any_state_parse<M: Manager, I: Io>(
+    any_state: AnyState<M::Dealloc>,
+    context: &mut Context<M, I>,
+    token: JsonToken,
+) -> AnyResult<M::Dealloc> {
+    match any_state.status {
+        ParsingStatus::Initial | ParsingStatus::ObjectColon => {
+            any_state.parse_value(context.manager, token)
         }
+        ParsingStatus::ArrayBegin => any_state.parse_array_begin(context.manager, token),
+        ParsingStatus::ArrayValue => any_state.parse_array_value(context.manager, token),
+        ParsingStatus::ArrayComma => any_state.parse_array_comma(context.manager, token),
+        ParsingStatus::ObjectBegin => any_state.parse_object_begin(context.manager, token),
+        ParsingStatus::ObjectKey => any_state.parse_object_key(token),
+        ParsingStatus::ObjectValue => any_state.parse_object_next(context.manager, token),
+        ParsingStatus::ObjectComma => any_state.parse_object_comma(context.manager, token),
+        ParsingStatus::ImportBegin => any_state.parse_import_begin(token),
+        ParsingStatus::ImportValue => any_state_parse_import_value(any_state, context, token),
+        ParsingStatus::ImportEnd => any_state.parse_import_end(token),
     }
+}
 
+impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
     fn end_array(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Array(array)) => {
