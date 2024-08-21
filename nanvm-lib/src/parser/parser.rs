@@ -18,7 +18,7 @@ use crate::{
 use super::shared::{AnyResult, AnyStateStruct, DataType, ParseError, ParsingStatus};
 use super::{
     path::{concat, split},
-    shared::{JsonElement, JsonStackElement, JsonStackObject},
+    shared::{JsonElement, JsonStackElement},
 };
 
 pub struct ModuleCache<D: Dealloc> {
@@ -68,7 +68,6 @@ pub trait AnyState<M: Manager> {
     ) -> AnyResult<M::Dealloc>;
     fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
-    fn begin_object(self) -> AnyResult<M::Dealloc>;
     fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
     fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
@@ -441,24 +440,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         }
     }
 
-    fn begin_object(mut self) -> AnyResult<M::Dealloc> {
-        let new_top: JsonStackElement<<M as Manager>::Dealloc> =
-            JsonStackElement::Object(JsonStackObject {
-                map: BTreeMap::default(),
-                key: String::default(),
-            });
-        if let JsonElement::Stack(top) = self.current {
-            self.stack.push(top)
-        }
-        AnyResult::Continue(AnyStateStruct {
-            data_type: self.data_type,
-            status: ParsingStatus::ObjectBegin,
-            current: JsonElement::Stack(new_top),
-            stack: self.stack,
-            consts: self.consts,
-        })
-    }
-
     fn end_object(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Object(object)) => {
@@ -482,9 +463,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
     fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
-            JsonToken::ObjectBegin => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
-            }
+            JsonToken::ObjectBegin => self.begin_object(),
             JsonToken::Id(s) if self.data_type.is_cjs_compatible() && s == "require" => {
                 self.begin_import()
             }
@@ -501,9 +480,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
     fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
-            JsonToken::ObjectBegin => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
-            }
+            JsonToken::ObjectBegin => self.begin_object(),
             JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
                 self.begin_import()
             }
@@ -522,9 +499,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ArrayEnd => self.end_array(manager),
-            JsonToken::ObjectBegin => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
-            }
+            JsonToken::ObjectBegin => self.begin_object(),
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
                 match option_any {

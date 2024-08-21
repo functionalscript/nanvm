@@ -263,4 +263,19 @@ impl<D: Dealloc> AnyStateStruct<D> {
             ..self
         })
     }
+
+    pub fn begin_object(mut self) -> AnyResult<D> {
+        let new_top: JsonStackElement<D> = JsonStackElement::Object(JsonStackObject {
+            map: BTreeMap::default(),
+            key: String::default(),
+        });
+        if let JsonElement::Stack(top) = self.current {
+            self.stack.push(top)
+        }
+        AnyResult::Continue(AnyStateStruct {
+            status: ParsingStatus::ObjectBegin,
+            current: JsonElement::Stack(new_top),
+            ..self
+        })
+    }
 }
