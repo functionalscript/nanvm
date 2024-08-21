@@ -1,4 +1,8 @@
-use crate::{js::any::Any, mem::manager::Dealloc};
+use crate::{
+    common::{cast::Cast, default::default},
+    js::any::Any,
+    mem::manager::Dealloc,
+};
 use std::collections::BTreeMap;
 use std::fmt::Display;
 
@@ -93,4 +97,35 @@ pub enum JsonElement<D: Dealloc> {
     None,
     Stack(JsonStackElement<D>),
     Any(Any<D>),
+}
+
+pub struct AnyStateStruct<D: Dealloc> {
+    pub data_type: DataType,
+    pub status: ParsingStatus,
+    pub current: JsonElement<D>,
+    pub stack: Vec<JsonStackElement<D>>,
+    pub consts: BTreeMap<String, Any<D>>,
+}
+
+impl<D: Dealloc> Default for AnyStateStruct<D> {
+    fn default() -> Self {
+        AnyStateStruct {
+            data_type: default(),
+            status: ParsingStatus::Initial,
+            current: JsonElement::None,
+            stack: [].cast(),
+            consts: default(),
+        }
+    }
+}
+
+pub struct AnySuccess<D: Dealloc> {
+    pub state: AnyStateStruct<D>,
+    pub value: Any<D>,
+}
+
+pub enum AnyResult<D: Dealloc> {
+    Continue(AnyStateStruct<D>),
+    Success(AnySuccess<D>),
+    Error(ParseError),
 }

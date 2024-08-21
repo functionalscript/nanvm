@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use io_trait::Io;
 
 use crate::{
-    common::{cast::Cast, default::default},
+    common::default::default,
     js::{
         any::Any,
         js_array::new_array,
@@ -15,7 +15,7 @@ use crate::{
     tokenizer::{tokenize, JsonToken},
 };
 
-use super::shared::{DataType, ParseError, ParsingStatus};
+use super::shared::{AnyResult, AnyStateStruct, AnySuccess, DataType, ParseError, ParsingStatus};
 use super::{
     path::{concat, split},
     shared::{JsonElement, JsonStackElement, JsonStackObject},
@@ -58,20 +58,6 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
     }
 }
 
-pub struct AnyStateStruct<D: Dealloc> {
-    pub data_type: DataType,
-    pub status: ParsingStatus,
-    pub current: JsonElement<D>,
-    pub stack: Vec<JsonStackElement<D>>,
-    pub consts: BTreeMap<String, Any<D>>,
-}
-
-pub enum AnyResult<D: Dealloc> {
-    Continue(AnyStateStruct<D>),
-    Success(AnySuccess<D>),
-    Error(ParseError),
-}
-
 pub trait AnyState<M: Manager> {
     fn set_djs(self) -> Self;
     fn set_data_type(self, data_type: DataType) -> Self;
@@ -101,23 +87,6 @@ pub trait AnyState<M: Manager> {
     fn parse_object_key(self, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-}
-
-pub struct AnySuccess<D: Dealloc> {
-    pub state: AnyStateStruct<D>,
-    pub value: Any<D>,
-}
-
-impl<D: Dealloc> Default for AnyStateStruct<D> {
-    fn default() -> Self {
-        AnyStateStruct {
-            data_type: default(),
-            status: ParsingStatus::Initial,
-            current: JsonElement::None,
-            stack: [].cast(),
-            consts: default(),
-        }
-    }
 }
 
 #[derive(Debug)]
