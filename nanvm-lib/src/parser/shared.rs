@@ -231,6 +231,7 @@ impl<D: Dealloc> Default for AnyState<D> {
     }
 }
 
+// AnyState methods that use Dealloc only - methods that use Manager are in AnyStateExtension.
 impl<D: Dealloc> AnyState<D> {
     pub fn set_djs(self) -> Self {
         AnyState {
@@ -390,6 +391,7 @@ impl<D: Dealloc> AnyState<D> {
     }
 }
 
+/// AnyStateExtension contains AnyState methods that use Manager (not only Dealloc).
 impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
     fn end_array(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
