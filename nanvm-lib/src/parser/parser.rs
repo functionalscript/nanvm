@@ -74,7 +74,6 @@ pub trait AnyState<M: Manager> {
     fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_object_key(self, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
     fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
 }
@@ -412,11 +411,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             ParsingStatus::ArrayValue => self.parse_array_value(context.manager, token),
             ParsingStatus::ArrayComma => self.parse_array_comma(context.manager, token),
             ParsingStatus::ObjectBegin => self.parse_object_begin(context.manager, token),
-            ParsingStatus::ObjectKey => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::parse_object_key(
-                    self, token,
-                )
-            }
+            ParsingStatus::ObjectKey => self.parse_object_key(token),
             ParsingStatus::ObjectValue => self.parse_object_next(context.manager, token),
             ParsingStatus::ObjectComma => self.parse_object_comma(context.manager, token),
             ParsingStatus::ImportBegin => self.parse_import_begin(token),
@@ -529,19 +524,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
             JsonToken::String(s) => self.push_key(s),
             JsonToken::Id(s) if self.data_type.is_djs() => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
-            _ => AnyResult::Error(ParseError::UnexpectedToken),
-        }
-    }
-
-    fn parse_object_key(self, token: JsonToken) -> AnyResult<M::Dealloc> {
-        match token {
-            JsonToken::Colon => AnyResult::Continue(AnyStateStruct {
-                data_type: self.data_type,
-                status: ParsingStatus::ObjectColon,
-                current: self.current,
-                stack: self.stack,
-                consts: self.consts,
-            }),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
         }
     }

@@ -278,4 +278,14 @@ impl<D: Dealloc> AnyStateStruct<D> {
             ..self
         })
     }
+
+    pub fn parse_object_key(self, token: JsonToken) -> AnyResult<D> {
+        match token {
+            JsonToken::Colon => AnyResult::Continue(AnyStateStruct {
+                status: ParsingStatus::ObjectColon,
+                ..self
+            }),
+            _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
 }
