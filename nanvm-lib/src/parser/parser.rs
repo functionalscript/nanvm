@@ -59,7 +59,6 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
 }
 
 pub trait AnyState<M: Manager> {
-    fn set_data_type(self, data_type: DataType) -> Self;
     fn parse_for_module<I: Io>(self, context: &mut Context<M, I>, token: JsonToken)
         -> JsonState<M>;
     fn parse_import_begin(self, token: JsonToken) -> AnyResult<M::Dealloc>;
@@ -163,63 +162,49 @@ impl JsonToken {
 impl<M: Manager> RootState<M> {
     fn parse<I: Io>(mut self, context: &mut Context<M, I>, token: JsonToken) -> JsonState<M> {
         match self.status {
-            RootStatus::Initial => {
-                match token {
-                    JsonToken::NewLine => JsonState::ParseRoot(RootState {
-                        status: RootStatus::Initial,
-                        state: self.state,
-                        new_line: true,
-                    }),
-                    JsonToken::Id(s) => match self.new_line {
-                        true => match s.as_ref() {
-                            "const" => JsonState::ParseRoot(RootState {
-                                status: RootStatus::Const,
-                                state: self.state,
+            RootStatus::Initial => match token {
+                JsonToken::NewLine => JsonState::ParseRoot(RootState {
+                    status: RootStatus::Initial,
+                    state: self.state,
+                    new_line: true,
+                }),
+                JsonToken::Id(s) => match self.new_line {
+                    true => match s.as_ref() {
+                        "const" => JsonState::ParseRoot(RootState {
+                            status: RootStatus::Const,
+                            state: self.state.set_djs(),
+                            new_line: false,
+                        }),
+                        "export" if self.state.data_type.is_mjs_compatible() => {
+                            JsonState::ParseRoot(RootState {
+                                status: RootStatus::Export,
+                                state: self.state.set_mjs(),
                                 new_line: false,
-                            }),
-                            "export" if self.state.data_type.is_mjs_compatible() => {
-                                JsonState::ParseRoot(RootState {
-                                    status: RootStatus::Export,
-                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
-                                        M,
-                                    >>::set_data_type(
-                                        self.state, DataType::Mjs
-                                    ),
-                                    new_line: false,
-                                })
-                            }
-                            "module" if self.state.data_type.is_cjs_compatible() => {
-                                JsonState::ParseRoot(RootState {
-                                    status: RootStatus::Module,
-                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
-                                        M,
-                                    >>::set_data_type(
-                                        self.state, DataType::Cjs
-                                    ),
-                                    new_line: false,
-                                })
-                            }
-                            "import" if self.state.data_type.is_mjs_compatible() => {
-                                JsonState::ParseRoot(RootState {
-                                    status: RootStatus::Import,
-                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
-                                        M,
-                                    >>::set_data_type(
-                                        self.state, DataType::Mjs
-                                    ),
-                                    new_line: false,
-                                })
-                            }
-                            _ => self.state.parse_for_module(context, JsonToken::Id(s)),
-                        },
-                        false => JsonState::Error(ParseError::NewLineExpected),
+                            })
+                        }
+                        "module" if self.state.data_type.is_cjs_compatible() => {
+                            JsonState::ParseRoot(RootState {
+                                status: RootStatus::Module,
+                                state: self.state.set_cjs(),
+                                new_line: false,
+                            })
+                        }
+                        "import" if self.state.data_type.is_mjs_compatible() => {
+                            JsonState::ParseRoot(RootState {
+                                status: RootStatus::Import,
+                                state: self.state.set_mjs(),
+                                new_line: false,
+                            })
+                        }
+                        _ => self.state.parse_for_module(context, JsonToken::Id(s)),
                     },
-                    _ => match self.new_line {
-                        true => self.state.parse_for_module(context, token),
-                        false => JsonState::Error(ParseError::NewLineExpected),
-                    },
-                }
-            }
+                    false => JsonState::Error(ParseError::NewLineExpected),
+                },
+                _ => match self.new_line {
+                    true => self.state.parse_for_module(context, token),
+                    false => JsonState::Error(ParseError::NewLineExpected),
+                },
+            },
             RootStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
                     "default" => JsonState::ParseModule(self.state),
@@ -357,16 +342,6 @@ impl<M: Manager> ConstState<M> {
 }
 
 impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
-    fn set_data_type(self, data_type: DataType) -> Self {
-        AnyStateStruct {
-            data_type,
-            status: self.status,
-            current: self.current,
-            stack: self.stack,
-            consts: self.consts,
-        }
-    }
-
     fn parse_for_module<I: Io>(
         self,
         context: &mut Context<M, I>,

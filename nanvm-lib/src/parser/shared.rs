@@ -131,9 +131,23 @@ pub enum AnyResult<D: Dealloc> {
 }
 
 impl<D: Dealloc> AnyStateStruct<D> {
-    fn set_djs(self) -> Self {
+    pub fn set_djs(self) -> Self {
         AnyStateStruct {
             data_type: DataType::Djs,
+            ..self
+        }
+    }
+
+    pub fn set_mjs(self) -> Self {
+        AnyStateStruct {
+            data_type: DataType::Mjs,
+            ..self
+        }
+    }
+
+    pub fn set_cjs(self) -> Self {
+        AnyStateStruct {
+            data_type: DataType::Cjs,
             ..self
         }
     }
