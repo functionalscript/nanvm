@@ -129,3 +129,12 @@ pub enum AnyResult<D: Dealloc> {
     Success(AnySuccess<D>),
     Error(ParseError),
 }
+
+impl<D: Dealloc> AnyStateStruct<D> {
+    fn set_djs(self) -> Self {
+        AnyStateStruct {
+            data_type: DataType::Djs,
+            ..self
+        }
+    }
+}

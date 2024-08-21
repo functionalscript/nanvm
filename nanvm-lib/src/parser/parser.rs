@@ -59,7 +59,6 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
 }
 
 pub trait AnyState<M: Manager> {
-    fn set_djs(self) -> Self;
     fn set_data_type(self, data_type: DataType) -> Self;
     fn parse_for_module<I: Io>(self, context: &mut Context<M, I>, token: JsonToken)
         -> JsonState<M>;
@@ -173,17 +172,11 @@ impl<M: Manager> RootState<M> {
                     }),
                     JsonToken::Id(s) => match self.new_line {
                         true => match s.as_ref() {
-                            "const" => {
-                                JsonState::ParseRoot(RootState {
-                                    status: RootStatus::Const,
-                                    state: <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<
-                                        M,
-                                    >>::set_djs(
-                                        self.state
-                                    ),
-                                    new_line: false,
-                                })
-                            }
+                            "const" => JsonState::ParseRoot(RootState {
+                                status: RootStatus::Const,
+                                state: self.state,
+                                new_line: false,
+                            }),
                             "export" if self.state.data_type.is_mjs_compatible() => {
                                 JsonState::ParseRoot(RootState {
                                     status: RootStatus::Export,
@@ -364,16 +357,6 @@ impl<M: Manager> ConstState<M> {
 }
 
 impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
-    fn set_djs(self) -> Self {
-        AnyStateStruct {
-            data_type: self.data_type.to_djs(),
-            status: self.status,
-            current: self.current,
-            stack: self.stack,
-            consts: self.consts,
-        }
-    }
-
     fn set_data_type(self, data_type: DataType) -> Self {
         AnyStateStruct {
             data_type,
