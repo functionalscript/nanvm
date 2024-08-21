@@ -67,7 +67,6 @@ pub trait AnyState<M: Manager> {
         token: JsonToken,
     ) -> AnyResult<M::Dealloc>;
     fn parse<I: Io>(self, context: &mut Context<M, I>, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn begin_import(self) -> AnyResult<M::Dealloc>;
     fn push_key(self, s: String) -> AnyResult<M::Dealloc>;
     fn begin_array(self) -> AnyResult<M::Dealloc>;
     fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
@@ -429,19 +428,6 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
         }
     }
 
-    fn begin_import(mut self) -> AnyResult<M::Dealloc> {
-        if let JsonElement::Stack(top) = self.current {
-            self.stack.push(top);
-        }
-        AnyResult::Continue(AnyStateStruct {
-            data_type: DataType::Cjs,
-            status: ParsingStatus::ImportBegin,
-            current: JsonElement::None,
-            stack: self.stack,
-            consts: self.consts,
-        })
-    }
-
     fn push_key(self, s: String) -> AnyResult<M::Dealloc> {
         match self.current {
             JsonElement::Stack(JsonStackElement::Object(stack_obj)) => {
@@ -535,7 +521,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                 <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
             }
             JsonToken::Id(s) if self.data_type.is_cjs_compatible() && s == "require" => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_import(self)
+                self.begin_import()
             }
             _ => {
                 let option_any = token.try_to_any(manager, &self.consts);
@@ -556,7 +542,7 @@ impl<M: Manager> AnyState<M> for AnyStateStruct<M::Dealloc> {
                 <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_object(self)
             }
             JsonToken::Id(s) if self.data_type == DataType::Cjs && s == "require" => {
-                <AnyStateStruct<<M as Manager>::Dealloc> as AnyState<M>>::begin_import(self)
+                self.begin_import()
             }
             JsonToken::ArrayEnd => self.end_array(manager),
             _ => {

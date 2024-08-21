@@ -232,4 +232,16 @@ impl<D: Dealloc> AnyStateStruct<D> {
             _ => todo!(),
         }
     }
+
+    pub fn begin_import(mut self) -> AnyResult<D> {
+        if let JsonElement::Stack(top) = self.current {
+            self.stack.push(top);
+        }
+        AnyResult::Continue(AnyStateStruct {
+            data_type: DataType::Cjs,
+            status: ParsingStatus::ImportBegin,
+            current: JsonElement::None,
+            ..self
+        })
+    }
 }
