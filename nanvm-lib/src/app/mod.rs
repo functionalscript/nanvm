@@ -4,7 +4,10 @@ use std::io::{self, Error};
 use crate::{
     common::default::default,
     mem::global::GLOBAL,
-    parser::{parse, Context, DataType},
+    parser::{
+        parser::{parse, Context},
+        shared::DataType,
+    },
     serializer::{to_djs::to_djs, to_json::to_json},
 };
 
