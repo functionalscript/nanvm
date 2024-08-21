@@ -209,6 +209,16 @@ impl Display for ParseError {
     }
 }
 
+impl<D: Dealloc> JsonState<D> {
+    pub fn end(self) -> Result<ParseResult<D>, ParseError> {
+        match self {
+            JsonState::Result(result) => Ok(result),
+            JsonState::Error(error) => Err(error),
+            _ => Err(ParseError::UnexpectedEnd),
+        }
+    }
+}
+
 impl<D: Dealloc> Default for AnyState<D> {
     fn default() -> Self {
         AnyState {

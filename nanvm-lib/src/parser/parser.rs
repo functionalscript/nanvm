@@ -346,16 +346,6 @@ fn json_state_push<M: Manager, I: Io>(
     }
 }
 
-fn json_state_end<M: Manager>(
-    json_state: JsonState<M::Dealloc>,
-) -> Result<ParseResult<M::Dealloc>, ParseError> {
-    match json_state {
-        JsonState::Result(result) => Ok(result),
-        JsonState::Error(error) => Err(error),
-        _ => Err(ParseError::UnexpectedEnd),
-    }
-}
-
 pub fn parse<M: Manager, I: Io>(
     context: &mut Context<M, I>,
 ) -> Result<ParseResult<M::Dealloc>, ParseError> {
@@ -382,7 +372,7 @@ pub fn parse_with_tokens<M: Manager, I: Io>(
     for token in iter {
         state = json_state_push(state, context, token);
     }
-    json_state_end::<M>(state)
+    state.end()
 }
 
 #[cfg(test)]
