@@ -16,28 +16,6 @@ pub enum DataType {
     Mjs,
 }
 
-impl DataType {
-    pub fn to_djs(&self) -> DataType {
-        match self {
-            DataType::Json | DataType::Djs => DataType::Djs,
-            DataType::Cjs => DataType::Cjs,
-            DataType::Mjs => DataType::Mjs,
-        }
-    }
-
-    pub fn is_djs(&self) -> bool {
-        matches!(self, DataType::Djs | DataType::Cjs | DataType::Mjs)
-    }
-
-    pub fn is_cjs_compatible(&self) -> bool {
-        matches!(self, DataType::Json | DataType::Djs | DataType::Cjs)
-    }
-
-    pub fn is_mjs_compatible(&self) -> bool {
-        matches!(self, DataType::Json | DataType::Djs | DataType::Mjs)
-    }
-}
-
 #[derive(Default, Debug)]
 pub enum ParsingStatus {
     #[default]
@@ -68,22 +46,6 @@ pub enum ParseError {
     NewLineExpected,
 }
 
-impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            ParseError::UnexpectedToken => "UnexpectedToken",
-            ParseError::UnexpectedEnd => "UnexpectedEnd",
-            ParseError::WrongExportStatement => "WrongExportStatement",
-            ParseError::WrongConstStatement => "WrongConstStatement",
-            ParseError::WrongRequireStatement => "WrongRequireStatement",
-            ParseError::WrongImportStatement => "WrongImportStatement",
-            ParseError::CannotReadFile => "CannotReadFile",
-            ParseError::CircularDependency => "CircularDependency",
-            ParseError::NewLineExpected => "NewLineExpected",
-        })
-    }
-}
-
 pub enum JsonStackElement<D: Dealloc> {
     Object(JsonStackObject<D>),
     Array(Vec<Any<D>>),
@@ -98,26 +60,6 @@ pub enum JsonElement<D: Dealloc> {
     None,
     Stack(JsonStackElement<D>),
     Any(Any<D>),
-}
-
-pub struct AnyState<D: Dealloc> {
-    pub data_type: DataType,
-    pub status: ParsingStatus,
-    pub current: JsonElement<D>,
-    pub stack: Vec<JsonStackElement<D>>,
-    pub consts: BTreeMap<String, Any<D>>,
-}
-
-impl<D: Dealloc> Default for AnyState<D> {
-    fn default() -> Self {
-        AnyState {
-            data_type: default(),
-            status: ParsingStatus::Initial,
-            current: JsonElement::None,
-            stack: [].cast(),
-            consts: default(),
-        }
-    }
 }
 
 pub struct AnySuccess<D: Dealloc> {
@@ -145,16 +87,16 @@ pub enum RootStatus {
     ImportIdFrom(String),
 }
 
-pub struct RootState<D: Dealloc> {
-    pub status: RootStatus,
-    pub state: AnyState<D>,
-    pub new_line: bool,
-}
-
 #[derive(Debug)]
 pub struct ParseResult<D: Dealloc> {
     pub data_type: DataType,
     pub any: Any<D>,
+}
+
+pub struct RootState<D: Dealloc> {
+    pub status: RootStatus,
+    pub state: AnyState<D>,
+    pub new_line: bool,
 }
 
 pub struct ConstState<D: Dealloc> {
@@ -168,6 +110,64 @@ pub enum JsonState<D: Dealloc> {
     ParseModule(AnyState<D>),
     Result(ParseResult<D>),
     Error(ParseError),
+}
+
+pub struct AnyState<D: Dealloc> {
+    pub data_type: DataType,
+    pub status: ParsingStatus,
+    pub current: JsonElement<D>,
+    pub stack: Vec<JsonStackElement<D>>,
+    pub consts: BTreeMap<String, Any<D>>,
+}
+
+impl DataType {
+    pub fn to_djs(&self) -> DataType {
+        match self {
+            DataType::Json | DataType::Djs => DataType::Djs,
+            DataType::Cjs => DataType::Cjs,
+            DataType::Mjs => DataType::Mjs,
+        }
+    }
+
+    pub fn is_djs(&self) -> bool {
+        matches!(self, DataType::Djs | DataType::Cjs | DataType::Mjs)
+    }
+
+    pub fn is_cjs_compatible(&self) -> bool {
+        matches!(self, DataType::Json | DataType::Djs | DataType::Cjs)
+    }
+
+    pub fn is_mjs_compatible(&self) -> bool {
+        matches!(self, DataType::Json | DataType::Djs | DataType::Mjs)
+    }
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ParseError::UnexpectedToken => "UnexpectedToken",
+            ParseError::UnexpectedEnd => "UnexpectedEnd",
+            ParseError::WrongExportStatement => "WrongExportStatement",
+            ParseError::WrongConstStatement => "WrongConstStatement",
+            ParseError::WrongRequireStatement => "WrongRequireStatement",
+            ParseError::WrongImportStatement => "WrongImportStatement",
+            ParseError::CannotReadFile => "CannotReadFile",
+            ParseError::CircularDependency => "CircularDependency",
+            ParseError::NewLineExpected => "NewLineExpected",
+        })
+    }
+}
+
+impl<D: Dealloc> Default for AnyState<D> {
+    fn default() -> Self {
+        AnyState {
+            data_type: default(),
+            status: ParsingStatus::Initial,
+            current: JsonElement::None,
+            stack: [].cast(),
+            consts: default(),
+        }
+    }
 }
 
 impl<D: Dealloc> AnyState<D> {
