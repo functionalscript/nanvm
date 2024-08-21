@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::Display,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 use io_trait::Io;
 
@@ -18,23 +15,16 @@ use crate::{
     tokenizer::{tokenize, JsonToken},
 };
 
-use super::path::{concat, split};
-use super::shared::{DataType, ParsingStatus};
+use super::shared::{DataType, ParseError, ParsingStatus};
+use super::{
+    path::{concat, split},
+    shared::{JsonStackElement, JsonStackObject},
+};
 
 pub enum JsonElement<D: Dealloc> {
     None,
     Stack(JsonStackElement<D>),
     Any(Any<D>),
-}
-
-pub enum JsonStackElement<D: Dealloc> {
-    Object(JsonStackObject<D>),
-    Array(Vec<Any<D>>),
-}
-
-pub struct JsonStackObject<D: Dealloc> {
-    pub map: BTreeMap<String, Any<D>>,
-    pub key: String,
 }
 
 pub struct ModuleCache<D: Dealloc> {
@@ -102,35 +92,6 @@ impl<M: Manager> Default for AnyState<M> {
             stack: [].cast(),
             consts: default(),
         }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ParseError {
-    UnexpectedToken,
-    UnexpectedEnd,
-    WrongExportStatement,
-    WrongConstStatement,
-    WrongRequireStatement,
-    WrongImportStatement,
-    CannotReadFile,
-    CircularDependency,
-    NewLineExpected,
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            ParseError::UnexpectedToken => "UnexpectedToken",
-            ParseError::UnexpectedEnd => "UnexpectedEnd",
-            ParseError::WrongExportStatement => "WrongExportStatement",
-            ParseError::WrongConstStatement => "WrongConstStatement",
-            ParseError::WrongRequireStatement => "WrongRequireStatement",
-            ParseError::WrongImportStatement => "WrongImportStatement",
-            ParseError::CannotReadFile => "CannotReadFile",
-            ParseError::CircularDependency => "CircularDependency",
-            ParseError::NewLineExpected => "NewLineExpected",
-        })
     }
 }
 
@@ -203,28 +164,6 @@ impl JsonToken {
             JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
             _ => None,
         }
-    }
-}
-
-impl DataType {
-    fn to_djs(&self) -> DataType {
-        match self {
-            DataType::Json | DataType::Djs => DataType::Djs,
-            DataType::Cjs => DataType::Cjs,
-            DataType::Mjs => DataType::Mjs,
-        }
-    }
-
-    fn is_djs(&self) -> bool {
-        matches!(self, DataType::Djs | DataType::Cjs | DataType::Mjs)
-    }
-
-    fn is_cjs_compatible(&self) -> bool {
-        matches!(self, DataType::Json | DataType::Djs | DataType::Cjs)
-    }
-
-    fn is_mjs_compatible(&self) -> bool {
-        matches!(self, DataType::Json | DataType::Djs | DataType::Mjs)
     }
 }
 
