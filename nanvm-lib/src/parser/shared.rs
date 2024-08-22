@@ -22,6 +22,28 @@ pub enum DataType {
     Mjs,
 }
 
+impl DataType {
+    pub fn to_djs(&self) -> DataType {
+        match self {
+            DataType::Json | DataType::Djs => DataType::Djs,
+            DataType::Cjs => DataType::Cjs,
+            DataType::Mjs => DataType::Mjs,
+        }
+    }
+
+    pub fn is_djs(&self) -> bool {
+        matches!(self, DataType::Djs | DataType::Cjs | DataType::Mjs)
+    }
+
+    pub fn is_cjs_compatible(&self) -> bool {
+        matches!(self, DataType::Json | DataType::Djs | DataType::Cjs)
+    }
+
+    pub fn is_mjs_compatible(&self) -> bool {
+        matches!(self, DataType::Json | DataType::Djs | DataType::Mjs)
+    }
+}
+
 #[derive(Default, Debug)]
 pub enum ParsingStatus {
     #[default]
@@ -50,6 +72,22 @@ pub enum ParseError {
     CannotReadFile,
     CircularDependency,
     NewLineExpected,
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ParseError::UnexpectedToken => "UnexpectedToken",
+            ParseError::UnexpectedEnd => "UnexpectedEnd",
+            ParseError::WrongExportStatement => "WrongExportStatement",
+            ParseError::WrongConstStatement => "WrongConstStatement",
+            ParseError::WrongRequireStatement => "WrongRequireStatement",
+            ParseError::WrongImportStatement => "WrongImportStatement",
+            ParseError::CannotReadFile => "CannotReadFile",
+            ParseError::CircularDependency => "CircularDependency",
+            ParseError::NewLineExpected => "NewLineExpected",
+        })
+    }
 }
 
 pub enum JsonStackElement<D: Dealloc> {
@@ -118,97 +156,6 @@ pub enum JsonState<D: Dealloc> {
     Error(ParseError),
 }
 
-pub struct AnyState<D: Dealloc> {
-    pub data_type: DataType,
-    pub status: ParsingStatus,
-    pub current: JsonElement<D>,
-    pub stack: Vec<JsonStackElement<D>>,
-    pub consts: BTreeMap<String, Any<D>>,
-}
-
-pub trait AnyStateExtension<M: Manager> {
-    fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
-    fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
-    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
-}
-
-fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
-    new_string(manager, s.encode_utf16().collect::<Vec<_>>()).to_ref()
-}
-
-fn try_id_to_any<M: Manager>(
-    s: &str,
-    _manager: M,
-    consts: &BTreeMap<String, Any<M::Dealloc>>,
-) -> Option<Any<M::Dealloc>> {
-    match s {
-        "null" => Some(Any::move_from(Null())),
-        "true" => Some(Any::move_from(true)),
-        "false" => Some(Any::move_from(false)),
-        s if consts.contains_key(s) => Some(consts.get(s).unwrap().clone()),
-        _ => None,
-    }
-}
-
-impl JsonToken {
-    fn try_to_any<M: Manager>(
-        self,
-        manager: M,
-        consts: &BTreeMap<String, Any<M::Dealloc>>,
-    ) -> Option<Any<M::Dealloc>> {
-        match self {
-            JsonToken::Number(f) => Some(Any::move_from(f)),
-            JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
-            JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
-            _ => None,
-        }
-    }
-}
-
-impl DataType {
-    pub fn to_djs(&self) -> DataType {
-        match self {
-            DataType::Json | DataType::Djs => DataType::Djs,
-            DataType::Cjs => DataType::Cjs,
-            DataType::Mjs => DataType::Mjs,
-        }
-    }
-
-    pub fn is_djs(&self) -> bool {
-        matches!(self, DataType::Djs | DataType::Cjs | DataType::Mjs)
-    }
-
-    pub fn is_cjs_compatible(&self) -> bool {
-        matches!(self, DataType::Json | DataType::Djs | DataType::Cjs)
-    }
-
-    pub fn is_mjs_compatible(&self) -> bool {
-        matches!(self, DataType::Json | DataType::Djs | DataType::Mjs)
-    }
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            ParseError::UnexpectedToken => "UnexpectedToken",
-            ParseError::UnexpectedEnd => "UnexpectedEnd",
-            ParseError::WrongExportStatement => "WrongExportStatement",
-            ParseError::WrongConstStatement => "WrongConstStatement",
-            ParseError::WrongRequireStatement => "WrongRequireStatement",
-            ParseError::WrongImportStatement => "WrongImportStatement",
-            ParseError::CannotReadFile => "CannotReadFile",
-            ParseError::CircularDependency => "CircularDependency",
-            ParseError::NewLineExpected => "NewLineExpected",
-        })
-    }
-}
-
 impl<D: Dealloc> JsonState<D> {
     pub fn end(self) -> Result<ParseResult<D>, ParseError> {
         match self {
@@ -217,6 +164,14 @@ impl<D: Dealloc> JsonState<D> {
             _ => Err(ParseError::UnexpectedEnd),
         }
     }
+}
+
+pub struct AnyState<D: Dealloc> {
+    pub data_type: DataType,
+    pub status: ParsingStatus,
+    pub current: JsonElement<D>,
+    pub stack: Vec<JsonStackElement<D>>,
+    pub consts: BTreeMap<String, Any<D>>,
 }
 
 impl<D: Dealloc> Default for AnyState<D> {
@@ -392,6 +347,18 @@ impl<D: Dealloc> AnyState<D> {
 }
 
 /// AnyStateExtension contains AnyState methods that use Manager (not only Dealloc).
+pub trait AnyStateExtension<M: Manager> {
+    fn end_array(self, manager: M) -> AnyResult<M::Dealloc>;
+    fn end_object(self, manager: M) -> AnyResult<M::Dealloc>;
+    fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+    fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M::Dealloc>;
+}
+
 impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
     fn end_array(mut self, manager: M) -> AnyResult<M::Dealloc> {
         match self.current {
@@ -514,6 +481,39 @@ impl<M: Manager> AnyStateExtension<M> for AnyState<M::Dealloc> {
             JsonToken::String(s) => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
             _ => AnyResult::Error(ParseError::UnexpectedToken),
+        }
+    }
+}
+
+fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc> {
+    new_string(manager, s.encode_utf16().collect::<Vec<_>>()).to_ref()
+}
+
+fn try_id_to_any<M: Manager>(
+    s: &str,
+    _manager: M,
+    consts: &BTreeMap<String, Any<M::Dealloc>>,
+) -> Option<Any<M::Dealloc>> {
+    match s {
+        "null" => Some(Any::move_from(Null())),
+        "true" => Some(Any::move_from(true)),
+        "false" => Some(Any::move_from(false)),
+        s if consts.contains_key(s) => Some(consts.get(s).unwrap().clone()),
+        _ => None,
+    }
+}
+
+impl JsonToken {
+    fn try_to_any<M: Manager>(
+        self,
+        manager: M,
+        consts: &BTreeMap<String, Any<M::Dealloc>>,
+    ) -> Option<Any<M::Dealloc>> {
+        match self {
+            JsonToken::Number(f) => Some(Any::move_from(f)),
+            JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
+            JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
+            _ => None,
         }
     }
 }
