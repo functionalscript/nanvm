@@ -1,8 +1,8 @@
-use super::DataType;
+use super::shared::DataType;
 use crate::ast::Module;
 use crate::common::default::default;
 use crate::mem::manager::Dealloc;
-use crate::tokenizer::{create_transition_maps, TokenizerState, TransitionMaps};
+use crate::tokenizer::{create_transition_maps, JsonToken, TokenizerState, TransitionMaps};
 
 #[derive(Default)]
 pub struct AnalyzerParameters {
@@ -48,9 +48,9 @@ impl<D: Dealloc> AnalyzerState<D> {
     /// Updates analyzer state with a next input character; the result is the increment in the count
     /// of `diagnostics`. It's up to the caller to check what was added at the end of `diagnostics`
     ///  - are there any fatal errors, from the point of view of the current parsing session?
-    fn push_mut(&mut self, c: char) -> usize {
-        for _token in self.tokenizer_state.push_mut(c, &self.tokenizer_maps) {
-            // TODO: process the token.
+    pub fn push_mut(&mut self, c: char) -> usize {
+        for token in self.tokenizer_state.push_mut(c, &self.tokenizer_maps) {
+            self.process_token(token);
         }
         let prior_diagnostics_len = self.diagnostics_len;
         self.diagnostics_len = self.diagnostics.len();
@@ -58,11 +58,13 @@ impl<D: Dealloc> AnalyzerState<D> {
     }
 
     /// Completes the analysis.
-    fn end(self) -> AnalyzerResults<D> {
+    pub fn end(self) -> AnalyzerResults<D> {
         // TODO: in case the current state is not a valid end state, add an error to self.diagnostics.
         AnalyzerResults {
             module: self.module,
             diagnostics: self.diagnostics,
         }
     }
+
+    fn process_token(&mut self, _token: JsonToken) {}
 }
