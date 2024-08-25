@@ -85,6 +85,7 @@ pub trait WriteJson: Write {
                 w.write_json(v.clone())
             }),
             Visitor::Array(a) => self.write_list('[', ']', a, |w, i| w.write_json(i.clone())),
+            Visitor::Bigint(_) => todo!(),
         }
     }
 }

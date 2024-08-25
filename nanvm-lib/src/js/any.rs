@@ -54,6 +54,7 @@ impl<D: Dealloc> Any<D> {
                 0b00 => Type::String,
                 0b01 => Type::Object,
                 0b10 => Type::Array,
+                0b11 => Type::Bigint,
                 _ => unreachable!(),
             }
         } else if self.is::<f64>() {
@@ -124,6 +125,7 @@ mod test {
     use crate::{
         js::{
             js_array::{new_array, JsArrayRef},
+            js_bigint::{new_bigint, JsBigintRef, Sign},
             js_object::{new_object, JsObjectRef},
             js_string::{new_string, JsString, JsStringRef},
             null::Null,
@@ -267,6 +269,31 @@ mod test {
         assert_eq!(u.get_type(), Type::Array);
         {
             let o = u.try_move::<ArrayRef>().unwrap();
+            let items = o.items();
+            assert!(items.is_empty());
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_bigint() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+        assert!(!A::move_from(Null()).is::<BigintRef>());
+
+        let o: BigintRef = new_bigint(Global(), Sign::Positive, []).to_ref();
+        assert!(A::move_from(o.clone()).is::<BigintRef>());
+        let v = o.items();
+        assert!(v.is_empty());
+        //
+        assert!(!A::move_from(15.0).is::<BigintRef>());
+        assert!(!A::move_from(true).is::<BigintRef>());
+
+        let o: BigintRef = new_bigint(Global(), Sign::Positive, []).to_ref();
+        let u = A::move_from(o);
+        assert_eq!(u.get_type(), Type::Bigint);
+        {
+            let o = u.try_move::<BigintRef>().unwrap();
             let items = o.items();
             assert!(items.is_empty());
         }

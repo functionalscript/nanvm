@@ -1,7 +1,8 @@
 use crate::mem::manager::Dealloc;
 
 use super::{
-    any::Any, js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type,
+    any::Any, js_array::JsArrayRef, js_bigint::JsBigintRef, js_object::JsObjectRef,
+    js_string::JsStringRef, type_::Type,
 };
 
 pub enum Visitor<T: Dealloc> {
@@ -11,6 +12,7 @@ pub enum Visitor<T: Dealloc> {
     String(JsStringRef<T>),
     Object(JsObjectRef<T>),
     Array(JsArrayRef<T>),
+    Bigint(JsBigintRef<T>),
 }
 
 pub fn to_visitor<T: Dealloc>(any: Any<T>) -> Visitor<T> {
@@ -21,5 +23,6 @@ pub fn to_visitor<T: Dealloc>(any: Any<T>) -> Visitor<T> {
         Type::String => Visitor::String(any.try_move().unwrap()),
         Type::Object => Visitor::Object(any.try_move().unwrap()),
         Type::Array => Visitor::Array(any.try_move().unwrap()),
+        Type::Bigint => Visitor::Bigint(any.try_move().unwrap()),
     }
 }

@@ -35,6 +35,8 @@ const REF_SPLIT: (BitSubset64, BitSubset64) = REF.split(0x0002_0000_0000_0000);
 
 const STRING_OBJECT: (BitSubset64, BitSubset64) = REF_SPLIT.0.split(0x0001_0000_0000_0000);
 
+const ARRAY_BIGINT: (BitSubset64, BitSubset64) = REF_SPLIT.1.split(0x0001_0000_0000_0000);
+
 // STRING: 1111_1111_1111_1.1.0.0
 
 pub const STRING: BitSubset64 = STRING_OBJECT.0;
@@ -43,13 +45,18 @@ pub const STRING: BitSubset64 = STRING_OBJECT.0;
 
 pub const OBJECT: BitSubset64 = STRING_OBJECT.1;
 
-// ARRAY : 1111_1111_1111_1.1.1.X
+// ARRAY : 1111_1111_1111_1.1.1.0
 
-pub const ARRAY: BitSubset64 = REF_SPLIT.1;
+pub const ARRAY: BitSubset64 = ARRAY_BIGINT.0;
+
+// BIG_INT : 1111_1111_1111_1.1.1.1
+
+pub const BIGINT: BitSubset64 = ARRAY_BIGINT.1;
 
 pub const REF_TYPE_STRING: u8 = 0b00;
 pub const REF_TYPE_OBJECT: u8 = 0b01;
 pub const REF_TYPE_ARRAY: u8 = 0b10;
+pub const REF_TYPE_BIGINT: u8 = 0b11;
 
 pub const fn ref_type(v: u64) -> u8 {
     ((v >> 48) & 0b11) as u8
