@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use super::{bitset::BIG_INT, ref_cast::RefCast};
+use super::{bitset::BIGINT, ref_cast::RefCast};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Sign {
@@ -21,52 +21,52 @@ pub enum Sign {
     Negative = -1,
 }
 
-pub struct JsBigIntHeader {
+pub struct JsBigintHeader {
     len: isize,
 }
 
-pub type JsBigInt = FlexibleArray<u64, JsBigIntHeader>;
+pub type JsBigint = FlexibleArray<u64, JsBigintHeader>;
 
-pub type JsBigIntRef<D> = Ref<JsBigInt, D>;
+pub type JsBigintRef<D> = Ref<JsBigint, D>;
 
-pub type JsBigIntMutRef<D> = MutRef<JsBigInt, D>;
+pub type JsBigintMutRef<D> = MutRef<JsBigint, D>;
 
-impl FlexibleArrayHeader for JsBigIntHeader {
+impl FlexibleArrayHeader for JsBigintHeader {
     fn len(&self) -> usize {
         self.len.unsigned_abs()
     }
 }
 
-impl<D: Dealloc> RefCast<D> for JsBigInt {
-    const REF_SUBSET: BitSubset64<*const Block<JsBigInt, D>> = BIG_INT.cast();
+impl<D: Dealloc> RefCast<D> for JsBigint {
+    const REF_SUBSET: BitSubset64<*const Block<JsBigint, D>> = BIGINT.cast();
 }
 
 pub fn new_big_int<M: Manager, I: ExactSizeIterator<Item = u64>>(
     m: M,
     sign: Sign,
     i: impl IntoIterator<IntoIter = I>,
-) -> JsBigIntMutRef<M::Dealloc> {
+) -> JsBigintMutRef<M::Dealloc> {
     let items = i.into_iter();
     m.new(FlexibleArrayConstructor::new(
-        JsBigIntHeader {
+        JsBigintHeader {
             len: (items.len() as isize) * sign as isize,
         },
         items,
     ))
 }
 
-pub fn zero<M: Manager>(m: M) -> JsBigIntMutRef<M::Dealloc> {
+pub fn zero<M: Manager>(m: M) -> JsBigintMutRef<M::Dealloc> {
     new_big_int(m, Sign::Positive, iter::empty())
 }
 
-pub fn from_u64<M: Manager>(m: M, sign: Sign, n: u64) -> JsBigIntMutRef<M::Dealloc> {
+pub fn from_u64<M: Manager>(m: M, sign: Sign, n: u64) -> JsBigintMutRef<M::Dealloc> {
     if n == 0 {
         return zero(m);
     }
     new_big_int(m, sign, iter::once(n))
 }
 
-pub fn add<M: Manager>(m: M, lhs: JsBigInt, rhs: JsBigInt) -> JsBigIntMutRef<M::Dealloc> {
+pub fn add<M: Manager>(m: M, lhs: JsBigint, rhs: JsBigint) -> JsBigintMutRef<M::Dealloc> {
     if lhs.sign() == rhs.sign() {
         new_big_int(m, lhs.sign(), add_vec(lhs.items(), rhs.items()))
     } else {
@@ -78,7 +78,7 @@ pub fn add<M: Manager>(m: M, lhs: JsBigInt, rhs: JsBigInt) -> JsBigIntMutRef<M::
     }
 }
 
-impl JsBigInt {
+impl JsBigint {
     fn sign(&self) -> Sign {
         if self.header.len < 0 {
             Sign::Negative
