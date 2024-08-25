@@ -125,7 +125,7 @@ mod test {
     use crate::{
         js::{
             js_array::{new_array, JsArrayRef},
-            js_bigint::{new_big_int, JsBigintRef, Sign},
+            js_bigint::{new_bigint, JsBigintRef, Sign},
             js_object::{new_object, JsObjectRef},
             js_string::{new_string, JsString, JsStringRef},
             null::Null,
@@ -276,12 +276,12 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_big_int() {
+    fn test_bigint() {
         type A = Any<Global>;
         type BigintRef = JsBigintRef<Global>;
         assert!(!A::move_from(Null()).is::<BigintRef>());
 
-        let o: BigintRef = new_big_int(Global(), Sign::Positive, []).to_ref();
+        let o: BigintRef = new_bigint(Global(), Sign::Positive, []).to_ref();
         assert!(A::move_from(o.clone()).is::<BigintRef>());
         let v = o.items();
         assert!(v.is_empty());
@@ -289,7 +289,7 @@ mod test {
         assert!(!A::move_from(15.0).is::<BigintRef>());
         assert!(!A::move_from(true).is::<BigintRef>());
 
-        let o: BigintRef = new_big_int(Global(), Sign::Positive, []).to_ref();
+        let o: BigintRef = new_bigint(Global(), Sign::Positive, []).to_ref();
         let u = A::move_from(o);
         assert_eq!(u.get_type(), Type::Bigint);
         {

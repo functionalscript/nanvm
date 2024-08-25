@@ -41,7 +41,7 @@ impl<D: Dealloc> RefCast<D> for JsBigint {
     const REF_SUBSET: BitSubset64<*const Block<JsBigint, D>> = BIGINT.cast();
 }
 
-pub fn new_big_int<M: Manager, I: ExactSizeIterator<Item = u64>>(
+pub fn new_bigint<M: Manager, I: ExactSizeIterator<Item = u64>>(
     m: M,
     sign: Sign,
     i: impl IntoIterator<IntoIter = I>,
@@ -56,19 +56,19 @@ pub fn new_big_int<M: Manager, I: ExactSizeIterator<Item = u64>>(
 }
 
 pub fn zero<M: Manager>(m: M) -> JsBigintMutRef<M::Dealloc> {
-    new_big_int(m, Sign::Positive, iter::empty())
+    new_bigint(m, Sign::Positive, iter::empty())
 }
 
 pub fn from_u64<M: Manager>(m: M, sign: Sign, n: u64) -> JsBigintMutRef<M::Dealloc> {
     if n == 0 {
         return zero(m);
     }
-    new_big_int(m, sign, iter::once(n))
+    new_bigint(m, sign, iter::once(n))
 }
 
 pub fn add<M: Manager>(m: M, lhs: JsBigint, rhs: JsBigint) -> JsBigintMutRef<M::Dealloc> {
     if lhs.sign() == rhs.sign() {
-        new_big_int(m, lhs.sign(), add_vec(lhs.items(), rhs.items()))
+        new_bigint(m, lhs.sign(), add_vec(lhs.items(), rhs.items()))
     } else {
         match cmp_vec(lhs.items(), rhs.items()) {
             Ordering::Equal => zero(m),
