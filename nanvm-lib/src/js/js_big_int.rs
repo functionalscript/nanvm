@@ -1,7 +1,7 @@
-use std::iter;
+use std::{cmp::Ordering, iter};
 
 use crate::{
-    common::bit_subset64::BitSubset64,
+    common::{bit_subset64::BitSubset64, default::default},
     mem::{
         block::Block,
         flexible_array::{
@@ -15,6 +15,7 @@ use crate::{
 
 use super::{bitset::BIG_INT, ref_cast::RefCast};
 
+#[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Sign {
     Positive = 1,
     Negative = -1,
@@ -63,4 +64,92 @@ pub fn from_u64<M: Manager>(m: M, sign: Sign, n: u64) -> JsBigIntMutRef<M::Deall
         return zero(m);
     }
     new_big_int(m, sign, iter::once(n))
+}
+
+pub fn add<M: Manager>(m: M, lhs: JsBigInt, rhs: JsBigInt) -> JsBigIntMutRef<M::Dealloc> {
+    if lhs.sign() == rhs.sign() {
+        new_big_int(m, lhs.sign(), add_vec(lhs.items(), rhs.items()))
+    } else {
+        match cmp_vec(lhs.items(), rhs.items()) {
+            Ordering::Equal => zero(m),
+            Ordering::Greater => todo!(),
+            Ordering::Less => todo!(),
+        }
+    }
+}
+
+impl JsBigInt {
+    fn sign(&self) -> Sign {
+        if self.header.len < 0 {
+            Sign::Negative
+        } else {
+            Sign::Positive
+        }
+    }
+}
+
+fn add_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
+    let mut value: Vec<_> = default();
+    let mut carry = 0;
+    let iter = match rhs.len() > lhs.len() {
+        true => rhs
+            .iter()
+            .copied()
+            .zip(lhs.iter().copied().chain(iter::repeat(0))),
+        false => lhs
+            .iter()
+            .copied()
+            .zip(rhs.iter().copied().chain(iter::repeat(0))),
+    };
+    for (a, b) in iter {
+        let next = a as u128 + b as u128 + carry;
+        value.push(next as u64);
+        carry = next >> 64;
+    }
+    if carry != 0 {
+        value.push(carry as u64);
+    }
+    value
+}
+
+fn sub_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
+    match cmp_vec(lhs, rhs) {
+        Ordering::Less | Ordering::Equal => default(),
+        Ordering::Greater => {
+            let mut value: Vec<_> = default();
+            let mut borrow = 0;
+            let iter = lhs
+                .iter()
+                .copied()
+                .zip(rhs.iter().copied().chain(iter::repeat(0)));
+            for (a, b) in iter {
+                let next = a as i128 - b as i128 - borrow;
+                value.push(next as u64);
+                borrow = next >> 64 & 1;
+            }
+            let res = value;
+            normalize_vec(res)
+        }
+    }
+}
+
+fn normalize_vec(mut vec: Vec<u64>) -> Vec<u64> {
+    while let Some(&0) = vec.last() {
+        vec.pop();
+    }
+    vec
+}
+
+fn cmp_vec(lhs: &[u64], rhs: &[u64]) -> Ordering {
+    let self_len = lhs.len();
+    let other_len: usize = rhs.len();
+    if self_len != other_len {
+        return self_len.cmp(&other_len);
+    }
+    for (self_digit, other_digit) in lhs.iter().copied().rev().zip(rhs.iter().copied().rev()) {
+        if self_digit != other_digit {
+            return self_digit.cmp(&other_digit);
+        }
+    }
+    Ordering::Equal
 }
