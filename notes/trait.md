@@ -6,7 +6,7 @@ trait Vm {
     type Object: Into<Any>;
     type Array: Into<Any>;
     type String: Into<Any>;
-    type BigInt: Into<Any>;
+    type Bigint: Into<Any>;
     type Any: where double: Into<Any>, bool: Into<Any>, Null: Into<Any>;
     fn string(self, value: &[u16]) -> Self::String;
     fn array(self, value: &[Self::Any]) -> Self::Array;
