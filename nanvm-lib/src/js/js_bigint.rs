@@ -66,14 +66,14 @@ pub fn from_u64<M: Manager>(m: M, sign: Sign, n: u64) -> JsBigintMutRef<M::Deall
     new_bigint(m, sign, iter::once(n))
 }
 
-pub fn add<M: Manager>(m: M, lhs: JsBigint, rhs: JsBigint) -> JsBigintMutRef<M::Dealloc> {
+pub fn add<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     if lhs.sign() == rhs.sign() {
         new_bigint(m, lhs.sign(), add_vec(lhs.items(), rhs.items()))
     } else {
         match cmp_vec(lhs.items(), rhs.items()) {
             Ordering::Equal => zero(m),
-            Ordering::Greater => todo!(),
-            Ordering::Less => todo!(),
+            Ordering::Greater => new_bigint(m, lhs.sign(), sub_vec(lhs.items(), rhs.items())),
+            Ordering::Less => new_bigint(m, rhs.sign(), sub_vec(rhs.items(), lhs.items())),
         }
     }
 }
@@ -152,4 +152,41 @@ fn cmp_vec(lhs: &[u64], rhs: &[u64]) -> Ordering {
         }
     }
     Ordering::Equal
+}
+
+#[cfg(test)]
+mod test {
+    use std::ops::Deref;
+
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::{
+        js::{
+            any::Any,
+            js_bigint::{JsBigintRef, Sign},
+            type_::Type,
+        },
+        mem::global::Global,
+    };
+
+    use super::{add, from_u64};
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_add() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Positive, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let sum: BigintRef = add(Global(), a, b).to_ref();
+        let u = A::move_from(sum);
+        assert_eq!(u.get_type(), Type::Bigint);
+        {
+            let o = u.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[3]);
+        }
+    }
 }
