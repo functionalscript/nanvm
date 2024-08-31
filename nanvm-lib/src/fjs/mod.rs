@@ -1,5 +1,3 @@
-use core::ops::Deref;
-
 mod simple;
 
 #[derive(Clone)]
@@ -12,8 +10,10 @@ enum Primitive {
 
 trait AnyMatch<T: Any> {
     type Result;
+    //
     fn primitive(self, v: Primitive) -> Self::Result;
     fn number(self, v: f64) -> Self::Result;
+    //
     fn object(self, v: T::Object) -> Self::Result;
     fn array(self, v: T::Array) -> Self::Result;
     fn string(self, v: T::String) -> Self::Result;
@@ -43,7 +43,7 @@ trait Any:
     type Array: Items<Item = Self>;
     type String: Items<Item = u16>;
     type Bigint: Bigint;
-    fn match_<T: AnyMatch<Self>>(self, m: T) -> T::Result;
+    fn switch<T: AnyMatch<Self>>(self, m: T) -> T::Result;
 }
 
 trait Vm {

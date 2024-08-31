@@ -63,7 +63,7 @@ impl super::Any for Any {
     type String = String;
     type Bigint = Bigint;
     type Vm = Vm;
-    fn match_<T: super::AnyMatch<Self>>(self, m: T) -> T::Result {
+    fn switch<T: super::AnyMatch<Self>>(self, m: T) -> T::Result {
         match self {
             Any::Primitive(v) => m.primitive(v),
             Any::Number(v) => m.number(v),
