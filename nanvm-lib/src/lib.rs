@@ -12,3 +12,4 @@ pub mod range_map;
 pub mod serializer;
 pub mod static_ref_default;
 pub mod tokenizer;
+pub mod fjs;
