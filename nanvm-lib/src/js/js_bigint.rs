@@ -86,13 +86,14 @@ pub fn negative<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc
     if is_zero(value) {
         return zero(m);
     }
-    match value.sign() {
-        Sign::Positive => todo!(),
-        Sign::Negative => todo!()
-    }    
+    let new_sign = match value.sign() {
+        Sign::Positive => Sign::Negative,
+        Sign::Negative => Sign::Positive,
+    };
+    new_bigint(m, new_sign, value.items().iter().copied())
 }
 
-pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+pub fn sub<M: Manager>(_m: M, _lhs: &JsBigint, _rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     todo!()
 }
 
