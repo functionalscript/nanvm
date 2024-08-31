@@ -173,9 +173,10 @@ mod test {
 
     #[test]
     #[wasm_bindgen_test]
-    fn test_add() {
+    fn test_add_u64() {
         type A = Any<Global>;
         type BigintRef = JsBigintRef<Global>;
+
         let a_ref = from_u64(Global(), Sign::Positive, 1);
         let b_ref = from_u64(Global(), Sign::Positive, 2);
         let a = a_ref.deref();
@@ -187,6 +188,44 @@ mod test {
             let o = u.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[3]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 1);
+        let b_ref = from_u64(Global(), Sign::Negative, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let sum: BigintRef = add(Global(), a, b).to_ref();
+        let u = A::move_from(sum);
+        assert_eq!(u.get_type(), Type::Bigint);
+        {
+            let o = u.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[3]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Negative, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let sum: BigintRef = add(Global(), a, b).to_ref();
+        let u = A::move_from(sum);
+        assert_eq!(u.get_type(), Type::Bigint);
+        {
+            let o = u.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 100);
+        let b_ref = from_u64(Global(), Sign::Positive, 100);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let sum: BigintRef = add(Global(), a, b).to_ref();
+        let u = A::move_from(sum);
+        assert_eq!(u.get_type(), Type::Bigint);
+        {
+            let o = u.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
         }
     }
 }
