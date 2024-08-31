@@ -78,6 +78,24 @@ pub fn add<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+pub fn is_zero(value: &JsBigint) -> bool {
+    value.items().is_empty()
+}
+
+pub fn negative<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    if is_zero(value) {
+        return zero(m);
+    }
+    match value.sign() {
+        Sign::Positive => todo!(),
+        Sign::Negative => todo!()
+    }    
+}
+
+pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    todo!()
+}
+
 impl JsBigint {
     fn sign(&self) -> Sign {
         if self.header.len < 0 {
@@ -227,6 +245,26 @@ mod test {
             let o = u.try_move::<BigintRef>().unwrap();
             assert!(o.items().is_empty());
         }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1 << 63);
+        let b_ref = from_u64(Global(), Sign::Positive, 1 << 63);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let sum: BigintRef = add(Global(), a, b).to_ref();
+        let u = A::move_from(sum);
+        assert_eq!(u.get_type(), Type::Bigint);
+        {
+            let o = u.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[0, 1]);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_add_overflow() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
         let a_ref = from_u64(Global(), Sign::Positive, 1 << 63);
         let b_ref = from_u64(Global(), Sign::Positive, 1 << 63);
