@@ -132,24 +132,19 @@ fn add_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
 }
 
 fn sub_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
-    match cmp_vec(lhs, rhs) {
-        Ordering::Less | Ordering::Equal => default(),
-        Ordering::Greater => {
-            let mut value: Vec<_> = default();
-            let mut borrow = 0;
-            let iter = lhs
-                .iter()
-                .copied()
-                .zip(rhs.iter().copied().chain(iter::repeat(0)));
-            for (a, b) in iter {
-                let next = a as i128 - b as i128 - borrow;
-                value.push(next as u64);
-                borrow = next >> 64 & 1;
-            }
-            let res = value;
-            normalize_vec(res)
-        }
+    let mut value: Vec<_> = default();
+    let mut borrow = 0;
+    let iter = lhs
+        .iter()
+        .copied()
+        .zip(rhs.iter().copied().chain(iter::repeat(0)));
+    for (a, b) in iter {
+        let next = a as i128 - b as i128 - borrow;
+        value.push(next as u64);
+        borrow = next >> 64 & 1;
     }
+    let res = value;
+    normalize_vec(res)
 }
 
 fn normalize_vec(mut vec: Vec<u64>) -> Vec<u64> {
