@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::{Items, Primitive, Result};
+use super::{Struct, Primitive, Result};
 
 #[derive(Clone)]
 pub enum Any {
@@ -50,8 +50,14 @@ impl From<Bigint> for Any {
     }
 }
 
-impl<T> Items for ArrayRc<T> {
+const ARRAY_RC_HEADER: () = ();
+
+impl<T> Struct for ArrayRc<T> {
+    type Header = ();
     type Item = T;
+    fn header(&self) -> &() {
+        &ARRAY_RC_HEADER
+    }
     fn items(&self) -> &[Self::Item] {
         self
     }
@@ -85,16 +91,14 @@ pub struct Bigint {
     rc: ArrayRc<u64>,
 }
 
-impl super::Items for Bigint {
+impl super::Struct for Bigint {
+    type Header = bool;
     type Item = u64;
-    fn items(&self) -> &[Self::Item] {
-        &self.rc
+    fn header(&self) -> &bool {
+        &self.negative
     }
-}
-
-impl super::Bigint for Bigint {
-    fn negative(&self) -> bool {
-        self.negative
+    fn items(&self) -> &[u64] {
+        &self.rc
     }
 }
 

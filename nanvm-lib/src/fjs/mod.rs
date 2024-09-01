@@ -22,15 +22,12 @@ trait AnyMatch<T: Any> {
     fn bigint(self, v: T::Bigint) -> Self::Result;
 }
 
-trait Items {
+trait Struct {
+    type Header;
     type Item;
+    fn header(&self) -> &Self::Header;
     fn items(&self) -> &[Self::Item];
 }
-
-trait Bigint: Items<Item = u64> {
-    fn negative(&self) -> bool;
-}
-
 
 enum Error {
     OutOfMemory = 1
@@ -48,10 +45,10 @@ trait Any:
     + From<Self::Bigint>
 {
     type Vm: Vm<Any = Self>;
-    type Object: Items<Item = (Self::String, Self)>;
-    type Array: Items<Item = Self>;
-    type String: Items<Item = u16>;
-    type Bigint: Bigint;
+    type Object: Struct<Header = (), Item = (Self::String, Self)>;
+    type Array: Struct<Header = (), Item = Self>;
+    type String: Struct<Header = (), Item = u16>;
+    type Bigint: Struct<Header = bool, Item = u64>;
     fn switch<T: AnyMatch<Self>>(self, m: T) -> T::Result;
 }
 
