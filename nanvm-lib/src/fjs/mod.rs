@@ -1,3 +1,5 @@
+use core::result;
+
 mod simple;
 
 #[derive(Clone)]
@@ -29,6 +31,13 @@ trait Bigint: Items<Item = u64> {
     fn negative(&self) -> bool;
 }
 
+
+enum Error {
+    OutOfMemory = 1
+}
+
+type Result<T> = result::Result<T, Error>;
+
 trait Any:
     Sized
     + From<Primitive>
@@ -48,10 +57,10 @@ trait Any:
 
 trait Vm {
     type Any: Any<Vm = Self>;
-    fn string(v: &[u16]) -> <Self::Any as Any>::String;
-    fn array(v: &[Self::Any]) -> <Self::Any as Any>::Array;
+    fn string(v: &[u16]) -> Result<<Self::Any as Any>::String>;
+    fn array(v: &[Self::Any]) -> Result<<Self::Any as Any>::Array>;
     fn object(
         v: &[(<Self::Any as Any>::String, Self::Any)],
-    ) -> <Self::Any as Any>::Object;
-    fn bigint(negative: bool, v: &[u64]) -> <Self::Any as Any>::Bigint;
+    ) -> Result<<Self::Any as Any>::Object>;
+    fn bigint(negative: bool, v: &[u64]) -> Result<<Self::Any as Any>::Bigint>;
 }

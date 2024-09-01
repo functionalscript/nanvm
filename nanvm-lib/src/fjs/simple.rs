@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::{Items, Primitive};
+use super::{Items, Primitive, Result};
 
 #[derive(Clone)]
 pub enum Any {
@@ -102,22 +102,20 @@ type Vm = ();
 
 impl super::Vm for Vm {
     type Any = Any;
-    fn string(v: &[u16]) -> String {
-        v.into()
+    fn string(v: &[u16]) -> Result<String> {
+        Ok(v.into())
     }
-    fn array(v: &[Self::Any]) -> Array {
-        v.into()
+    fn array(v: &[Self::Any]) -> Result<Array> {
+        Ok(v.into())
     }
-    fn bigint(negative: bool, v: &[u64]) -> <Self::Any as super::Any>::Bigint {
-        Bigint {
+    fn bigint(negative: bool, v: &[u64]) -> Result<Bigint> {
+        Ok(Bigint {
             negative,
             rc: v.into(),
-        }
+        })
     }
 
-    fn object(
-        v: &[(<Self::Any as super::Any>::String, Self::Any)],
-    ) -> <Self::Any as super::Any>::Object {
-        v.into()
+    fn object(v: &[(String, Any)]) -> Result<Object> {
+        Ok(v.into())
     }
 }
