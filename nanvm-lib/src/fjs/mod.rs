@@ -1,63 +1,39 @@
-use core::result;
+use std::rc::Rc;
 
-mod simple;
+type ArrayRc<T> = Rc<[T]>;
 
-#[derive(Clone)]
-enum Primitive {
-    Null = 0,
-    Undefined = 1,
-    True = 2,
-    False = 3,
-}
+// "hello"
+type String = ArrayRc<u16>;
 
-trait AnyMatch<T: Any> {
-    type Result;
-    //
-    fn primitive(self, v: Primitive) -> Self::Result;
-    fn number(self, v: f64) -> Self::Result;
-    //
-    fn object(self, v: T::Object) -> Self::Result;
-    fn array(self, v: T::Array) -> Self::Result;
-    fn string(self, v: T::String) -> Self::Result;
-    fn bigint(self, v: T::Bigint) -> Self::Result;
-}
+// [6, false]
+type Array = ArrayRc<Any>;
 
-trait Struct {
-    type Header;
-    type Item;
-    fn header(&self) -> &Self::Header;
-    fn items(&self) -> &[Self::Item];
-}
+// { x: "d" }
+type Object = ArrayRc<(String, Any)>;
 
-enum Error {
-    OutOfMemory = 1
-}
+// 34n
+type Bigint = ArrayRc<u64>;
 
-type Result<T> = result::Result<T, Error>;
+// () => 5
+type Function = Rc<Any>;
 
-trait Any:
-    Sized
-    + From<Primitive>
-    + From<f64>
-    + From<Self::String>
-    + From<Self::Object>
-    + From<Self::Array>
-    + From<Self::Bigint>
-{
-    type Vm: Vm<Any = Self>;
-    type Object: Struct<Header = (), Item = (Self::String, Self)>;
-    type Array: Struct<Header = (), Item = Self>;
-    type String: Struct<Header = (), Item = u16>;
-    type Bigint: Struct<Header = bool, Item = u64>;
-    fn switch<T: AnyMatch<Self>>(self, m: T) -> T::Result;
-}
-
-trait Vm {
-    type Any: Any<Vm = Self>;
-    fn string(v: &[u16]) -> Result<<Self::Any as Any>::String>;
-    fn array(v: &[Self::Any]) -> Result<<Self::Any as Any>::Array>;
-    fn object(
-        v: &[(<Self::Any as Any>::String, Self::Any)],
-    ) -> Result<<Self::Any as Any>::Object>;
-    fn bigint(negative: bool, v: &[u64]) -> Result<<Self::Any as Any>::Bigint>;
+enum Any {
+    // void 0
+    Undefined,
+    // null
+    Null,
+    // false
+    Bool(bool),
+    // 3.14
+    Number(f64),
+    // "Hello world!"
+    String(String),
+    // [43, true]
+    Array(Array),
+    // { a: "H", b: 5 }
+    Object(Object),
+    // 42n
+    Bigint(Bigint),
+    // () => () => 5
+    Function(Function),
 }
