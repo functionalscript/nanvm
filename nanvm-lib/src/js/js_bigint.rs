@@ -55,6 +55,15 @@ pub fn new_bigint<M: Manager, I: ExactSizeIterator<Item = u64>>(
     ))
 }
 
+impl Sign {
+    fn opposite(self) -> Self {
+        match self {
+            Self::Positive => Sign::Negative,
+            Self::Negative => Sign::Positive,
+        }
+    }
+}
+
 pub fn zero<M: Manager>(m: M) -> JsBigintMutRef<M::Dealloc> {
     new_bigint(m, Sign::Positive, iter::empty())
 }
@@ -86,15 +95,21 @@ pub fn negative<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc
     if is_zero(value) {
         return zero(m);
     }
-    let new_sign = match value.sign() {
-        Sign::Positive => Sign::Negative,
-        Sign::Negative => Sign::Positive,
-    };
-    new_bigint(m, new_sign, value.items().iter().copied())
+    new_bigint(m, value.sign().opposite(), value.items().iter().copied())
 }
 
-pub fn sub<M: Manager>(_m: M, _lhs: &JsBigint, _rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
-    todo!()
+pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    if lhs.sign() != rhs.sign() {
+        new_bigint(m, lhs.sign(), add_vec(lhs.items(), rhs.items()))
+    } else {
+        match cmp_vec(lhs.items(), rhs.items()) {
+            Ordering::Equal => zero(m),
+            Ordering::Greater => new_bigint(m, lhs.sign(), sub_vec(lhs.items(), rhs.items())),
+            Ordering::Less => {
+                new_bigint(m, rhs.sign().opposite(), sub_vec(rhs.items(), lhs.items()))
+            }
+        }
+    }
 }
 
 impl JsBigint {
