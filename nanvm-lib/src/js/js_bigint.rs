@@ -113,12 +113,16 @@ pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
 }
 
 pub fn shl<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
-    if is_zero(lhs) | is_zero(rhs) {
+    if is_zero(lhs) {
         return zero(m);
     }
 
+    if is_zero(rhs) {
+        return new_bigint(m, lhs.sign(), lhs.items().to_vec());
+    }
+
     if rhs.sign() == Sign::Negative {
-        panic!("Shift right opearnd should be positive")
+        panic!("Shift right operand should be positive")
     }
 
     if rhs.items().len() != 1 {
@@ -143,6 +147,48 @@ pub fn shl<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
         let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
         zeros_vector.extend(vec);
         vec = zeros_vector;
+    }
+
+    vec = normalize_vec(vec);
+    new_bigint(m, lhs.sign(), vec)
+}
+
+pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    if is_zero(lhs) {
+        return zero(m);
+    }
+
+    if is_zero(rhs) {
+        return new_bigint(m, lhs.sign(), lhs.items().to_vec());
+    }
+
+    if rhs.sign() == Sign::Negative {
+        panic!("Shift right operand should be positive")
+    }
+
+    let number_to_remove = (rhs.items()[0] / 64) as usize;
+    if number_to_remove >= lhs.items().len() {
+        return match lhs.sign() {
+            Sign::Positive => zero(m),
+            Sign::Negative => from_u64(m, Sign::Negative, 1)
+        };
+    }
+
+    let mut vec = lhs.items().to_vec();
+    vec = vec.split_off(number_to_remove);
+    let shift_mod = rhs.items()[0] & ((1 << 6) - 1);
+    if shift_mod > 0 {
+        let len = vec.len();
+        let mask = 1 << (shift_mod - 1);
+        let mut i = 0;
+        loop {
+            vec[i] >>= shift_mod;
+            i += 1;
+            if i == len {
+                break;
+            }
+            vec[i - 1] |= (vec[i] & mask) << (64 - shift_mod);            
+        }
     }
 
     vec = normalize_vec(vec);
@@ -397,7 +443,8 @@ mod test {
         assert_eq!(res.get_type(), Type::Bigint);
         {
             let o = res.try_move::<BigintRef>().unwrap();
-            assert!(o.items().is_empty());
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[2]);
         }
 
         let c: BigintRef = shl(Global(), a, a).to_ref();
@@ -509,7 +556,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Shift right opearnd should be positive")]
+    #[should_panic(expected = "Shift right operand should be positive")]
     #[wasm_bindgen_test]
     fn test_shl_negative_rhs() {
         type A = Any<Global>;
