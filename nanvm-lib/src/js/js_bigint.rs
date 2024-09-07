@@ -691,4 +691,18 @@ mod test {
             assert_eq!(o.items(), &[(1 << 63) + 2, 4]);
         }
     }
+
+    #[test]
+    #[should_panic(expected = "Shift right operand should be positive")]
+    #[wasm_bindgen_test]
+    fn test_shr_negative_rhs() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Negative, 1);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let _c: BigintRef = shr(Global(), a, b).to_ref();
+    }
 }
