@@ -121,36 +121,17 @@ pub fn shl<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
         return new_bigint(m, lhs.sign(), lhs.items().to_vec());
     }
 
-    if rhs.sign() == Sign::Negative {
-        panic!("Shift right operand should be positive")
-    }
-
     if rhs.items().len() != 1 {
-        panic!("Maximum bigint size exceeded")
+        return match rhs.sign() {
+            Sign::Positive => panic!("Maximum bigint size exceeded"),
+            Sign::Negative => shr_on_big(m, lhs.sign()),
+        };
     }
 
-    let mut vec = lhs.items().to_vec();
-    let shift_mod = rhs.items()[0] & ((1 << 6) - 1);
-    if shift_mod > 0 {
-        let len = vec.len();
-        vec.push(0);
-        for i in (0..=len - 1).rev() {
-            let mut digit = vec[i] as u128;
-            digit <<= shift_mod;
-            vec[i + 1] |= (digit >> 64) as u64;
-            vec[i] = digit as u64;
-        }
+    match rhs.sign() {
+        Sign::Positive => shl_on_u64(m, lhs, rhs.items()[0]),
+        Sign::Negative => shr_on_u64(m, lhs, rhs.items()[0]),
     }
-
-    let number_of_zeros = (rhs.items()[0] / 64) as usize;
-    if number_of_zeros > 0 {
-        let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
-        zeros_vector.extend(vec);
-        vec = zeros_vector;
-    }
-
-    vec = normalize_vec(vec);
-    new_bigint(m, lhs.sign(), vec)
 }
 
 pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
@@ -162,40 +143,17 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
         return new_bigint(m, lhs.sign(), lhs.items().to_vec());
     }
 
-    if rhs.sign() == Sign::Negative {
-        panic!("Shift right operand should be positive")
-    }
-
-    let number_to_remove = (rhs.items()[0] / 64) as usize;
-    if number_to_remove >= lhs.items().len() {
-        return match lhs.sign() {
-            Sign::Positive => zero(m),
-            Sign::Negative => from_u64(m, Sign::Negative, 1),
+    if rhs.items().len() != 1 {
+        return match rhs.sign() {
+            Sign::Positive => shr_on_big(m, lhs.sign()),
+            Sign::Negative => panic!("Maximum bigint size exceeded"),
         };
     }
 
-    let mut vec = lhs.items().to_vec();
-    vec = vec.split_off(number_to_remove);
-    let shift_mod = rhs.items()[0] & ((1 << 6) - 1);
-    if shift_mod > 0 {
-        let len = vec.len();
-        let mask = 1 << (shift_mod - 1);
-        let mut i = 0;
-        loop {
-            vec[i] >>= shift_mod;
-            i += 1;
-            if i == len {
-                break;
-            }
-            vec[i - 1] |= (vec[i] & mask) << (64 - shift_mod);
-        }
+    match rhs.sign() {
+        Sign::Positive => shr_on_u64(m, lhs, rhs.items()[0]),
+        Sign::Negative => shl_on_u64(m, lhs, rhs.items()[0]),
     }
-
-    vec = normalize_vec(vec);
-    if vec.is_empty() && lhs.sign() == Sign::Negative {
-        return from_u64(m, Sign::Negative, 1);
-    }
-    new_bigint(m, lhs.sign(), vec)
 }
 
 impl JsBigint {
@@ -267,6 +225,68 @@ fn cmp_vec(lhs: &[u64], rhs: &[u64]) -> Ordering {
         }
     }
     Ordering::Equal
+}
+
+fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+    let mut vec = lhs.items().to_vec();
+    let shift_mod = rhs & ((1 << 6) - 1);
+    if shift_mod > 0 {
+        let len = vec.len();
+        vec.push(0);
+        for i in (0..=len - 1).rev() {
+            let mut digit = vec[i] as u128;
+            digit <<= shift_mod;
+            vec[i + 1] |= (digit >> 64) as u64;
+            vec[i] = digit as u64;
+        }
+    }
+
+    let number_of_zeros = (rhs / 64) as usize;
+    if number_of_zeros > 0 {
+        let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
+        zeros_vector.extend(vec);
+        vec = zeros_vector;
+    }
+
+    vec = normalize_vec(vec);
+    new_bigint(m, lhs.sign(), vec)
+}
+
+fn shr_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+    let number_to_remove = (rhs / 64) as usize;
+    if number_to_remove >= lhs.items().len() {
+        return shr_on_big(m, lhs.sign());
+    }
+
+    let mut vec = lhs.items().to_vec();
+    vec = vec.split_off(number_to_remove);
+    let shift_mod = rhs & ((1 << 6) - 1);
+    if shift_mod > 0 {
+        let len = vec.len();
+        let mask = 1 << (shift_mod - 1);
+        let mut i = 0;
+        loop {
+            vec[i] >>= shift_mod;
+            i += 1;
+            if i == len {
+                break;
+            }
+            vec[i - 1] |= (vec[i] & mask) << (64 - shift_mod);
+        }
+    }
+
+    vec = normalize_vec(vec);
+    if vec.is_empty() && lhs.sign() == Sign::Negative {
+        return from_u64(m, Sign::Negative, 1);
+    }
+    new_bigint(m, lhs.sign(), vec)
+}
+
+fn shr_on_big<M: Manager>(m: M, sign: Sign) -> JsBigintMutRef<M::Dealloc> {
+    match sign {
+        Sign::Positive => zero(m),
+        Sign::Negative => from_u64(m, Sign::Negative, 1),
+    }
 }
 
 #[cfg(test)]
@@ -542,6 +562,19 @@ mod test {
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[0, 10, 18]);
         }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 2);
+        let b_ref = from_u64(Global(), Sign::Negative, 1);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = shl(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
+        }
     }
 
     #[test]
@@ -553,20 +586,6 @@ mod test {
 
         let a_ref = from_u64(Global(), Sign::Positive, 1);
         let b_ref = new_bigint(Global(), Sign::Positive, [1, 1]);
-        let a = a_ref.deref();
-        let b = b_ref.deref();
-        let _c: BigintRef = shl(Global(), a, b).to_ref();
-    }
-
-    #[test]
-    #[should_panic(expected = "Shift right operand should be positive")]
-    #[wasm_bindgen_test]
-    fn test_shl_negative_rhs() {
-        type A = Any<Global>;
-        type BigintRef = JsBigintRef<Global>;
-
-        let a_ref = from_u64(Global(), Sign::Positive, 1);
-        let b_ref = from_u64(Global(), Sign::Negative, 1);
         let a = a_ref.deref();
         let b = b_ref.deref();
         let _c: BigintRef = shl(Global(), a, b).to_ref();
@@ -690,17 +709,30 @@ mod test {
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[(1 << 63) + 2, 4]);
         }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 2);
+        let b_ref = from_u64(Global(), Sign::Negative, 1);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = shr(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[4]);
+        }
     }
 
     #[test]
-    #[should_panic(expected = "Shift right operand should be positive")]
+    #[should_panic(expected = "Maximum bigint size exceeded")]
     #[wasm_bindgen_test]
-    fn test_shr_negative_rhs() {
+    fn test_shr_overflow() {
         type A = Any<Global>;
         type BigintRef = JsBigintRef<Global>;
 
         let a_ref = from_u64(Global(), Sign::Positive, 1);
-        let b_ref = from_u64(Global(), Sign::Negative, 1);
+        let b_ref = new_bigint(Global(), Sign::Negative, [1, 1]);
         let a = a_ref.deref();
         let b = b_ref.deref();
         let _c: BigintRef = shr(Global(), a, b).to_ref();
