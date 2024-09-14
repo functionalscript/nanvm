@@ -4,30 +4,14 @@ use super::shared::{
 };
 use super::{
     path::{concat, split},
-    shared::JsonElement,
+    shared::{JsonElement, ModuleCache},
 };
 use crate::{
     common::default::default,
-    js::any::Any,
-    mem::manager::{Dealloc, Manager},
+    mem::manager::Manager,
     tokenizer::{tokenize, JsonToken},
 };
 use io_trait::Io;
-use std::collections::{BTreeMap, BTreeSet};
-
-pub struct ModuleCache<D: Dealloc> {
-    pub complete: BTreeMap<String, Any<D>>,
-    pub progress: BTreeSet<String>,
-}
-
-impl<D: Dealloc> Default for ModuleCache<D> {
-    fn default() -> Self {
-        Self {
-            complete: default(),
-            progress: default(),
-        }
-    }
-}
 
 pub struct Context<'a, M: Manager, I: Io> {
     manager: M,
