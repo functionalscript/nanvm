@@ -156,6 +156,20 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+pub fn not<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    if is_zero(value) {
+        return from_u64(m, Sign::Negative, 1);
+    }
+    match value.sign() {
+        Sign::Positive => new_bigint(m, Sign::Negative, add_vec(value.items(), &[1])),
+        Sign::Negative => new_bigint(
+            m,
+            Sign::Positive,
+            normalize_vec(sub_vec(value.items(), &[1])),
+        ),
+    }
+}
+
 impl JsBigint {
     fn sign(&self) -> Sign {
         if self.header.len < 0 {
@@ -298,7 +312,7 @@ mod test {
     use crate::{
         js::{
             any::Any,
-            js_bigint::{new_bigint, shl, shr, sub, zero, JsBigintRef, Sign},
+            js_bigint::{new_bigint, not, shl, shr, sub, zero, JsBigintRef, Sign},
             type_::Type,
         },
         mem::global::Global,
@@ -736,5 +750,55 @@ mod test {
         let a = a_ref.deref();
         let b = b_ref.deref();
         let _c: BigintRef = shr(Global(), a, b).to_ref();
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_not() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = zero(Global());
+        let a = a_ref.deref();
+        let not_a: BigintRef = not(Global(), a).to_ref();
+        let res = A::move_from(not_a);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 1);
+        let a = a_ref.deref();
+        let not_a: BigintRef = not(Global(), a).to_ref();
+        let res = A::move_from(not_a);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Positive, [1, 5, 9]);
+        let a = a_ref.deref();
+        let not_a: BigintRef = not(Global(), a).to_ref();
+        let res = A::move_from(not_a);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[2, 5, 9]);
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Negative, [1, 5, 9]);
+        let a = a_ref.deref();
+        let not_a: BigintRef = not(Global(), a).to_ref();
+        let res = A::move_from(not_a);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[0, 5, 9]);
+        }
     }
 }
