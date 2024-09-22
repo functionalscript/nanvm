@@ -25,6 +25,11 @@ pub struct JsBigintHeader {
     len: isize,
 }
 
+pub struct TwosComplement {
+    sign: Sign,
+    vec: Vec<u64>,
+}
+
 pub type JsBigint = FlexibleArray<u64, JsBigintHeader>;
 
 pub type JsBigintRef<D> = Ref<JsBigint, D>;
@@ -156,17 +161,19 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
-fn twos_complement(value: &JsBigint) -> Vec<u64> {
-    match value.sign() {
-        Sign::Positive => value.items().to_vec(),
-        Sign::Negative => {
-            let mut vec: Vec<_> = default();
-            for d in value.items() {
-                vec.push(!d);
+fn twos_complement(value: &JsBigint) -> TwosComplement {
+    TwosComplement {
+        sign: value.sign(),
+        vec: match value.sign() {
+            Sign::Positive => value.items().to_vec(),
+            Sign::Negative => {
+                let mut vec: Vec<_> = default();
+                for d in value.items() {
+                    vec.push(!d);
+                }
+                sub_vec(&vec, &[1])
             }
-            vec.push(1 << 63);
-            normalize_vec(add_vec(&vec, &[1]))
-        }
+        },
     }
 }
 
