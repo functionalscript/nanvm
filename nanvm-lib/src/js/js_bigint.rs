@@ -156,6 +156,19 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+fn twos_complement(value: &JsBigint) -> Vec<u64> {
+    match value.sign() {
+        Sign::Positive => value.items().to_vec(),
+        Sign::Negative => {
+            let mut vec: Vec<_> = default();
+            for d in value.items() {
+                vec.push(!d);
+            }
+            add_vec(&vec, &[1])
+        }
+    }
+}
+
 impl JsBigint {
     fn sign(&self) -> Sign {
         if self.header.len < 0 {
