@@ -164,7 +164,8 @@ fn twos_complement(value: &JsBigint) -> Vec<u64> {
             for d in value.items() {
                 vec.push(!d);
             }
-            add_vec(&vec, &[1])
+            vec.push(1 << 63);
+            normalize_vec(add_vec(&vec, &[1]))
         }
     }
 }
