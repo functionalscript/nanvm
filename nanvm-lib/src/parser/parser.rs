@@ -1,6 +1,6 @@
 use super::shared::{
-    AnyResult, AnyState, AnyStateExtension, ConstState, JsonState, ParseError, ParseResult,
-    ParsingStatus, RootState, RootStatus,
+    AnyResult, AnyState, ConstState, JsonState, ParseError, ParseResult, ParsingStatus, RootState,
+    RootStatus,
 };
 use super::{
     path::{concat, split},
@@ -37,10 +37,10 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
 }
 
 fn root_state_parse<M: Manager, I: Io>(
-    mut root_state: RootState<M::Dealloc>,
+    mut root_state: RootState<M>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> JsonState<M::Dealloc> {
+) -> JsonState<M> {
     match root_state.status {
         RootStatus::Initial => match token {
             JsonToken::NewLine => JsonState::ParseRoot(RootState {
@@ -195,10 +195,10 @@ fn root_state_parse<M: Manager, I: Io>(
 }
 
 fn const_state_parse<M: Manager, I: Io>(
-    const_state: ConstState<M::Dealloc>,
+    const_state: ConstState<M>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> JsonState<M::Dealloc> {
+) -> JsonState<M> {
     match token {
         JsonToken::Semicolon => todo!(),
         _ => {
@@ -223,10 +223,10 @@ fn const_state_parse<M: Manager, I: Io>(
 }
 
 fn any_state_parse_for_module<M: Manager, I: Io>(
-    any_state: AnyState<M::Dealloc>,
+    any_state: AnyState<M>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> JsonState<M::Dealloc> {
+) -> JsonState<M> {
     let result = any_state_parse(any_state, context, token);
     match result {
         AnyResult::Continue(state) => JsonState::ParseModule(state),
@@ -239,10 +239,10 @@ fn any_state_parse_for_module<M: Manager, I: Io>(
 }
 
 fn any_state_parse_import_value<M: Manager, I: Io>(
-    any_state: AnyState<M::Dealloc>,
+    any_state: AnyState<M>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> AnyResult<M::Dealloc> {
+) -> AnyResult<M> {
     match token {
         JsonToken::String(s) => {
             let current_path = concat(split(&context.path).0, s.as_str());
@@ -278,7 +278,7 @@ fn any_state_parse_import_value<M: Manager, I: Io>(
                         Err(e) => AnyResult::Error(e),
                     }
                 }
-                Err(_) => AnyResult::<M::Dealloc>::Error(ParseError::CannotReadFile),
+                Err(_) => AnyResult::<M>::Error(ParseError::CannotReadFile),
             }
         }
         _ => AnyResult::Error(ParseError::WrongRequireStatement),
@@ -286,10 +286,10 @@ fn any_state_parse_import_value<M: Manager, I: Io>(
 }
 
 fn any_state_parse<M: Manager, I: Io>(
-    any_state: AnyState<M::Dealloc>,
+    any_state: AnyState<M>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> AnyResult<M::Dealloc> {
+) -> AnyResult<M> {
     match any_state.status {
         ParsingStatus::Initial | ParsingStatus::ObjectColon => {
             any_state.parse_value(context.manager, token)
@@ -308,10 +308,10 @@ fn any_state_parse<M: Manager, I: Io>(
 }
 
 fn json_state_push<M: Manager, I: Io>(
-    json_state: JsonState<M::Dealloc>,
+    json_state: JsonState<M>,
     context: &mut Context<M, I>,
     token: JsonToken,
-) -> JsonState<M::Dealloc> {
+) -> JsonState<M> {
     if token == JsonToken::NewLine {
         return match json_state {
             JsonState::ParseRoot(state) => root_state_parse(state, context, token),
