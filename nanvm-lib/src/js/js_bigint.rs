@@ -46,6 +46,15 @@ impl<D: Dealloc> RefCast<D> for JsBigint {
     const REF_SUBSET: BitSubset64<*const Block<JsBigint, D>> = BIGINT.cast();
 }
 
+impl TwosComplement {
+    fn repeat(&self) -> u64 {
+        match self.sign {
+            Sign::Positive => 0,
+            Sign::Negative => u64::MAX,
+        }
+    }
+}
+
 pub fn new_bigint<M: Manager, I: ExactSizeIterator<Item = u64>>(
     m: M,
     sign: Sign,
@@ -118,9 +127,10 @@ pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
 }
 
 pub fn and<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
-    let a = to_twos_complement(lhs);
-    let b = to_twos_complement(rhs);
-    todo!()
+    let lhs_tc = to_twos_complement(lhs);
+    let rhs_tc = to_twos_complement(rhs);
+    let res_tc = and_twos_complement(lhs_tc, rhs_tc);
+    from_twos_complement(m, res_tc)
 }
 
 pub fn shl<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
@@ -173,7 +183,7 @@ fn to_twos_complement(value: &JsBigint) -> TwosComplement {
         vec: match value.sign() {
             Sign::Positive => value.items().to_vec(),
             Sign::Negative => {
-                let sub = sub_vec(&value.items(), &[1]);
+                let sub = sub_vec(value.items(), &[1]);
                 let mut res: Vec<_> = default();
                 for d in sub {
                     res.push(!d);
@@ -199,7 +209,27 @@ fn from_twos_complement<M: Manager>(m: M, value: TwosComplement) -> JsBigintMutR
 }
 
 fn and_twos_complement(lhs: TwosComplement, rhs: TwosComplement) -> TwosComplement {
-    todo!()
+    let iter = match rhs.vec.len() > lhs.vec.len() {
+        true => rhs
+            .vec
+            .iter()
+            .copied()
+            .zip(lhs.vec.iter().copied().chain(iter::repeat(lhs.repeat()))),
+        false => lhs
+            .vec
+            .iter()
+            .copied()
+            .zip(rhs.vec.iter().copied().chain(iter::repeat(rhs.repeat()))),
+    };
+    let sign = match lhs.sign == Sign::Negative && rhs.sign == Sign::Negative {
+        true => Sign::Negative,
+        false => Sign::Positive,
+    };
+    let mut vec: Vec<_> = default();
+    for (a, b) in iter {
+        vec.push(a & b);
+    }
+    TwosComplement { sign, vec }
 }
 
 impl JsBigint {
