@@ -209,7 +209,22 @@ fn from_twos_complement<M: Manager>(m: M, value: TwosComplement) -> JsBigintMutR
 }
 
 fn and_twos_complement(lhs: TwosComplement, rhs: TwosComplement) -> TwosComplement {
-    let iter = match rhs.vec.len() > lhs.vec.len() {
+    let sign = match lhs.sign == Sign::Negative && rhs.sign == Sign::Negative {
+        true => Sign::Negative,
+        false => Sign::Positive,
+    };
+    let mut vec: Vec<_> = default();
+    for (a, b) in twos_complement_zip(&lhs, &rhs) {
+        vec.push(a & b);
+    }
+    TwosComplement { sign, vec }
+}
+
+fn twos_complement_zip<'a>(
+    lhs: &'a TwosComplement,
+    rhs: &'a TwosComplement,
+) -> impl Iterator<Item = (u64, u64)> + 'a {
+    match rhs.vec.len() > lhs.vec.len() {
         true => rhs
             .vec
             .iter()
@@ -220,16 +235,7 @@ fn and_twos_complement(lhs: TwosComplement, rhs: TwosComplement) -> TwosCompleme
             .iter()
             .copied()
             .zip(rhs.vec.iter().copied().chain(iter::repeat(rhs.repeat()))),
-    };
-    let sign = match lhs.sign == Sign::Negative && rhs.sign == Sign::Negative {
-        true => Sign::Negative,
-        false => Sign::Positive,
-    };
-    let mut vec: Vec<_> = default();
-    for (a, b) in iter {
-        vec.push(a & b);
     }
-    TwosComplement { sign, vec }
 }
 
 impl JsBigint {
