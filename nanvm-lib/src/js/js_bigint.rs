@@ -117,6 +117,12 @@ pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+pub fn and<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    let a = to_twos_complement(lhs);
+    let b = to_twos_complement(rhs);
+
+}
+
 pub fn shl<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     if is_zero(lhs) {
         return zero(m);
@@ -161,20 +167,39 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
-fn twos_complement(value: &JsBigint) -> TwosComplement {
+fn to_twos_complement(value: &JsBigint) -> TwosComplement {
     TwosComplement {
         sign: value.sign(),
         vec: match value.sign() {
             Sign::Positive => value.items().to_vec(),
             Sign::Negative => {
-                let mut vec: Vec<_> = default();
-                for d in value.items() {
-                    vec.push(!d);
+                let sub = sub_vec(&value.items(), &[1]);
+                let mut res: Vec<_> = default();
+                for d in sub {
+                    res.push(!d);
                 }
-                sub_vec(&vec, &[1])
+                res
             }
         },
     }
+}
+
+fn from_twos_complement<M: Manager>(m: M, value: TwosComplement) -> JsBigintMutRef<M::Dealloc> {
+    match value.sign {
+        Sign::Positive => new_bigint(m, Sign::Positive, value.vec),
+        Sign::Negative => {
+            let sub = sub_vec(&value.vec, &[1]);
+            let mut res: Vec<u64> = default();
+            for d in sub {
+                res.push(!d);
+            }
+            new_bigint(m, Sign::Negative, res)
+        }
+    }
+}
+
+fn and_twos_complement(lhs: TwosComplement, rhs: TwosComplement) -> TwosComplement {
+    todo!()
 }
 
 impl JsBigint {
