@@ -380,7 +380,7 @@ mod test {
     use crate::{
         js::{
             any::Any,
-            js_bigint::{new_bigint, shl, shr, sub, zero, JsBigintRef, Sign},
+            js_bigint::{and, new_bigint, shl, shr, sub, zero, JsBigintRef, Sign},
             type_::Type,
         },
         mem::global::Global,
@@ -818,5 +818,51 @@ mod test {
         let a = a_ref.deref();
         let b = b_ref.deref();
         let _c: BigintRef = shr(Global(), a, b).to_ref();
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_and() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 12);
+        let b_ref = from_u64(Global(), Sign::Positive, 9);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[8]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 12);
+        let b_ref = from_u64(Global(), Sign::Negative, 9);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[4]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 12);
+        let b_ref = from_u64(Global(), Sign::Negative, 9);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[12]);
+        }
     }
 }
