@@ -151,11 +151,8 @@ pub fn and<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
 
 pub fn or<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     let lhs_tc = to_twos_complement(lhs);
-    println!("{:?} {:?}", lhs_tc.sign, lhs_tc.vec);
     let rhs_tc = to_twos_complement(rhs);
-    println!("{:?} {:?}", rhs_tc.sign, rhs_tc.vec);
     let res_tc = or_twos_complement(lhs_tc, rhs_tc);
-    println!("{:?} {:?}", res_tc.sign, res_tc.vec);
     from_twos_complement(m, res_tc)
 }
 
