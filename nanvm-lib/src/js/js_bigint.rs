@@ -889,5 +889,43 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert!(o.items().is_empty());
         }
+
+        let a_ref = new_bigint(Global(), Sign::Positive, [1, 3, 5, 7, 9]);
+        let b_ref = new_bigint(Global(), Sign::Positive, [3, 5, 7, 9, 11]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.items(), &[1, 1, 5, 1, 9]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = new_bigint(Global(), Sign::Negative, [1, 1]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 1);
+        let b_ref = new_bigint(Global(), Sign::Positive, [1, 1]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1, 1]);
+        }
     }
 }
