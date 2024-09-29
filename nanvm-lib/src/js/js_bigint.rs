@@ -420,7 +420,7 @@ fn shr_on_big<M: Manager>(m: M, sign: Sign) -> JsBigintMutRef<M::Dealloc> {
 
 #[cfg(test)]
 mod test {
-    use std::{ops::Deref, u64};
+    use std::ops::Deref;
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
