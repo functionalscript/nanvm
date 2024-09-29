@@ -420,7 +420,7 @@ fn shr_on_big<M: Manager>(m: M, sign: Sign) -> JsBigintMutRef<M::Dealloc> {
 
 #[cfg(test)]
 mod test {
-    use std::ops::Deref;
+    use std::{ops::Deref, u64};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -1106,6 +1106,17 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[0, 5, 9]);
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Negative, [0, 1]);
+        let a = a_ref.deref();
+        let not_a: BigintRef = not(Global(), a).to_ref();
+        let res = A::move_from(not_a);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[u64::MAX]);
         }
     }
 }
