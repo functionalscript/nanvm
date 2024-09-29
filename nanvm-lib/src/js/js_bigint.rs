@@ -217,6 +217,7 @@ fn and_twos_complement(lhs: TwosComplement, rhs: TwosComplement) -> TwosCompleme
     for (a, b) in twos_complement_zip(&lhs, &rhs) {
         vec.push(a & b);
     }
+    vec = normalize_vec(vec);
     TwosComplement { sign, vec }
 }
 
@@ -863,6 +864,30 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Negative);
             assert_eq!(o.items(), &[12]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 1);
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c: BigintRef = and(Global(), a, b).to_ref();
+        let res = A::move_from(c);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
         }
     }
 }
