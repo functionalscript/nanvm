@@ -132,6 +132,34 @@ pub enum AnyResult<M: Manager> {
     Error(ParseError),
 }
 
+pub struct AnyResultWithImportPath<M: Manager> {
+    pub any_result: AnyResult<M>,
+    pub import_path: Option<String>,
+}
+
+impl<M: Manager> AnyResultWithImportPath<M> {
+    pub fn new(any_result: AnyResult<M>) -> Self {
+        AnyResultWithImportPath {
+            any_result,
+            import_path: None,
+        }
+    }
+
+    pub fn new_error(error: ParseError) -> Self {
+        Self {
+            any_result: AnyResult::Error(error),
+            import_path: None,
+        }
+    }
+
+    pub fn new_with_import_path(any_result: AnyResult<M>, import_path: String) -> Self {
+        Self {
+            any_result,
+            import_path: Some(import_path),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum RootStatus {
     Initial,
@@ -152,34 +180,6 @@ pub struct ParseResult<D: Dealloc> {
     pub any: Any<D>,
 }
 
-pub struct RootStateParseResult<M: Manager> {
-    pub json_state: JsonState<M>,
-    pub import_from_path: Option<String>, // an extra output in case of "import from" statement
-}
-
-impl<M: Manager> RootStateParseResult<M> {
-    pub fn new(json_state: JsonState<M>) -> Self {
-        RootStateParseResult {
-            json_state,
-            import_from_path: None,
-        }
-    }
-
-    pub fn new_error(error: ParseError) -> Self {
-        RootStateParseResult {
-            json_state: JsonState::Error(error),
-            import_from_path: None,
-        }
-    }
-
-    pub fn new_with_import_from(json_state: JsonState<M>, import_from_path: String) -> Self {
-        RootStateParseResult {
-            json_state,
-            import_from_path: Some(import_from_path),
-        }
-    }
-}
-
 pub struct RootState<M: Manager> {
     pub status: RootStatus,
     pub state: AnyState<M>,
@@ -193,148 +193,156 @@ impl<M: Manager> RootState<M> {
         token: JsonToken,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
-    ) -> RootStateParseResult<M> {
+    ) -> JsonStateWithImportPath<M> {
         match self.status {
             RootStatus::Initial => match token {
-                JsonToken::NewLine => RootStateParseResult::new(JsonState::ParseRoot(RootState {
-                    new_line: true,
-                    ..self
-                })),
+                JsonToken::NewLine => {
+                    JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
+                        new_line: true,
+                        ..self
+                    }))
+                }
                 JsonToken::Id(s) => match self.new_line {
                     true => match s.as_ref() {
-                        "const" => RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                        "const" => JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                             status: RootStatus::Const,
                             state: self.state.set_djs(),
                             new_line: false,
                         })),
                         "export" if self.state.data_type.is_mjs_compatible() => {
-                            RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                            JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                                 status: RootStatus::Export,
                                 state: self.state.set_mjs(),
                                 new_line: false,
                             }))
                         }
                         "module" if self.state.data_type.is_cjs_compatible() => {
-                            RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                            JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                                 status: RootStatus::Module,
                                 state: self.state.set_cjs(),
                                 new_line: false,
                             }))
                         }
                         "import" if self.state.data_type.is_mjs_compatible() => {
-                            RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                            JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                                 status: RootStatus::Import,
                                 state: self.state.set_mjs(),
                                 new_line: false,
                             }))
                         }
-                        _ => RootStateParseResult::new(self.state.parse_for_module(
-                            manager,
-                            JsonToken::Id(s),
-                            &mut module_cache.progress,
-                        )),
+                        _ => {
+                            // TODO: this case requires a thorough analysis and testing.
+                            self.state.parse_for_module(
+                                manager,
+                                JsonToken::Id(s),
+                                module_cache,
+                                context_path,
+                            )
+                        }
                     },
-                    false => RootStateParseResult::new_error(ParseError::NewLineExpected),
+                    false => JsonStateWithImportPath::new_error(ParseError::NewLineExpected),
                 },
                 _ => match self.new_line {
-                    true => RootStateParseResult::new(self.state.parse_for_module(
-                        manager,
-                        token,
-                        &mut module_cache.progress,
-                    )),
-                    false => RootStateParseResult::new_error(ParseError::NewLineExpected),
+                    true => self
+                        .state
+                        .parse_for_module(manager, token, module_cache, context_path),
+                    false => JsonStateWithImportPath::new_error(ParseError::NewLineExpected),
                 },
             },
             RootStatus::Export => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "default" => RootStateParseResult::new(JsonState::ParseModule(self.state)),
-                    _ => RootStateParseResult::new_error(ParseError::WrongExportStatement),
+                    "default" => JsonStateWithImportPath::new(JsonState::ParseModule(self.state)),
+                    _ => JsonStateWithImportPath::new_error(ParseError::WrongExportStatement),
                 },
-                _ => RootStateParseResult::new_error(ParseError::WrongExportStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongExportStatement),
             },
             RootStatus::Module => match token {
-                JsonToken::Dot => RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                JsonToken::Dot => JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                     status: RootStatus::ModuleDot,
                     state: self.state,
                     new_line: false,
                 })),
-                _ => RootStateParseResult::new_error(ParseError::WrongExportStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongExportStatement),
             },
             RootStatus::ModuleDot => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "exports" => RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                    "exports" => JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                         status: RootStatus::ModuleDotExports,
                         state: self.state,
                         new_line: false,
                     })),
-                    _ => RootStateParseResult::new_error(ParseError::WrongExportStatement),
+                    _ => JsonStateWithImportPath::new_error(ParseError::WrongExportStatement),
                 },
-                _ => RootStateParseResult::new_error(ParseError::WrongExportStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongExportStatement),
             },
             RootStatus::ModuleDotExports => match token {
-                JsonToken::Equals => RootStateParseResult::new(JsonState::ParseModule(self.state)),
-                _ => RootStateParseResult::new_error(ParseError::WrongExportStatement),
+                JsonToken::Equals => {
+                    JsonStateWithImportPath::new(JsonState::ParseModule(self.state))
+                }
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongExportStatement),
             },
             RootStatus::Const => match token {
-                JsonToken::Id(s) => RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                JsonToken::Id(s) => JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                     status: RootStatus::ConstId(s),
                     state: self.state,
                     new_line: false,
                 })),
-                _ => RootStateParseResult::new_error(ParseError::WrongConstStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongConstStatement),
             },
             RootStatus::ConstId(s) => match token {
-                JsonToken::Equals => RootStateParseResult::new(JsonState::ParseConst(ConstState {
-                    key: s,
-                    state: self.state,
-                })),
-                _ => RootStateParseResult::new_error(ParseError::WrongConstStatement),
+                JsonToken::Equals => {
+                    JsonStateWithImportPath::new(JsonState::ParseConst(ConstState {
+                        key: s,
+                        state: self.state,
+                    }))
+                }
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongConstStatement),
             },
             RootStatus::Import => match token {
-                JsonToken::Id(s) => RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                JsonToken::Id(s) => JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                     status: RootStatus::ImportId(s),
                     state: self.state,
                     new_line: false,
                 })),
-                _ => RootStateParseResult::new_error(ParseError::WrongImportStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongImportStatement),
             },
             RootStatus::ImportId(id) => match token {
                 JsonToken::Id(s) => match s.as_ref() {
-                    "from" => RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                    "from" => JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                         status: RootStatus::ImportIdFrom(id),
                         state: self.state,
                         new_line: false,
                     })),
-                    _ => RootStateParseResult::new_error(ParseError::WrongImportStatement),
+                    _ => JsonStateWithImportPath::new_error(ParseError::WrongImportStatement),
                 },
-                _ => RootStateParseResult::new_error(ParseError::WrongImportStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongImportStatement),
             },
             RootStatus::ImportIdFrom(id) => match token {
                 JsonToken::String(s) => {
-                    let import_from_path = concat(split(&context_path).0, s.as_str());
-                    if let Some(any) = module_cache.complete.get(&import_from_path) {
+                    let import_path = concat(split(&context_path).0, s.as_str());
+                    if let Some(any) = module_cache.complete.get(&import_path) {
                         let mut state = self.state;
                         state.consts.insert(id, any.clone());
-                        return RootStateParseResult::new(JsonState::ParseRoot(RootState {
+                        return JsonStateWithImportPath::new(JsonState::ParseRoot(RootState {
                             status: RootStatus::Initial,
                             state,
                             new_line: false,
                         }));
                     }
-                    if module_cache.progress.contains(&import_from_path) {
-                        return RootStateParseResult::new_error(ParseError::CircularDependency);
+                    if module_cache.progress.contains(&import_path) {
+                        return JsonStateWithImportPath::new_error(ParseError::CircularDependency);
                     }
-                    module_cache.progress.insert(import_from_path.clone());
-                    RootStateParseResult::new_with_import_from(
+                    module_cache.progress.insert(import_path.clone());
+                    JsonStateWithImportPath::new_with_import_path(
                         JsonState::ParseRoot(RootState {
                             status: RootStatus::Initial,
                             new_line: false,
                             ..self
                         }),
-                        import_from_path,
+                        import_path,
                     )
                 }
-                _ => RootStateParseResult::new_error(ParseError::WrongImportStatement),
+                _ => JsonStateWithImportPath::new_error(ParseError::WrongImportStatement),
             },
         }
     }
@@ -343,6 +351,38 @@ impl<M: Manager> RootState<M> {
 pub struct ConstState<M: Manager> {
     pub key: String,
     pub state: AnyState<M>,
+}
+
+impl<M: Manager> ConstState<M> {
+    fn parse(
+        self,
+        manager: M,
+        token: JsonToken,
+        module_cache: &mut ModuleCache<M::Dealloc>,
+        context_path: String,
+    ) -> JsonState<M> {
+        match token {
+            JsonToken::Semicolon => todo!(),
+            _ => {
+                let result = self.state.parse(manager, token, module_cache, context_path);
+                match result.any_result {
+                    AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
+                        key: self.key,
+                        state,
+                    }),
+                    AnyResult::Success(mut success) => {
+                        success.state.consts.insert(self.key, success.value);
+                        JsonState::ParseRoot(RootState {
+                            status: RootStatus::Initial,
+                            state: success.state,
+                            new_line: false,
+                        })
+                    }
+                    AnyResult::Error(error) => JsonState::Error(error),
+                }
+            }
+        }
+    }
 }
 
 pub enum JsonState<M: Manager> {
@@ -354,6 +394,37 @@ pub enum JsonState<M: Manager> {
 }
 
 impl<M: Manager> JsonState<M> {
+    pub fn push(
+        self,
+        manager: M,
+        token: JsonToken,
+        module_cache: &mut ModuleCache<M::Dealloc>,
+        context_path: String,
+    ) -> JsonStateWithImportPath<M> {
+        if token == JsonToken::NewLine {
+            return match self {
+                JsonState::ParseRoot(state) => {
+                    state.parse(manager, token, module_cache, context_path)
+                }
+                _ => JsonStateWithImportPath::new(self),
+            };
+        }
+        match self {
+            JsonState::ParseRoot(state) => state.parse(manager, token, module_cache, context_path),
+            JsonState::Result(_) => JsonStateWithImportPath::new_error(ParseError::UnexpectedToken),
+            JsonState::ParseModule(state) => {
+                state.parse_for_module(manager, token, module_cache, context_path)
+            }
+            JsonState::ParseConst(state) => JsonStateWithImportPath::new(state.parse(
+                manager,
+                token,
+                module_cache,
+                context_path,
+            )),
+            _ => JsonStateWithImportPath::new(self),
+        }
+    }
+
     pub fn end(self) -> Result<ParseResult<M::Dealloc>, ParseError> {
         match self {
             JsonState::Result(result) => Ok(result),
@@ -406,19 +477,43 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse(
+        self,
+        manager: M,
+        token: JsonToken,
+        module_cache: &mut ModuleCache<M::Dealloc>,
+        context_path: String,
+    ) -> AnyResultWithImportPath<M> {
         match self.status {
-            ParsingStatus::Initial | ParsingStatus::ObjectColon => self.parse_value(manager, token),
-            ParsingStatus::ArrayBegin => self.parse_array_begin(manager, token),
-            ParsingStatus::ArrayValue => self.parse_array_value(manager, token),
-            ParsingStatus::ArrayComma => self.parse_array_comma(manager, token),
-            ParsingStatus::ObjectBegin => self.parse_object_begin(manager, token),
-            ParsingStatus::ObjectKey => self.parse_object_key(token),
-            ParsingStatus::ObjectValue => self.parse_object_next(manager, token),
-            ParsingStatus::ObjectComma => self.parse_object_comma(manager, token),
-            ParsingStatus::ImportBegin => self.parse_import_begin(token),
-            ParsingStatus::ImportValue => todo!(), // any_state, context, token),
-            ParsingStatus::ImportEnd => self.parse_import_end(token),
+            ParsingStatus::Initial | ParsingStatus::ObjectColon => {
+                AnyResultWithImportPath::new(self.parse_value(manager, token))
+            }
+            ParsingStatus::ArrayBegin => {
+                AnyResultWithImportPath::new(self.parse_array_begin(manager, token))
+            }
+            ParsingStatus::ArrayValue => {
+                AnyResultWithImportPath::new(self.parse_array_value(manager, token))
+            }
+            ParsingStatus::ArrayComma => {
+                AnyResultWithImportPath::new(self.parse_array_comma(manager, token))
+            }
+            ParsingStatus::ObjectBegin => {
+                AnyResultWithImportPath::new(self.parse_object_begin(manager, token))
+            }
+            ParsingStatus::ObjectKey => AnyResultWithImportPath::new(self.parse_object_key(token)),
+            ParsingStatus::ObjectValue => {
+                AnyResultWithImportPath::new(self.parse_object_next(manager, token))
+            }
+            ParsingStatus::ObjectComma => {
+                AnyResultWithImportPath::new(self.parse_object_comma(manager, token))
+            }
+            ParsingStatus::ImportBegin => {
+                AnyResultWithImportPath::new(self.parse_import_begin(token))
+            }
+            ParsingStatus::ImportValue => {
+                self.parse_import_value(token, module_cache, context_path)
+            }
+            ParsingStatus::ImportEnd => AnyResultWithImportPath::new(self.parse_import_end(token)),
         }
     }
 
@@ -426,16 +521,33 @@ impl<M: Manager> AnyState<M> {
         self,
         manager: M,
         token: JsonToken,
-        _module_cache_progress: &mut BTreeSet<String>,
-    ) -> JsonState<M> {
-        let result = self.parse(manager, token);
-        match result {
-            AnyResult::Continue(state) => JsonState::ParseModule(state),
-            AnyResult::Success(success) => JsonState::Result(ParseResult {
-                data_type: success.state.data_type,
-                any: success.value,
-            }),
-            AnyResult::Error(error) => JsonState::Error(error),
+        module_cache: &mut ModuleCache<M::Dealloc>,
+        context_path: String,
+    ) -> JsonStateWithImportPath<M> {
+        let result = self.parse(manager, token, module_cache, context_path);
+        match result.import_path {
+            Some(import_path) => {
+                if let AnyResult::Continue(state) = result.any_result {
+                    JsonStateWithImportPath::new_with_import_path(
+                        JsonState::ParseModule(state),
+                        import_path,
+                    )
+                } else {
+                    panic!("Import path should be returned only with Continue result");
+                }
+            }
+            None => match result.any_result {
+                AnyResult::Continue(state) => {
+                    JsonStateWithImportPath::new(JsonState::ParseModule(state))
+                }
+                AnyResult::Success(success) => {
+                    JsonStateWithImportPath::new(JsonState::Result(ParseResult {
+                        data_type: success.state.data_type,
+                        any: success.value,
+                    }))
+                }
+                AnyResult::Error(error) => JsonStateWithImportPath::new_error(error),
+            },
         }
     }
 
@@ -453,6 +565,38 @@ impl<M: Manager> AnyState<M> {
         match token {
             JsonToken::ClosingParenthesis => self.end_import(),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
+        }
+    }
+
+    fn parse_import_value(
+        self,
+        token: JsonToken,
+        module_cache: &mut ModuleCache<M::Dealloc>,
+        context_path: String,
+    ) -> AnyResultWithImportPath<M> {
+        match token {
+            JsonToken::String(s) => {
+                let import_path = concat(split(&context_path).0, s.as_str());
+                if let Some(any) = module_cache.complete.get(&import_path) {
+                    return AnyResultWithImportPath::new(AnyResult::Continue(AnyState {
+                        status: ParsingStatus::ImportEnd,
+                        current: JsonElement::Any(any.clone()),
+                        ..self
+                    }));
+                }
+                if module_cache.progress.contains(&import_path) {
+                    return AnyResultWithImportPath::new_error(ParseError::CircularDependency);
+                }
+                module_cache.progress.insert(import_path.clone());
+                AnyResultWithImportPath::new_with_import_path(
+                    AnyResult::Continue(AnyState {
+                        status: ParsingStatus::ImportEnd,
+                        ..self
+                    }),
+                    import_path,
+                )
+            }
+            _ => AnyResultWithImportPath::new_error(ParseError::WrongRequireStatement),
         }
     }
 
@@ -696,6 +840,34 @@ impl<M: Manager> AnyState<M> {
                 new_state.push_value(Any::move_from(js_object))
             }
             _ => unreachable!(),
+        }
+    }
+}
+
+pub struct JsonStateWithImportPath<M: Manager> {
+    pub json_state: JsonState<M>,
+    pub import_path: Option<String>, // an extra output in case of "import from" statement
+}
+
+impl<M: Manager> JsonStateWithImportPath<M> {
+    pub fn new(json_state: JsonState<M>) -> Self {
+        JsonStateWithImportPath {
+            json_state,
+            import_path: None,
+        }
+    }
+
+    pub fn new_error(error: ParseError) -> Self {
+        Self {
+            json_state: JsonState::Error(error),
+            import_path: None,
+        }
+    }
+
+    pub fn new_with_import_path(json_state: JsonState<M>, import_path: String) -> Self {
+        Self {
+            json_state,
+            import_path: Some(import_path),
         }
     }
 }
