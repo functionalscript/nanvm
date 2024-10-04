@@ -11,7 +11,7 @@ use super::{
     path::{concat, split},
     shared::{
         to_js_string, DataType, JsonElement, JsonStackElement, JsonStackObject, JsonState,
-        JsonStateWithImportPath, ModuleCache, ParseError, ParseResult, ParsingStatus,
+        ModuleCache, ParseError, ParseResult, ParsingStatus,
     },
 };
 
@@ -76,8 +76,8 @@ impl<M: Manager> AnyState<M> {
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
     ) -> (
-        AnyResult<M>,   /*any_result*/
-        Option<String>, /*import_path*/
+        /*any_result:*/ AnyResult<M>,
+        /*import_path*/ Option<String>,
     ) {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
@@ -104,30 +104,29 @@ impl<M: Manager> AnyState<M> {
         token: JsonToken,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
-    ) -> JsonStateWithImportPath<M> {
+    ) -> (
+        /*json_state:*/ JsonState<M>,
+        /*import_path:*/ Option<String>,
+    ) {
         let (any_result, import_path) = self.parse(manager, token, module_cache, context_path);
         match import_path {
             Some(import_path) => {
                 if let AnyResult::Continue(state) = any_result {
-                    JsonStateWithImportPath::new_with_import_path(
-                        JsonState::ParseModule(state),
-                        import_path,
-                    )
+                    (JsonState::ParseModule(state), Some(import_path))
                 } else {
                     panic!("Import path should be returned only with Continue result");
                 }
             }
             None => match any_result {
-                AnyResult::Continue(state) => {
-                    JsonStateWithImportPath::new(JsonState::ParseModule(state))
-                }
-                AnyResult::Success(success) => {
-                    JsonStateWithImportPath::new(JsonState::Result(ParseResult {
+                AnyResult::Continue(state) => (JsonState::ParseModule(state), None),
+                AnyResult::Success(success) => (
+                    JsonState::Result(ParseResult {
                         data_type: success.state.data_type,
                         any: success.value,
-                    }))
-                }
-                AnyResult::Error(error) => JsonStateWithImportPath::new_error(error),
+                    }),
+                    None,
+                ),
+                AnyResult::Error(error) => (JsonState::Error(error), None),
             },
         }
     }
