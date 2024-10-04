@@ -1,19 +1,18 @@
+use super::{
+    json_state::JsonState,
+    path::{concat, split},
+    shared::{
+        to_js_string, DataType, JsonElement, JsonStackElement, JsonStackObject, ModuleCache,
+        ParseError, ParseResult, ParsingStatus,
+    },
+};
 use crate::{
     common::{cast::Cast, default::default},
     js::{any::Any, js_array::new_array, js_object::new_object},
     mem::manager::Manager,
     tokenizer::JsonToken,
 };
-
 use std::collections::BTreeMap;
-
-use super::{
-    path::{concat, split},
-    shared::{
-        to_js_string, DataType, JsonElement, JsonStackElement, JsonStackObject, JsonState,
-        ModuleCache, ParseError, ParseResult, ParsingStatus,
-    },
-};
 
 pub struct AnySuccess<M: Manager> {
     pub state: AnyState<M>,
