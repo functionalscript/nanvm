@@ -434,6 +434,34 @@ impl<M: Manager> JsonState<M> {
     }
 }
 
+pub struct JsonStateWithImportPath<M: Manager> {
+    pub json_state: JsonState<M>,
+    pub import_path: Option<String>, // an extra output in case of "import from" statement
+}
+
+impl<M: Manager> JsonStateWithImportPath<M> {
+    pub fn new(json_state: JsonState<M>) -> Self {
+        JsonStateWithImportPath {
+            json_state,
+            import_path: None,
+        }
+    }
+
+    pub fn new_error(error: ParseError) -> Self {
+        Self {
+            json_state: JsonState::Error(error),
+            import_path: None,
+        }
+    }
+
+    pub fn new_with_import_path(json_state: JsonState<M>, import_path: String) -> Self {
+        Self {
+            json_state,
+            import_path: Some(import_path),
+        }
+    }
+}
+
 pub struct AnyState<M: Manager> {
     pub data_type: DataType,
     pub status: ParsingStatus,
@@ -840,34 +868,6 @@ impl<M: Manager> AnyState<M> {
                 new_state.push_value(Any::move_from(js_object))
             }
             _ => unreachable!(),
-        }
-    }
-}
-
-pub struct JsonStateWithImportPath<M: Manager> {
-    pub json_state: JsonState<M>,
-    pub import_path: Option<String>, // an extra output in case of "import from" statement
-}
-
-impl<M: Manager> JsonStateWithImportPath<M> {
-    pub fn new(json_state: JsonState<M>) -> Self {
-        JsonStateWithImportPath {
-            json_state,
-            import_path: None,
-        }
-    }
-
-    pub fn new_error(error: ParseError) -> Self {
-        Self {
-            json_state: JsonState::Error(error),
-            import_path: None,
-        }
-    }
-
-    pub fn new_with_import_path(json_state: JsonState<M>, import_path: String) -> Self {
-        Self {
-            json_state,
-            import_path: Some(import_path),
         }
     }
 }
