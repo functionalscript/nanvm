@@ -326,8 +326,9 @@ impl<M: Manager> ConstState<M> {
         match token {
             JsonToken::Semicolon => todo!(),
             _ => {
-                let result = self.state.parse(manager, token, module_cache, context_path);
-                match result.any_result {
+                // TODO: use import_path in place of _ below to track possible errors - or provide an explanation on why it's not necessary.
+                let (any_result, _) = self.state.parse(manager, token, module_cache, context_path);
+                match any_result {
                     AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
                         key: self.key,
                         state,

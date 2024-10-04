@@ -26,34 +26,6 @@ pub enum AnyResult<M: Manager> {
     Error(ParseError),
 }
 
-pub struct AnyResultWithImportPath<M: Manager> {
-    pub any_result: AnyResult<M>,
-    pub import_path: Option<String>,
-}
-
-impl<M: Manager> AnyResultWithImportPath<M> {
-    pub fn new(any_result: AnyResult<M>) -> Self {
-        AnyResultWithImportPath {
-            any_result,
-            import_path: None,
-        }
-    }
-
-    pub fn new_error(error: ParseError) -> Self {
-        Self {
-            any_result: AnyResult::Error(error),
-            import_path: None,
-        }
-    }
-
-    pub fn new_with_import_path(any_result: AnyResult<M>, import_path: String) -> Self {
-        Self {
-            any_result,
-            import_path: Some(import_path),
-        }
-    }
-}
-
 pub struct AnyState<M: Manager> {
     pub data_type: DataType,
     pub status: ParsingStatus,
@@ -103,37 +75,26 @@ impl<M: Manager> AnyState<M> {
         token: JsonToken,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
-    ) -> AnyResultWithImportPath<M> {
+    ) -> (
+        AnyResult<M>,   /*any_result*/
+        Option<String>, /*import_path*/
+    ) {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
-                AnyResultWithImportPath::new(self.parse_value(manager, token))
+                (self.parse_value(manager, token), None)
             }
-            ParsingStatus::ArrayBegin => {
-                AnyResultWithImportPath::new(self.parse_array_begin(manager, token))
-            }
-            ParsingStatus::ArrayValue => {
-                AnyResultWithImportPath::new(self.parse_array_value(manager, token))
-            }
-            ParsingStatus::ArrayComma => {
-                AnyResultWithImportPath::new(self.parse_array_comma(manager, token))
-            }
-            ParsingStatus::ObjectBegin => {
-                AnyResultWithImportPath::new(self.parse_object_begin(manager, token))
-            }
-            ParsingStatus::ObjectKey => AnyResultWithImportPath::new(self.parse_object_key(token)),
-            ParsingStatus::ObjectValue => {
-                AnyResultWithImportPath::new(self.parse_object_next(manager, token))
-            }
-            ParsingStatus::ObjectComma => {
-                AnyResultWithImportPath::new(self.parse_object_comma(manager, token))
-            }
-            ParsingStatus::ImportBegin => {
-                AnyResultWithImportPath::new(self.parse_import_begin(token))
-            }
+            ParsingStatus::ArrayBegin => (self.parse_array_begin(manager, token), None),
+            ParsingStatus::ArrayValue => (self.parse_array_value(manager, token), None),
+            ParsingStatus::ArrayComma => (self.parse_array_comma(manager, token), None),
+            ParsingStatus::ObjectBegin => (self.parse_object_begin(manager, token), None),
+            ParsingStatus::ObjectKey => (self.parse_object_key(token), None),
+            ParsingStatus::ObjectValue => (self.parse_object_next(manager, token), None),
+            ParsingStatus::ObjectComma => (self.parse_object_comma(manager, token), None),
+            ParsingStatus::ImportBegin => (self.parse_import_begin(token), None),
             ParsingStatus::ImportValue => {
                 self.parse_import_value(token, module_cache, context_path)
             }
-            ParsingStatus::ImportEnd => AnyResultWithImportPath::new(self.parse_import_end(token)),
+            ParsingStatus::ImportEnd => (self.parse_import_end(token), None),
         }
     }
 
@@ -144,10 +105,10 @@ impl<M: Manager> AnyState<M> {
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
     ) -> JsonStateWithImportPath<M> {
-        let result = self.parse(manager, token, module_cache, context_path);
-        match result.import_path {
+        let (any_result, import_path) = self.parse(manager, token, module_cache, context_path);
+        match import_path {
             Some(import_path) => {
-                if let AnyResult::Continue(state) = result.any_result {
+                if let AnyResult::Continue(state) = any_result {
                     JsonStateWithImportPath::new_with_import_path(
                         JsonState::ParseModule(state),
                         import_path,
@@ -156,7 +117,7 @@ impl<M: Manager> AnyState<M> {
                     panic!("Import path should be returned only with Continue result");
                 }
             }
-            None => match result.any_result {
+            None => match any_result {
                 AnyResult::Continue(state) => {
                     JsonStateWithImportPath::new(JsonState::ParseModule(state))
                 }
@@ -193,30 +154,36 @@ impl<M: Manager> AnyState<M> {
         token: JsonToken,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
-    ) -> AnyResultWithImportPath<M> {
+    ) -> (
+        AnyResult<M>,   /*any_result*/
+        Option<String>, /*import_path*/
+    ) {
         match token {
             JsonToken::String(s) => {
                 let import_path = concat(split(&context_path).0, s.as_str());
                 if let Some(any) = module_cache.complete.get(&import_path) {
-                    return AnyResultWithImportPath::new(AnyResult::Continue(AnyState {
-                        status: ParsingStatus::ImportEnd,
-                        current: JsonElement::Any(any.clone()),
-                        ..self
-                    }));
+                    return (
+                        AnyResult::Continue(AnyState {
+                            status: ParsingStatus::ImportEnd,
+                            current: JsonElement::Any(any.clone()),
+                            ..self
+                        }),
+                        None,
+                    );
                 }
                 if module_cache.progress.contains(&import_path) {
-                    return AnyResultWithImportPath::new_error(ParseError::CircularDependency);
+                    return (AnyResult::Error(ParseError::CircularDependency), None);
                 }
                 module_cache.progress.insert(import_path.clone());
-                AnyResultWithImportPath::new_with_import_path(
+                (
                     AnyResult::Continue(AnyState {
                         status: ParsingStatus::ImportEnd,
                         ..self
                     }),
-                    import_path,
+                    Some(import_path),
                 )
             }
-            _ => AnyResultWithImportPath::new_error(ParseError::WrongRequireStatement),
+            _ => (AnyResult::Error(ParseError::WrongRequireStatement), None),
         }
     }
 
