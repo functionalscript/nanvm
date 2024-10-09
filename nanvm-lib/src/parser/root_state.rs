@@ -34,7 +34,10 @@ impl<M: Manager> RootState<M> {
         token: JsonToken,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
-    ) -> (/*any_result:*/ JsonState<M>, /*import_path:*/ Option<String>) {
+    ) -> (
+        /*any_result:*/ JsonState<M>,
+        /*import_path:*/ Option<String>,
+    ) {
         match self.status {
             RootStatus::Initial => match token {
                 JsonToken::NewLine => (
