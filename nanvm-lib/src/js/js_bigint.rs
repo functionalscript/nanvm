@@ -523,7 +523,7 @@ mod test {
         mem::global::Global,
     };
 
-    use super::{add, from_u64};
+    use super::{add, div_mod, from_u64};
 
     #[test]
     #[wasm_bindgen_test]
@@ -1301,6 +1301,79 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[1, u64::MAX, u64::MAX, u64::MAX - 1]);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    #[wasm_bindgen_test]
+    fn test_div_by_zero() {
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let _ = div_mod(Global(), a, b);
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    #[wasm_bindgen_test]
+    fn test_div_zero_by_zero() {
+        let a_ref = zero(Global());
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let _ = div_mod(Global(), a, b);
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_div() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 7);
+        let b_ref = from_u64(Global(), Sign::Positive, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let (d, m) = div_mod(Global(), a, b);
+        let d_ref = d.to_ref();
+        let d_res = A::move_from(d_ref);
+        assert_eq!(d_res.get_type(), Type::Bigint);
+        {
+            let o = d_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[3]);
+        }
+        let m_ref = m.to_ref();
+        let m_res = A::move_from(m_ref);
+        assert_eq!(m_res.get_type(), Type::Bigint);
+        {
+            let o = m_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Positive, [7, 5]);
+        let b_ref = new_bigint(Global(), Sign::Negative, [0, 3]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let (d, m) = div_mod(Global(), a, b);
+        let d_ref = d.to_ref();
+        let d_res = A::move_from(d_ref);
+        assert_eq!(d_res.get_type(), Type::Bigint);
+        {
+            let o = d_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[1]);
+        }
+        let m_ref = m.to_ref();
+        let m_res = A::move_from(m_ref);
+        assert_eq!(m_res.get_type(), Type::Bigint);
+        {
+            let o = m_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[7, 2]);
         }
     }
 }
