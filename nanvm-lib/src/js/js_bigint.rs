@@ -146,14 +146,16 @@ pub fn mul<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     if is_zero(lhs) || is_zero(rhs) {
         return zero(m);
     }
-
     let sign = match lhs.sign() == rhs.sign() {
         true => Sign::Positive,
         false => Sign::Negative,
     };
+    new_bigint(m, sign, mul_vec(lhs.items(), rhs.items()))
+}
 
-    let lhs_max = lhs.items().len() - 1;
-    let rhs_max = rhs.items().len() - 1;
+fn mul_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
+    let lhs_max = lhs.len() - 1;
+    let rhs_max = rhs.len() - 1;
     let total_max = lhs_max + rhs_max + 1;
     let mut vec = vec![0; total_max + 1];
     let mut i: usize = 0;
@@ -161,14 +163,12 @@ pub fn mul<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
         let mut j = if i > rhs_max { i - rhs_max } else { 0 };
         let max = if i < lhs_max { i } else { lhs_max };
         while j <= max {
-            vec = add_to_vec(vec, i, lhs.items()[j] as u128 * rhs.items()[i - j] as u128);
+            vec = add_to_vec(vec, i, lhs[j] as u128 * rhs[i - j] as u128);
             j += 1;
         }
         i += 1;
     }
-
-    vec = normalize_vec(vec);
-    new_bigint(m, sign, vec)
+    normalize_vec(vec)
 }
 
 fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
@@ -179,6 +179,60 @@ fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
         vec = add_to_vec(vec, index + 1, carry);
     }
     vec
+}
+
+pub fn div_mod<M: Manager>(
+    m: M,
+    lhs: &JsBigint,
+    rhs: &JsBigint,
+) -> (JsBigintMutRef<M::Dealloc>, JsBigintMutRef<M::Dealloc>) {
+    if is_zero(rhs) {
+        panic!("attempt to divide by zero");
+    }
+
+    let sign = match lhs.sign() == rhs.sign() {
+        true => Sign::Positive,
+        false => Sign::Negative,
+    };
+
+    match cmp_vec(lhs.items(), rhs.items()) {
+        Ordering::Less => (zero(m), new_bigint(m, sign, rhs.items().to_vec())),
+        Ordering::Equal => (from_u64(m, sign, 1), zero(m)),
+        Ordering::Greater => {
+            let mut a = lhs.items().to_vec();
+            let mut result: Vec<u64> = default();
+            loop {
+                if cmp_vec(a.as_slice(), rhs.items()) == Ordering::Less {
+                    return (new_bigint(m, sign.clone(), result), new_bigint(m, sign, a));
+                }
+                let a_high_digit = a.len() - 1;
+                let b_high_digit = rhs.items().len() - 1;
+                let a_high = a[a_high_digit];
+                let b_high = rhs.items()[b_high_digit];
+                let (q_index, q_digit) = match b_high.cmp(&a_high) {
+                    Ordering::Less | Ordering::Equal => {
+                        (a_high_digit - b_high_digit, a_high / b_high)
+                    }
+                    Ordering::Greater => {
+                        let a_high_2 = ((a_high as u128) << 64) + a[a_high_digit - 1] as u128;
+                        (
+                            a_high_digit - b_high_digit - 1,
+                            (a_high_2 / b_high as u128) as u64,
+                        )
+                    }
+                };
+                let mut q_vec = vec![0; q_index + 1];
+                q_vec[q_index] = q_digit;
+                let mut m = mul_vec(rhs.items(), &q_vec);
+                if a.cmp(&m) == Ordering::Less {
+                    q_vec[q_index] = q_digit - 1;
+                    m = mul_vec(rhs.items(), &q_vec);
+                }
+                a = sub_vec(lhs.items(), m.as_slice());
+                result = add_vec(result.as_slice(), &q_vec);
+            }
+        }
+    }
 }
 
 pub fn and<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
