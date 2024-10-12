@@ -515,15 +515,14 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{
-            any::Any,
-            js_bigint::{and, mul, new_bigint, not, or, shl, shr, sub, zero, JsBigintRef, Sign},
-            type_::Type,
-        },
+        js::{any::Any, type_::Type},
         mem::global::Global,
     };
 
-    use super::{add, div_mod, from_u64};
+    use super::{
+        add, and, div_mod, from_u64, mul, new_bigint, not, or, shl, shr, sub, zero, JsBigintRef,
+        Sign,
+    };
 
     #[test]
     #[wasm_bindgen_test]
