@@ -142,6 +142,45 @@ pub fn sub<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+pub fn mul<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    if is_zero(lhs) || is_zero(rhs) {
+        return zero(m);
+    }
+
+    let sign = match lhs.sign() == rhs.sign() {
+        true => Sign::Positive,
+        false => Sign::Negative,
+    };
+
+    let lhs_max = lhs.items().len() - 1;
+    let rhs_max = rhs.items().len() - 1;
+    let total_max = lhs_max + rhs_max + 1;
+    let mut vec = vec![0; total_max + 1];
+    let mut i: usize = 0;
+    while i < total_max {
+        let mut j = if i > rhs_max { i - rhs_max } else { 0 };
+        let max = if i < lhs_max { i } else { lhs_max };
+        while j <= max {
+            vec = add_to_vec(vec, i, lhs.items()[j] as u128 * rhs.items()[i - j] as u128);
+            j += 1;
+        }
+        i += 1;
+    }
+
+    vec = normalize_vec(vec);
+    new_bigint(m, sign, vec)
+}
+
+fn add_to_vec(mut vec: Vec<u64>, index: usize, add: u128) -> Vec<u64> {
+    let sum = vec[index] as u128 + add;
+    vec[index] = sum as u64;
+    let carry = sum >> 64;
+    if carry > 0 {
+        vec = add_to_vec(vec, index + 1, carry);
+    }
+    vec
+}
+
 pub fn and<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     let lhs_tc = to_twos_complement(lhs);
     let rhs_tc = to_twos_complement(rhs);
@@ -424,7 +463,7 @@ mod test {
     use crate::{
         js::{
             any::Any,
-            js_bigint::{and, new_bigint, not, or, shl, shr, sub, zero, JsBigintRef, Sign},
+            js_bigint::{and, mul, new_bigint, not, or, shl, shr, sub, zero, JsBigintRef, Sign},
             type_::Type,
         },
         mem::global::Global,
@@ -1114,6 +1153,100 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[u64::MAX]);
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_mul() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Negative, 1);
+        let zero_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let z = zero_ref.deref();
+
+        let product: BigintRef = mul(Global(), a, z).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
+        }
+
+        let product: BigintRef = mul(Global(), z, a).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
+        }
+
+        let product: BigintRef = mul(Global(), b, z).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
+        }
+
+        let product: BigintRef = mul(Global(), z, b).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert!(o.items().is_empty());
+        }
+
+        let product: BigintRef = mul(Global(), a, b).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Positive, [1, 2, 3, 4]);
+        let b_ref = new_bigint(Global(), Sign::Positive, [5, 6, 7]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let product: BigintRef = mul(Global(), a, b).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[5, 16, 34, 52, 45, 28]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, u64::MAX);
+        let b_ref = from_u64(Global(), Sign::Negative, u64::MAX);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let product: BigintRef = mul(Global(), a, b).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1, u64::MAX - 1]);
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Negative, [u64::MAX, u64::MAX, u64::MAX]);
+        let b_ref = from_u64(Global(), Sign::Negative, u64::MAX);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let product: BigintRef = mul(Global(), a, b).to_ref();
+        let res = A::move_from(product);
+        assert_eq!(res.get_type(), Type::Bigint);
+        {
+            let o = res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1, u64::MAX, u64::MAX, u64::MAX - 1]);
         }
     }
 }
