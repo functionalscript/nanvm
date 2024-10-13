@@ -565,12 +565,13 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{any::Any, new, type_::Type},
+        js::{any::Any, type_::Type},
         mem::global::Global,
     };
 
     use super::{
-        add, and, div_mod, from_u64, mul, new_bigint, not, or, pow, shl, shr, sub, zero, JsBigintRef, Sign
+        add, and, div_mod, from_u64, mul, new_bigint, not, or, pow, shl, shr, sub, zero,
+        JsBigintRef, Sign,
     };
 
     #[test]
@@ -1489,7 +1490,7 @@ mod test {
         let a = a_ref.deref();
         let b = b_ref.deref();
         let _ = pow(Global(), a, b);
-    }    
+    }
 
     #[test]
     #[wasm_bindgen_test]
@@ -1521,7 +1522,7 @@ mod test {
             let o = result.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[128]);
-        }        
+        }
 
         let a_ref = from_u64(Global(), Sign::Negative, 2);
         let b_ref = from_u64(Global(), Sign::Positive, 7);
