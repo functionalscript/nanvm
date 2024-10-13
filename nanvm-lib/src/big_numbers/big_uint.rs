@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Div, Mul, Shl, Shr, Sub},
 };
 
-use crate::common::{cast::Cast, default::default};
+use crate::common::{cast::Cast, default::default, vec::new_resize};
 
 use super::{big_int::BigInt, big_int::Sign};
 
@@ -132,7 +132,7 @@ impl BigUint {
                         }
                     };
                     let mut q = BigUint {
-                        value: vec![0; q_index + 1],
+                        value: new_resize(q_index + 1),
                     };
                     q.value[q_index] = q_digit;
                     let mut m = b * &q;
@@ -246,7 +246,7 @@ impl Mul for &BigUint {
         let lhs_max = self.len() - 1;
         let rhs_max = other.len() - 1;
         let total_max = self.len() + other.len() - 1;
-        let mut value = vec![0; total_max + 1];
+        let mut value = new_resize(total_max + 1);
         let mut i: usize = 0;
         while i < total_max {
             let mut j = if i > rhs_max { i - rhs_max } else { 0 };
@@ -304,7 +304,7 @@ impl Shl for &BigUint {
 
         let number_of_zeros = (rhs.value[0] / 64) as usize;
         if number_of_zeros > 0 {
-            let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
+            let mut zeros_vector: Vec<_> = new_resize(number_of_zeros);
             zeros_vector.extend(value);
             value = zeros_vector;
         }
