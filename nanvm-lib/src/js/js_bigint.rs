@@ -200,15 +200,16 @@ pub fn div_mod<M: Manager>(
         Ordering::Equal => (from_u64(m, sign, 1), zero(m)),
         Ordering::Greater => {
             let mut a = lhs.items().to_vec();
+            let b = rhs.items();
             let mut result: Vec<u64> = default();
             loop {
-                if cmp_vec(&a, rhs.items()) == Ordering::Less {
+                if cmp_vec(&a, b) == Ordering::Less {
                     return (new_bigint(m, sign.clone(), result), new_bigint(m, sign, a));
                 }
                 let a_high_digit = a.len() - 1;
-                let b_high_digit = rhs.items().len() - 1;
+                let b_high_digit = b.len() - 1;
                 let a_high = a[a_high_digit];
-                let b_high = rhs.items()[b_high_digit];
+                let b_high = b[b_high_digit];
                 let (q_index, q_digit) = match b_high.cmp(&a_high) {
                     Ordering::Less | Ordering::Equal => {
                         (a_high_digit - b_high_digit, a_high / b_high)
@@ -221,15 +222,16 @@ pub fn div_mod<M: Manager>(
                         )
                     }
                 };
-                let mut q_vec = vec![0; q_index + 1];
-                q_vec[q_index] = q_digit;
-                let mut m = mul_vec(rhs.items(), &q_vec);
+                let mut q = vec![0; q_index + 1];
+                q[q_index] = q_digit;
+                let mut m = mul_vec(b, &q);
                 if a.cmp(&m) == Ordering::Less {
-                    q_vec[q_index] = q_digit - 1;
-                    m = mul_vec(rhs.items(), &q_vec);
+                    q[q_index] = q_digit - 1;
+                    m = mul_vec(b, &q);
                 }
-                a = sub_vec(lhs.items(), &m);
-                result = add_vec(&result, &q_vec);
+                a = sub_vec(&a, &m);
+                a = normalize_vec(a);
+                result = add_vec(&result, &q);
             }
         }
     }
@@ -1331,6 +1333,28 @@ mod test {
         type A = Any<Global>;
         type BigintRef = JsBigintRef<Global>;
 
+        let a_ref = from_u64(Global(), Sign::Positive, 2);
+        let b_ref = from_u64(Global(), Sign::Positive, 7);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let (d, m) = div_mod(Global(), a, b);
+        let d_ref = d.to_ref();
+        let d_res = A::move_from(d_ref);
+        assert_eq!(d_res.get_type(), Type::Bigint);
+        {
+            let o = d_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert!(o.items().is_empty());
+        }
+        let m_ref = m.to_ref();
+        let m_res = A::move_from(m_ref);
+        assert_eq!(m_res.get_type(), Type::Bigint);
+        {
+            let o = m_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[7]);
+        }
+
         let a_ref = from_u64(Global(), Sign::Positive, 7);
         let b_ref = from_u64(Global(), Sign::Positive, 2);
         let a = a_ref.deref();
@@ -1351,6 +1375,28 @@ mod test {
             let o = m_res.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Positive);
             assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = new_bigint(Global(), Sign::Negative, [1, 1]);
+        let b_ref = from_u64(Global(), Sign::Negative, 1);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let (d, m) = div_mod(Global(), a, b);
+        let d_ref = d.to_ref();
+        let d_res = A::move_from(d_ref);
+        assert_eq!(d_res.get_type(), Type::Bigint);
+        {
+            let o = d_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1, 1]);
+        }
+        let m_ref = m.to_ref();
+        let m_res = A::move_from(m_ref);
+        assert_eq!(m_res.get_type(), Type::Bigint);
+        {
+            let o = m_res.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert!(o.items().is_empty());
         }
 
         let a_ref = new_bigint(Global(), Sign::Positive, [7, 5]);
