@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, iter};
 
 use crate::{
-    common::{bit_subset64::BitSubset64, default::default},
+    common::{bit_subset64::BitSubset64, default::default, vec::new_resize},
     mem::{
         block::Block,
         flexible_array::{
@@ -157,7 +157,7 @@ fn mul_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     let lhs_max = lhs.len() - 1;
     let rhs_max = rhs.len() - 1;
     let total_max = lhs_max + rhs_max + 1;
-    let mut vec = vec![0; total_max + 1];
+    let mut vec = new_resize(total_max + 1);
     let mut i: usize = 0;
     while i < total_max {
         let mut j = if i > rhs_max { i - rhs_max } else { 0 };
@@ -222,7 +222,7 @@ pub fn div_mod<M: Manager>(
                         )
                     }
                 };
-                let mut q = vec![0; q_index + 1];
+                let mut q = new_resize(q_index + 1);
                 q[q_index] = q_digit;
                 let mut m = mul_vec(b, &q);
                 if a.cmp(&m) == Ordering::Less {
@@ -512,7 +512,7 @@ fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::D
 
     let number_of_zeros = (rhs / 64) as usize;
     if number_of_zeros > 0 {
-        let mut zeros_vector: Vec<_> = vec![0; number_of_zeros];
+        let mut zeros_vector: Vec<_> = new_resize(number_of_zeros);
         zeros_vector.extend(vec);
         vec = zeros_vector;
     }
