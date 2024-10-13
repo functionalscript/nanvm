@@ -237,6 +237,54 @@ pub fn div_mod<M: Manager>(
     }
 }
 
+pub fn pow<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
+    if rhs.sign() == Sign::Negative {
+        panic!("exponent must be positive");
+    }
+
+    if lhs.items().len() == 1 && lhs.items()[0] == 1 {
+        return from_u64(m, Sign::Positive, 1);
+    }
+
+    if is_zero(lhs) {
+        return if is_zero(rhs) {
+            from_u64(m, Sign::Positive, 1)
+        } else {
+            zero(m)
+        };
+    }
+
+    if is_zero(rhs) {
+        return from_u64(m, Sign::Positive, 1);
+    }
+
+    if rhs.items().len() != 1 {
+        panic!("maximum bigint size exceeded")
+    }
+
+    pow_u64(m, lhs, rhs.items()[0])
+}
+
+pub fn pow_u64<M: Manager>(m: M, lhs: &JsBigint, mut rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+    let mut res = [1].to_vec();
+    let mut b = lhs.items().to_vec();
+    let sign = if lhs.sign() == Sign::Positive || rhs & 1 == 0 {
+        Sign::Positive
+    } else {
+        Sign::Negative
+    };
+    loop {
+        if rhs == 0 {
+            return new_bigint(m, sign, res);
+        }
+        if rhs & 1 > 0 {
+            res = mul_vec(&res, &b);
+        }
+        rhs >>= 1;
+        b = mul_vec(&b, &b);
+    }
+}
+
 pub fn and<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     let lhs_tc = to_twos_complement(lhs);
     let rhs_tc = to_twos_complement(rhs);
@@ -517,13 +565,12 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        js::{any::Any, type_::Type},
+        js::{any::Any, new, type_::Type},
         mem::global::Global,
     };
 
     use super::{
-        add, and, div_mod, from_u64, mul, new_bigint, not, or, shl, shr, sub, zero, JsBigintRef,
-        Sign,
+        add, and, div_mod, from_u64, mul, new_bigint, not, or, pow, shl, shr, sub, zero, JsBigintRef, Sign
     };
 
     #[test]
@@ -1419,6 +1466,139 @@ mod test {
             let o = m_res.try_move::<BigintRef>().unwrap();
             assert_eq!(o.sign(), Sign::Negative);
             assert_eq!(o.items(), &[7, 2]);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "maximum bigint size exceeded")]
+    #[wasm_bindgen_test]
+    fn test_pow_overflow() {
+        let a_ref = from_u64(Global(), Sign::Positive, 5);
+        let b_ref = new_bigint(Global(), Sign::Positive, [100, 100]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let _ = pow(Global(), a, b);
+    }
+
+    #[test]
+    #[should_panic(expected = "exponent must be positive")]
+    #[wasm_bindgen_test]
+    fn test_pow_negative() {
+        let a_ref = from_u64(Global(), Sign::Positive, 5);
+        let b_ref = new_bigint(Global(), Sign::Negative, [5]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let _ = pow(Global(), a, b);
+    }    
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_pow() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 100);
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 2);
+        let b_ref = from_u64(Global(), Sign::Positive, 7);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[128]);
+        }        
+
+        let a_ref = from_u64(Global(), Sign::Negative, 2);
+        let b_ref = from_u64(Global(), Sign::Positive, 7);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Negative);
+            assert_eq!(o.items(), &[128]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 5);
+        let b_ref = from_u64(Global(), Sign::Positive, 4);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[625]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Negative, 5);
+        let b_ref = from_u64(Global(), Sign::Positive, 4);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[625]);
+        }
+
+        let a_ref = zero(Global());
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = zero(Global());
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
+        }
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = new_bigint(Global(), Sign::Positive, [100, 100]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        let c = pow(Global(), a, b).to_ref();
+        let result = A::move_from(c);
+        assert_eq!(result.get_type(), Type::Bigint);
+        {
+            let o = result.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1]);
         }
     }
 }
