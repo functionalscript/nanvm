@@ -202,7 +202,7 @@ pub fn div_mod<M: Manager>(
             let mut a = lhs.items().to_vec();
             let mut result: Vec<u64> = default();
             loop {
-                if cmp_vec(a.as_slice(), rhs.items()) == Ordering::Less {
+                if cmp_vec(&a, rhs.items()) == Ordering::Less {
                     return (new_bigint(m, sign.clone(), result), new_bigint(m, sign, a));
                 }
                 let a_high_digit = a.len() - 1;
@@ -228,8 +228,8 @@ pub fn div_mod<M: Manager>(
                     q_vec[q_index] = q_digit - 1;
                     m = mul_vec(rhs.items(), &q_vec);
                 }
-                a = sub_vec(lhs.items(), m.as_slice());
-                result = add_vec(result.as_slice(), &q_vec);
+                a = sub_vec(lhs.items(), &m);
+                result = add_vec(&result, &q_vec);
             }
         }
     }
