@@ -424,7 +424,6 @@ fn xor_twos_complement(lhs: TwosComplement, rhs: TwosComplement) -> TwosCompleme
     TwosComplement { sign, vec }
 }
 
-
 fn twos_complement_zip<'a>(
     lhs: &'a TwosComplement,
     rhs: &'a TwosComplement,
