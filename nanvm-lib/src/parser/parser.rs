@@ -948,7 +948,7 @@ mod test {
         let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.header.len, 1);
+        assert_eq!(result.header_len(), 1);
         let items = result.items();
         assert_eq!(items, [0x1]);
 
@@ -963,7 +963,7 @@ mod test {
         let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.header.len, -2);
+        assert_eq!(result.header_len(), -2);
         let items = result.items();
         assert_eq!(items, [0x2, 0x3]);
 
