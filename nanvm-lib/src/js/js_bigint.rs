@@ -30,6 +30,12 @@ pub struct TwosComplement {
     vec: Vec<u64>,
 }
 
+impl JsBigint {
+    pub fn header_len(&self) -> isize {
+        self.header.len
+    }
+}
+
 pub type JsBigint = FlexibleArray<u64, JsBigintHeader>;
 
 pub type JsBigintRef<D> = Ref<JsBigint, D>;

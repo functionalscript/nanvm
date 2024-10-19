@@ -363,8 +363,15 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
+        big_numbers::{
+            big_int::{BigInt, Sign},
+            big_uint::BigUint,
+        },
         common::default::default,
-        js::{js_array::JsArrayRef, js_object::JsObjectRef, js_string::JsStringRef, type_::Type},
+        js::{
+            js_array::JsArrayRef, js_bigint::JsBigintRef, js_object::JsObjectRef,
+            js_string::JsStringRef, type_::Type,
+        },
         mem::{global::GLOBAL, local::Local, manager::Manager},
         tokenizer::{tokenize, ErrorType, JsonToken},
     };
@@ -929,6 +936,36 @@ mod test {
         let result = result.unwrap();
         let items = result.items();
         assert_eq!(items, [0x61, 0x62, 0x63]);
+
+        let tokens = [JsonToken::BigInt(BigInt {
+            sign: Sign::Positive,
+            value: BigUint {
+                value: [1].to_vec(),
+            },
+        })];
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.header_len(), 1);
+        let items = result.items();
+        assert_eq!(items, [0x1]);
+
+        let tokens = [JsonToken::BigInt(BigInt {
+            sign: Sign::Negative,
+            value: BigUint {
+                value: [2, 3].to_vec(),
+            },
+        })];
+        let result = parse_with_virtual_io(manager, tokens.into_iter());
+        assert!(result.is_ok());
+        let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.header_len(), -2);
+        let items = result.items();
+        assert_eq!(items, [0x2, 0x3]);
 
         let tokens = [JsonToken::ArrayBegin, JsonToken::ArrayEnd];
         let result = parse_with_virtual_io(manager, tokens.into_iter());
