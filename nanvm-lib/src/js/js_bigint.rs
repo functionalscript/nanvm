@@ -22,7 +22,7 @@ pub enum Sign {
 }
 
 pub struct JsBigintHeader {
-    len: isize,
+    pub len: isize,
 }
 
 pub struct TwosComplement {
