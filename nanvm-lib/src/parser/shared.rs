@@ -1,7 +1,9 @@
 use crate::{
+    big_numbers::big_int::{BigInt, Sign},
     common::default::default,
     js::{
         any::Any,
+        js_bigint::{new_bigint, JsBigintRef},
         js_string::{new_string, JsStringRef},
         null::Null,
     },
@@ -128,6 +130,14 @@ pub fn to_js_string<M: Manager>(manager: M, s: String) -> JsStringRef<M::Dealloc
     new_string(manager, s.encode_utf16().collect::<Vec<_>>()).to_ref()
 }
 
+pub fn to_js_bigint<M: Manager>(manager: M, b: BigInt) -> JsBigintRef<M::Dealloc> {
+    let sign = match b.sign {
+        Sign::Positive => crate::js::js_bigint::Sign::Positive,
+        Sign::Negative => crate::js::js_bigint::Sign::Negative,
+    };
+    new_bigint(manager, sign, b.value.value).to_ref()
+}
+
 fn try_id_to_any<M: Manager>(
     s: &str,
     _manager: M,
@@ -152,6 +162,7 @@ impl JsonToken {
             JsonToken::Number(f) => Some(Any::move_from(f)),
             JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
             JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
+            JsonToken::BigInt(b) => Some(Any::move_from(to_js_bigint(manager, b))),
             _ => None,
         }
     }
