@@ -1,39 +1,32 @@
-use std::rc::Rc;
+trait FromExactSizeIterator<T> {
+    fn from(v: impl ExactSizeIterator<Item = T>) -> Self;
+}
 
-type ArrayRc<T> = Rc<[T]>;
+trait String: FromExactSizeIterator<u16> {}
 
-// "hello"
-type String = ArrayRc<u16>;
+trait Object: FromExactSizeIterator<Self::Any> {
+    type Any: Any;
+}
 
-// [6, false]
-type Array = ArrayRc<Any>;
+type Property<T> = (<T as Any>::String, T);
 
-// { x: "d" }
-type Object = ArrayRc<(String, Any)>;
+trait Array: FromExactSizeIterator<Property<Self::Any>> {
+    type Any: Any;
+}
 
-// 34n
-type Bigint = ArrayRc<u64>;
+trait Bigint: From<i128> {}
 
-// () => 5
-type Function = Rc<Any>;
+trait Function {}
 
-enum Any {
-    // void 0
+enum None {
     Undefined,
-    // null
     Null,
-    // false
-    Bool(bool),
-    // 3.14
-    Number(f64),
-    // "Hello world!"
-    String(String),
-    // [43, true]
-    Array(Array),
-    // { a: "H", b: 5 }
-    Object(Object),
-    // 42n
-    Bigint(Bigint),
-    // () => () => 5
-    Function(Function),
+}
+
+trait Any: From<None> + From<bool> + From<f64> {
+    type String: String;
+    type Object: Object<Any = Self>;
+    type Array: Array<Any = Self>;
+    type Bigint: Bigint;
+    type Function: Function;
 }
