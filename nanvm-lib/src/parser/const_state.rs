@@ -2,7 +2,6 @@ use super::{
     any_state::{AnyResult, AnyState},
     json_state::JsonState,
     root_state::{RootState, RootStatus},
-    shared::ModuleCache,
 };
 use crate::{mem::manager::Manager, tokenizer::JsonToken};
 
@@ -12,19 +11,13 @@ pub struct ConstState<M: Manager> {
 }
 
 impl<M: Manager> ConstState<M> {
-    pub fn parse(
-        self,
-        manager: M,
-        token: JsonToken,
-        module_cache: &mut ModuleCache<M::Dealloc>,
-        context_path: String,
-    ) -> JsonState<M> {
+    pub fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
         match token {
             JsonToken::Semicolon => todo!(),
             _ => {
                 // TODO: use import_path in place of _ below to track possible errors -
                 // or provide an explanation on why it's not necessary.
-                let (any_result, _) = self.state.parse(manager, token, module_cache, context_path);
+                let (any_result, _) = self.state.parse(manager, token);
                 match any_result {
                     AnyResult::Continue(state) => JsonState::ParseConst(ConstState {
                         key: self.key,
