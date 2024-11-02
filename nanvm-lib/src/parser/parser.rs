@@ -369,8 +369,7 @@ mod test {
         },
         common::default::default,
         js::{
-            js_array::JsArrayRef, js_bigint::JsBigintRef, js_object::JsObjectRef,
-            js_string::JsStringRef, type_::Type,
+            self, js_array::JsArrayRef, js_bigint::{from_u64, new_bigint, JsBigintRef}, js_object::JsObjectRef, js_string::JsStringRef, type_::Type
         },
         mem::{global::GLOBAL, local::Local, manager::Manager},
         tokenizer::{tokenize, ErrorType, JsonToken},
@@ -394,7 +393,7 @@ mod test {
 
     fn parse_with_virtual_io<M: Manager>(
         manager: M,
-        iter: impl Iterator<Item = JsonToken>,
+        iter: impl Iterator<Item = JsonToken<M::Dealloc>>,
     ) -> Result<ParseResult<M::Dealloc>, ParseError> {
         parse_with_tokens(
             &mut create_test_context(manager, &virtual_io(), &mut default()),
@@ -937,12 +936,7 @@ mod test {
         let items = result.items();
         assert_eq!(items, [0x61, 0x62, 0x63]);
 
-        let tokens = [JsonToken::BigInt(BigInt {
-            sign: Sign::Positive,
-            value: BigUint {
-                value: [1].to_vec(),
-            },
-        })];
+        let tokens = [JsonToken::BigInt(from_u64(manager, js::js_bigint::Sign::Positive, 1))];
         let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();
@@ -951,13 +945,9 @@ mod test {
         assert_eq!(result.header_len(), 1);
         let items = result.items();
         assert_eq!(items, [0x1]);
+        
 
-        let tokens = [JsonToken::BigInt(BigInt {
-            sign: Sign::Negative,
-            value: BigUint {
-                value: [2, 3].to_vec(),
-            },
-        })];
+        let tokens = [JsonToken::BigInt(new_bigint(manager, js::js_bigint::Sign::Negative, [2, 3]))];
         let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();

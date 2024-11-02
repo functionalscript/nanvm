@@ -264,13 +264,13 @@ pub struct ExpState<D: Dealloc> {
     e: i64,
 }
 
-impl ExpState {
-    const fn add_digit(mut self, c: char) -> ExpState {
+impl<D: Dealloc> ExpState<D> {
+    const fn add_digit(mut self, c: char) -> ExpState<D> {
         self.e = self.e * 10 + digit_to_number(c) as i64;
         self
     }
 
-    fn into_token<D: Dealloc>(self) -> JsonToken<D> {
+    fn into_token(self) -> JsonToken<D> {
         let exp = self.fe
             + match self.es {
                 Sign::Positive => self.e,

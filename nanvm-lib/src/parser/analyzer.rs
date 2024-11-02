@@ -66,5 +66,5 @@ impl<D: Dealloc> AnalyzerState<D> {
         }
     }
 
-    fn process_token(&mut self, _token: JsonToken) {}
+    fn process_token(&mut self, _token: JsonToken<D>) {}
 }

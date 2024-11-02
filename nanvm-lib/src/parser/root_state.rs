@@ -31,7 +31,7 @@ impl<M: Manager> RootState<M> {
     pub fn parse(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
     ) -> (

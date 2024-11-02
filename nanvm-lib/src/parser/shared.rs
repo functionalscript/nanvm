@@ -152,7 +152,7 @@ fn try_id_to_any<M: Manager>(
     }
 }
 
-impl JsonToken {
+impl<D: Dealloc> JsonToken<D> {
     pub fn try_to_any<M: Manager>(
         self,
         manager: M,

@@ -18,7 +18,7 @@ impl<M: Manager> JsonState<M> {
     pub fn push(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
         module_cache: &mut ModuleCache<M::Dealloc>,
         context_path: String,
     ) -> (
