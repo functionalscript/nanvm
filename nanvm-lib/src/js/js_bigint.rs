@@ -21,6 +21,7 @@ pub enum Sign {
     Negative = -1,
 }
 
+#[derive(Debug)]
 pub struct JsBigintHeader {
     len: isize,
 }
@@ -449,7 +450,7 @@ fn twos_complement_zip<'a>(
 }
 
 impl JsBigint {
-    fn sign(&self) -> Sign {
+    pub fn sign(&self) -> Sign {
         if self.header.len < 0 {
             Sign::Negative
         } else {

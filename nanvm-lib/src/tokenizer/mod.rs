@@ -1,17 +1,13 @@
-use std::{collections::VecDeque, mem::take, ops::RangeInclusive};
+use std::{collections::VecDeque, mem::take, ops::{Deref, RangeInclusive}};
 
 use crate::{
     big_numbers::{
-        big_float::BigFloat,
-        big_int::{BigInt, Sign},
-        big_uint::BigUint,
-    },
-    common::{cast::Cast, default::default},
-    range_map::{from_one, from_range, merge, merge_list, RangeMap, State},
+        self, big_float::BigFloat, big_int::{BigInt, Sign}, big_uint::BigUint
+    }, common::{cast::Cast, default::default}, js::js_bigint::{self, add, from_u64, JsBigintMutRef, JsBigintRef}, mem::manager::{Dealloc, Manager}, range_map::{from_one, from_range, merge, merge_list, RangeMap, State}
 };
 
-#[derive(Debug, PartialEq)]
-pub enum JsonToken {
+#[derive(Debug)]
+pub enum JsonToken<D: Dealloc> {
     String(String),
     Number(f64),
     ObjectBegin,
@@ -23,7 +19,7 @@ pub enum JsonToken {
     Equals,
     Dot,
     ErrorToken(ErrorType),
-    BigInt(BigInt),
+    BigInt(JsBigintMutRef<D>),
     Id(String),
     NewLine,
     Semicolon,
@@ -42,7 +38,7 @@ pub enum ErrorType {
 }
 
 #[derive(Default)]
-pub enum TokenizerState {
+pub enum TokenizerState<D: Dealloc> {
     #[default]
     Initial,
     ParseId(String),
@@ -51,13 +47,13 @@ pub enum TokenizerState {
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
     ParseZero(Sign),
-    ParseInt(IntegerState),
-    ParseFracBegin(IntegerState),
-    ParseFrac(FloatState),
-    ParseExpBegin(ExpState),
-    ParseExpSign(ExpState),
-    ParseExp(ExpState),
-    ParseBigInt(IntegerState),
+    ParseInt(JsBigintMutRef<D>),
+    ParseFracBegin(JsBigintMutRef<D>),
+    ParseFrac(FloatState<D>),
+    ParseExpBegin(ExpState<D>),
+    ParseExpSign(ExpState<D>),
+    ParseExp(ExpState<D>),
+    ParseBigInt(JsBigintMutRef<D>),
     ParseNewLine,
     ParseCommentStart,
     ParseSinglelineComment,
@@ -66,8 +62,8 @@ pub enum TokenizerState {
     ParseOperator(String),
 }
 
-impl TokenizerState {
-    fn push(self, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState) {
+impl<D: Dealloc> TokenizerState<D> {
+    fn push(self, c: char, maps: &TransitionMaps) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
         match self {
             TokenizerState::Initial => get_next_state((), c, &maps.initial, maps),
             TokenizerState::ParseId(s) => get_next_state(s, c, &maps.id, maps),
@@ -99,13 +95,13 @@ impl TokenizerState {
         }
     }
 
-    pub fn push_mut(&mut self, c: char, tm: &TransitionMaps) -> Vec<JsonToken> {
+    pub fn push_mut(&mut self, c: char, tm: &TransitionMaps) -> Vec<JsonToken<D>> {
         let tokens;
         (tokens, *self) = take(self).push(c, tm);
         tokens
     }
 
-    fn end(self) -> Vec<JsonToken> {
+    fn end(self) -> Vec<JsonToken<D>> {
         match self {
             TokenizerState::Initial
             | TokenizerState::ParseNewLine
@@ -146,7 +142,7 @@ pub struct ParseUnicodeCharState {
 }
 
 impl ParseUnicodeCharState {
-    fn push(mut self, i: u32) -> (Vec<JsonToken>, TokenizerState) {
+    fn push<D: Dealloc>(mut self, i: u32) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
         let new_unicode = self.unicode | (i << ((3 - self.index) * 4));
         match self.index {
             3 => {
@@ -169,11 +165,6 @@ impl ParseUnicodeCharState {
     }
 }
 
-pub struct IntegerState {
-    s: Sign,
-    b: BigUint,
-}
-
 pub fn bigfloat_to_f64(bf_10: BigFloat<10>) -> f64 {
     let bf_2 = bf_10.to_bin(54);
     bf_2.to_f64()
@@ -186,72 +177,67 @@ impl BigUint {
     }
 }
 
-impl IntegerState {
-    fn from_difit(sign: Sign, c: char) -> IntegerState {
-        IntegerState {
-            s: sign,
-            b: BigUint::from_u64(digit_to_number(c)),
-        }
+impl<D: Dealloc> JsBigintMutRef<D> {
+    fn from_digit<M: Manager>(m: M, sign: js_bigint::Sign, c: char) -> JsBigintMutRef<M::Dealloc> {
+        from_u64(m, sign, digit_to_number(c))
     }
 
-    fn add_digit(mut self, c: char) -> IntegerState {
-        self.b = self.b.add_digit(c);
-        self
+    fn add_digit<M: Manager>(self, m: M, c: char) -> JsBigintMutRef<M::Dealloc> {
+        add(m, self.deref(), Self::from_digit(m, js_bigint::Sign::Positive, c).deref())
     }
 
-    fn into_float_state(self) -> FloatState {
+    fn into_float_state(self) -> FloatState<D> {
         FloatState {
-            s: self.s,
-            b: self.b,
+            b: self,
             fe: 0,
         }
     }
 
-    fn into_exp_state(self) -> ExpState {
+    fn into_exp_state(self) -> ExpState<D> {
         ExpState {
-            s: self.s,
-            b: self.b,
+            b: self,
             fe: 0,
             es: Sign::Positive,
             e: 0,
         }
     }
 
-    fn into_token(self) -> JsonToken {
+    fn to_old_bigint(self) -> BigInt {
+        let deref = self.deref();
+        let sign = match deref.sign() {
+            js_bigint::Sign::Positive => big_numbers::big_int::Sign::Positive,
+            js_bigint::Sign::Negative => big_numbers::big_int::Sign::Negative,
+        };
+        BigInt { sign, value: BigUint { value: deref.items().to_vec() }}
+    }
+
+    fn into_token(self) -> JsonToken<D> {        
         JsonToken::Number(bigfloat_to_f64(BigFloat {
-            significand: BigInt {
-                sign: self.s,
-                value: self.b,
-            },
+            significand: self.to_old_bigint(),
             exp: 0,
             non_zero_reminder: false,
         }))
     }
 
-    fn into_big_int_token(self) -> JsonToken {
-        JsonToken::BigInt(BigInt {
-            sign: self.s,
-            value: self.b,
-        })
+    fn into_big_int_token(self) -> JsonToken<D> {
+        JsonToken::BigInt(self)
     }
 }
 
-pub struct FloatState {
-    s: Sign,
-    b: BigUint,
+pub struct FloatState<D: Dealloc> {    
+    b: JsBigintMutRef<D>,
     fe: i64,
 }
 
-impl FloatState {
-    fn add_digit(mut self, c: char) -> FloatState {
-        self.b = self.b.add_digit(c);
+impl<D: Dealloc> FloatState<D> {
+    fn add_digit<M: Manager>(mut self, m: M, c: char) -> FloatState<M::Dealloc> {
+        self.b = self.b.add_digit(m, c);
         self.fe -= 1;
         self
     }
 
-    fn into_exp_state(self) -> ExpState {
+    fn into_exp_state(self) -> ExpState<D> {
         ExpState {
-            s: self.s,
             b: self.b,
             fe: self.fe,
             es: Sign::Positive,
@@ -259,7 +245,7 @@ impl FloatState {
         }
     }
 
-    fn into_token(self) -> JsonToken {
+    fn into_token(self) -> JsonToken<D> {
         JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: BigInt {
                 sign: self.s,
@@ -271,9 +257,8 @@ impl FloatState {
     }
 }
 
-pub struct ExpState {
-    s: Sign,
-    b: BigUint,
+pub struct ExpState<D: Dealloc> {
+    b: JsBigintMutRef<D>,
     fe: i64,
     es: Sign,
     e: i64,
@@ -285,7 +270,7 @@ impl ExpState {
         self
     }
 
-    fn into_token(self) -> JsonToken {
+    fn into_token<D: Dealloc>(self) -> JsonToken<D> {
         let exp = self.fe
             + match self.es {
                 Sign::Positive => self.e,
@@ -304,7 +289,7 @@ impl ExpState {
 
 const CP_0: u32 = 0x30;
 
-fn operator_to_token(s: String) -> Option<JsonToken> {
+fn operator_to_token<D: Dealloc>(s: String) -> Option<JsonToken<D>> {
     match s.as_str() {
         "{" => Some(JsonToken::ObjectBegin),
         "}" => Some(JsonToken::ObjectEnd),
