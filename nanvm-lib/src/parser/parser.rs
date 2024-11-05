@@ -197,7 +197,7 @@ fn root_state_parse<M: Manager, I: Io>(
 fn const_state_parse<M: Manager, I: Io>(
     const_state: ConstState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> JsonState<M> {
     match token {
         JsonToken::Semicolon => todo!(),
@@ -225,7 +225,7 @@ fn const_state_parse<M: Manager, I: Io>(
 fn any_state_parse_for_module<M: Manager, I: Io>(
     any_state: AnyState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> JsonState<M> {
     let result = any_state_parse(any_state, context, token);
     match result {
@@ -241,7 +241,7 @@ fn any_state_parse_for_module<M: Manager, I: Io>(
 fn any_state_parse_import_value<M: Manager, I: Io>(
     any_state: AnyState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> AnyResult<M> {
     match token {
         JsonToken::String(s) => {
@@ -288,7 +288,7 @@ fn any_state_parse_import_value<M: Manager, I: Io>(
 fn any_state_parse<M: Manager, I: Io>(
     any_state: AnyState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> AnyResult<M> {
     match any_state.status {
         ParsingStatus::Initial | ParsingStatus::ObjectColon => {
@@ -310,13 +310,17 @@ fn any_state_parse<M: Manager, I: Io>(
 fn json_state_push<M: Manager, I: Io>(
     json_state: JsonState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> JsonState<M> {
-    if token == JsonToken::NewLine {
-        return match json_state {
-            JsonState::ParseRoot(state) => root_state_parse(state, context, token),
-            _ => json_state,
-        };
+    match token {
+        JsonToken::NewLine => 
+        {
+            return match json_state {
+                JsonState::ParseRoot(state) => root_state_parse(state, context, token),
+                _ => json_state,
+            }
+        },
+        _ => {}
     }
     match json_state {
         JsonState::ParseRoot(state) => root_state_parse(state, context, token),
@@ -343,7 +347,7 @@ pub fn parse<M: Manager, I: Io>(
 
 pub fn parse_with_tokens<M: Manager, I: Io>(
     context: &mut Context<M, I>,
-    iter: impl Iterator<Item = JsonToken>,
+    iter: impl Iterator<Item = JsonToken<M::Dealloc>>,
 ) -> Result<ParseResult<M::Dealloc>, ParseError> {
     let mut state = JsonState::ParseRoot(RootState {
         status: RootStatus::Initial,

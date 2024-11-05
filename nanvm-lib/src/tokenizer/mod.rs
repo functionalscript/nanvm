@@ -3,7 +3,7 @@ use std::{collections::VecDeque, mem::take, ops::{Deref, RangeInclusive}};
 use crate::{
     big_numbers::{
         self, big_float::BigFloat, big_int::{BigInt, Sign}, big_uint::BigUint
-    }, common::{cast::Cast, default::default}, js::js_bigint::{self, add, from_u64, JsBigintMutRef, JsBigintRef}, mem::manager::{Dealloc, Manager}, range_map::{from_one, from_range, merge, merge_list, RangeMap, State}
+    }, common::{cast::Cast, default::default}, js::js_bigint::{self, add, from_u64, zero, JsBigintMutRef, JsBigintRef}, mem::manager::{Dealloc, Manager}, range_map::{from_one, from_range, merge, merge_list, RangeMap, State}
 };
 
 #[derive(Debug)]
@@ -361,37 +361,37 @@ fn set(arr: impl IntoIterator<Item = char>) -> Vec<RangeInclusive<char>> {
     result
 }
 
-type Transition<T> =
-    fn(state: T, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+type Transition<T, D> =
+    fn(state: T, c: char, maps: &TransitionMaps) -> (Vec<JsonToken<D>>, TokenizerState<D>);
 
-struct TransitionMap<T> {
-    def: Transition<T>,
-    rm: RangeMap<char, State<Transition<T>>>,
+struct TransitionMap<T, D: Dealloc> {
+    def: Transition<T, D>,
+    rm: RangeMap<char, State<Transition<T, D>>>,
 }
 
-pub struct TransitionMaps {
-    initial: TransitionMap<()>,
-    id: TransitionMap<String>,
-    string: TransitionMap<String>,
-    escape_char: TransitionMap<String>,
-    unicode_char: TransitionMap<ParseUnicodeCharState>,
-    zero: TransitionMap<Sign>,
-    int: TransitionMap<IntegerState>,
-    minus: TransitionMap<()>,
-    frac_begin: TransitionMap<IntegerState>,
-    frac: TransitionMap<FloatState>,
-    exp_begin: TransitionMap<ExpState>,
-    exp: TransitionMap<ExpState>,
-    big_int: TransitionMap<IntegerState>,
-    new_line: TransitionMap<()>,
-    comment_start: TransitionMap<()>,
-    singleline_comment: TransitionMap<()>,
-    multiline_comment: TransitionMap<()>,
-    multiline_comment_asterix: TransitionMap<()>,
-    operator: TransitionMap<String>,
+pub struct TransitionMaps<D: Dealloc> {
+    initial: TransitionMap<(), D>,
+    id: TransitionMap<String, D>,
+    string: TransitionMap<String, D>,
+    escape_char: TransitionMap<String, D>,
+    unicode_char: TransitionMap<ParseUnicodeCharState, D>,
+    zero: TransitionMap<Sign, D>,
+    int: TransitionMap<JsBigintMutRef<D>, D>,
+    minus: TransitionMap<(), D>,
+    frac_begin: TransitionMap<JsBigintMutRef<D>, D>,
+    frac: TransitionMap<FloatState<D>, D>,
+    exp_begin: TransitionMap<ExpState<D>, D>,
+    exp: TransitionMap<ExpState<D>, D>,
+    big_int: TransitionMap<JsBigintMutRef<D>, D>,
+    new_line: TransitionMap<(), D>,
+    comment_start: TransitionMap<(), D>,
+    singleline_comment: TransitionMap<(), D>,
+    multiline_comment: TransitionMap<(), D>,
+    multiline_comment_asterix: TransitionMap<(), D>,
+    operator: TransitionMap<String, D>,
 }
 
-pub fn create_transition_maps() -> TransitionMaps {
+pub fn create_transition_maps<D: Dealloc>() -> TransitionMaps<D> {
     TransitionMaps {
         initial: create_initial_transitions(),
         id: create_id_transitions(),
@@ -415,12 +415,12 @@ pub fn create_transition_maps() -> TransitionMaps {
     }
 }
 
-fn get_next_state<T>(
+fn get_next_state<T, D: Dealloc>(
     state: T,
     c: char,
     tm: &TransitionMap<T>,
     maps: &TransitionMaps,
-) -> (Vec<JsonToken>, TokenizerState)
+) -> (Vec<JsonToken<D>>, TokenizerState<D>)
 where
     T: 'static,
 {
@@ -503,24 +503,24 @@ fn create_string_transactions() -> TransitionMap<String> {
     }
 }
 
-fn continue_string_state(mut s: String, c: char) -> (Vec<JsonToken>, TokenizerState) {
+fn continue_string_state<D: Dealloc>(mut s: String, c: char) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
     s.push(c);
     (default(), TokenizerState::ParseString(s))
 }
 
-fn transfer_state(
-    mut vec: Vec<JsonToken>,
-    mut state: TokenizerState,
+fn transfer_state<D: Dealloc>(
+    mut vec: Vec<JsonToken<D>>,
+    mut state: TokenizerState<D>,
     c: char,
-    maps: &TransitionMaps,
-) -> (Vec<JsonToken>, TokenizerState) {
+    maps: &TransitionMaps<D>,
+) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
     let next_tokens;
     (next_tokens, state) = state.push(c, maps);
     vec.extend(next_tokens);
     (vec, state)
 }
 
-fn create_escape_char_transactions() -> TransitionMap<String> {
+fn create_escape_char_transactions<D: Dealloc>() -> TransitionMap<String, D> {
     TransitionMap {
         def: |s, c, maps| {
             transfer_state(
@@ -556,12 +556,12 @@ fn create_escape_char_transactions() -> TransitionMap<String> {
     }
 }
 
-fn create_unicode_char_transactions() -> TransitionMap<ParseUnicodeCharState> {
+fn create_unicode_char_transactions<D: Dealloc>() -> TransitionMap<ParseUnicodeCharState, D> {
     type Func = fn(
         state: ParseUnicodeCharState,
         c: char,
-        maps: &TransitionMaps,
-    ) -> (Vec<JsonToken>, TokenizerState);
+        maps: &TransitionMaps<D>,
+    ) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
         def: |state, c, maps| {
             transfer_state(
@@ -591,7 +591,7 @@ fn create_unicode_char_transactions() -> TransitionMap<ParseUnicodeCharState> {
     }
 }
 
-fn create_zero_transactions() -> TransitionMap<Sign> {
+fn create_zero_transactions<M: Manager>(m: M) -> TransitionMap<Sign, M::Dealloc> {
     type Func = fn(s: Sign, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
@@ -602,10 +602,7 @@ fn create_zero_transactions() -> TransitionMap<Sign> {
                     (|s, _, _| {
                         (
                             default(),
-                            TokenizerState::ParseFracBegin(IntegerState {
-                                s,
-                                b: BigUint::ZERO,
-                            }),
+                            TokenizerState::ParseFracBegin(zero(m)),
                         )
                     }) as Func,
                 ),
@@ -613,8 +610,7 @@ fn create_zero_transactions() -> TransitionMap<Sign> {
                     (
                         default(),
                         TokenizerState::ParseExpBegin(ExpState {
-                            s,
-                            b: BigUint::ZERO,
+                            b: zero(m),
                             fe: 0,
                             es: Sign::Positive,
                             e: 0,
@@ -624,10 +620,7 @@ fn create_zero_transactions() -> TransitionMap<Sign> {
                 from_one('n', |s, _, _| {
                     (
                         default(),
-                        TokenizerState::ParseBigInt(IntegerState {
-                            s,
-                            b: BigUint::ZERO,
-                        }),
+                        TokenizerState::ParseBigInt(zero(m)),
                     )
                 }),
                 create_range_map(terminal_for_number(), |_, c, maps| {
@@ -644,9 +637,9 @@ fn create_zero_transactions() -> TransitionMap<Sign> {
     }
 }
 
-fn create_int_transactions() -> TransitionMap<IntegerState> {
+fn create_int_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> {
     type Func =
-        fn(s: IntegerState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+        fn(s: JsBigintMutRef<D>, c: char, maps: &TransitionMaps) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
         def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
         rm: merge_list(
@@ -671,7 +664,7 @@ fn create_int_transactions() -> TransitionMap<IntegerState> {
     }
 }
 
-fn create_frac_begin_transactions() -> TransitionMap<IntegerState> {
+fn create_frac_begin_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> {
     type Func =
         fn(s: IntegerState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
@@ -688,7 +681,7 @@ fn create_frac_begin_transactions() -> TransitionMap<IntegerState> {
     }
 }
 
-fn create_frac_transactions() -> TransitionMap<FloatState> {
+fn create_frac_transactions<D: Dealloc>() -> TransitionMap<FloatState<D>, D> {
     type Func =
         fn(s: FloatState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
@@ -711,7 +704,7 @@ fn create_frac_transactions() -> TransitionMap<FloatState> {
     }
 }
 
-fn create_minus_transactions() -> TransitionMap<()> {
+fn create_minus_transactions<D: Dealloc>() -> TransitionMap<(), D> {
     type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
@@ -730,7 +723,7 @@ fn create_minus_transactions() -> TransitionMap<()> {
     }
 }
 
-fn create_exp_begin_transactions() -> TransitionMap<ExpState> {
+fn create_exp_begin_transactions<D: Dealloc>() -> TransitionMap<ExpState<D>, D> {
     type Func = fn(s: ExpState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
@@ -756,7 +749,7 @@ fn create_exp_begin_transactions() -> TransitionMap<ExpState> {
     }
 }
 
-fn create_exp_transactions() -> TransitionMap<ExpState> {
+fn create_exp_transactions<D: Dealloc>() -> TransitionMap<ExpState<D>, D> {
     type Func = fn(s: ExpState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
@@ -772,7 +765,7 @@ fn create_exp_transactions() -> TransitionMap<ExpState> {
     }
 }
 
-fn create_big_int_transactions() -> TransitionMap<IntegerState> {
+fn create_big_int_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> {
     type Func =
         fn(s: IntegerState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
@@ -783,7 +776,7 @@ fn create_big_int_transactions() -> TransitionMap<IntegerState> {
     }
 }
 
-fn tokenize_invalid_number(c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState) {
+fn tokenize_invalid_number<D: Dealloc>(c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
     transfer_state(
         [JsonToken::ErrorToken(ErrorType::InvalidNumber)].cast(),
         TokenizerState::Initial,
@@ -792,7 +785,7 @@ fn tokenize_invalid_number(c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, T
     )
 }
 
-fn create_new_line_transactions() -> TransitionMap<()> {
+fn create_new_line_transactions<D: Dealloc>() -> TransitionMap<(), D> {
     type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, c, maps| {
@@ -809,7 +802,7 @@ fn create_new_line_transactions() -> TransitionMap<()> {
     }
 }
 
-fn create_comment_start_transactions() -> TransitionMap<()> {
+fn create_comment_start_transactions<D: Dealloc>() -> TransitionMap<(), D> {
     type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, _, _| {
@@ -829,7 +822,7 @@ fn create_comment_start_transactions() -> TransitionMap<()> {
     }
 }
 
-fn create_singleline_comment_transactions() -> TransitionMap<()> {
+fn create_singleline_comment_transactions<D: Dealloc>() -> TransitionMap<(), D> {
     type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, _, _| (default(), TokenizerState::ParseSinglelineComment)) as Func,
@@ -839,7 +832,7 @@ fn create_singleline_comment_transactions() -> TransitionMap<()> {
     }
 }
 
-fn create_multiline_comment_transactions() -> TransitionMap<()> {
+fn create_multiline_comment_transactions<D: Dealloc>() -> TransitionMap<(), D> {
     type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, _, _| (default(), TokenizerState::ParseMultilineComment)) as Func,
@@ -849,7 +842,7 @@ fn create_multiline_comment_transactions() -> TransitionMap<()> {
     }
 }
 
-fn create_multiline_comment_asterix_transactions() -> TransitionMap<()> {
+fn create_multiline_comment_asterix_transactions<D: Dealloc>() -> TransitionMap<(), D> {
     type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
     TransitionMap {
         def: (|_, _, _| (default(), TokenizerState::ParseMultilineComment)) as Func,
@@ -862,7 +855,7 @@ fn create_multiline_comment_asterix_transactions() -> TransitionMap<()> {
     }
 }
 
-fn create_operator_transactions() -> TransitionMap<String> {
+fn create_operator_transactions<D: Dealloc>() -> TransitionMap<String, D> {
     TransitionMap {
         def: |s, c, maps| {
             let token = operator_to_token(s).unwrap();
@@ -886,19 +879,19 @@ fn create_operator_transactions() -> TransitionMap<String> {
     }
 }
 
-pub fn tokenize(input: String) -> Vec<JsonToken> {
+pub fn tokenize<D: Dealloc>(input: String) -> Vec<JsonToken<D>> {
     TokenizerStateIterator::new(input.chars()).collect()
 }
 
-pub struct TokenizerStateIterator<T: Iterator<Item = char>> {
+pub struct TokenizerStateIterator<T: Iterator<Item = char>, D: Dealloc> {
     chars: T,
-    cache: VecDeque<JsonToken>,
-    state: TokenizerState,
-    maps: TransitionMaps,
+    cache: VecDeque<JsonToken<D>>,
+    state: TokenizerState<D>,
+    maps: TransitionMaps<D>,
     end: bool,
 }
 
-impl<T: Iterator<Item = char>> TokenizerStateIterator<T> {
+impl<T: Iterator<Item = char>, D: Dealloc> TokenizerStateIterator<T, D> {
     pub fn new(chars: T) -> Self {
         Self {
             chars,
@@ -910,8 +903,8 @@ impl<T: Iterator<Item = char>> TokenizerStateIterator<T> {
     }
 }
 
-impl<T: Iterator<Item = char>> Iterator for TokenizerStateIterator<T> {
-    type Item = JsonToken;
+impl<T: Iterator<Item = char>, D: Dealloc> Iterator for TokenizerStateIterator<T, D> {
+    type Item = JsonToken<D>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
