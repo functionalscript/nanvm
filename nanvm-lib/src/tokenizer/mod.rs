@@ -3,7 +3,7 @@ use std::{collections::VecDeque, mem::take, ops::{Deref, RangeInclusive}};
 use crate::{
     big_numbers::{
         self, big_float::BigFloat, big_int::{BigInt, Sign}, big_uint::BigUint
-    }, common::{cast::Cast, default::default}, js::js_bigint::{self, add, from_u64, zero, JsBigintMutRef, JsBigintRef}, mem::manager::{Dealloc, Manager}, range_map::{from_one, from_range, merge, merge_list, RangeMap, State}
+    }, common::{cast::Cast, default::default}, js::js_bigint::{self, add, from_u64, zero, JsBigintMutRef}, mem::manager::{Dealloc, Manager}, range_map::{from_one, from_range, merge, merge_list, RangeMap, State}
 };
 
 #[derive(Debug)]
@@ -62,8 +62,10 @@ pub enum TokenizerState<D: Dealloc> {
     ParseOperator(String),
 }
 
-impl<D: Dealloc> TokenizerState<D> {
-    fn push(self, c: char, maps: &TransitionMaps) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
+impl<D: Dealloc> TokenizerState<D>
+where
+    D: 'static {
+    fn push(self, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
         match self {
             TokenizerState::Initial => get_next_state((), c, &maps.initial, maps),
             TokenizerState::ParseId(s) => get_next_state(s, c, &maps.id, maps),
@@ -95,7 +97,7 @@ impl<D: Dealloc> TokenizerState<D> {
         }
     }
 
-    pub fn push_mut(&mut self, c: char, tm: &TransitionMaps) -> Vec<JsonToken<D>> {
+    pub fn push_mut(&mut self, c: char, tm: &TransitionMaps<D>) -> Vec<JsonToken<D>> {
         let tokens;
         (tokens, *self) = take(self).push(c, tm);
         tokens
@@ -247,10 +249,7 @@ impl<D: Dealloc> FloatState<D> {
 
     fn into_token(self) -> JsonToken<D> {
         JsonToken::Number(bigfloat_to_f64(BigFloat {
-            significand: BigInt {
-                sign: self.s,
-                value: self.b,
-            },
+            significand: self.b.to_old_bigint(),
             exp: self.fe,
             non_zero_reminder: false,
         }))
@@ -393,14 +392,14 @@ pub struct TransitionMaps<D: Dealloc> {
 
 pub fn create_transition_maps<M: Manager>(manager: M) -> TransitionMaps<M::Dealloc> {
     TransitionMaps {
-        initial: create_initial_transitions(),
+        initial: create_initial_transitions(manager),
         id: create_id_transitions(),
         string: create_string_transactions(),
         escape_char: create_escape_char_transactions(),
         unicode_char: create_unicode_char_transactions(),
         zero: create_zero_transactions(manager),
         int: create_int_transactions(manager),
-        minus: create_minus_transactions(),
+        minus: create_minus_transactions(manager),
         frac_begin: create_frac_begin_transactions(),
         frac: create_frac_transactions(manager),
         exp_begin: create_exp_begin_transactions(),
