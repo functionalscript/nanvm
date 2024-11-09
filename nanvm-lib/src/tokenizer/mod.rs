@@ -334,14 +334,14 @@ const fn digit_to_number(c: char) -> u64 {
     c as u64 - CP_0 as u64
 }
 
-fn start_number(s: Sign, c: char) -> IntegerState {
-    IntegerState::from_difit(s, c)
+fn start_number<M: Manager>(manager: M, s: js_bigint::Sign, c: char) -> JsBigintMutRef<M::Dealloc> {
+    JsBigintMutRef::from_digit(manager, s, c)
 }
 
-fn create_range_map<T>(
+fn create_range_map<T, D: Dealloc>(
     list: Vec<RangeInclusive<char>>,
-    t: Transition<T>,
-) -> RangeMap<char, State<Transition<T>>> {
+    t: Transition<T, D>,
+) -> RangeMap<char, State<Transition<T, D>>> {
     let mut result = RangeMap { list: default() };
     for range in list {
         result = merge(from_range(range, t), result);
@@ -362,7 +362,7 @@ fn set(arr: impl IntoIterator<Item = char>) -> Vec<RangeInclusive<char>> {
 }
 
 type Transition<T, D> =
-    fn(state: T, c: char, maps: &TransitionMaps) -> (Vec<JsonToken<D>>, TokenizerState<D>);
+    fn(state: T, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
 
 struct TransitionMap<T, D: Dealloc> {
     def: Transition<T, D>,
@@ -391,18 +391,18 @@ pub struct TransitionMaps<D: Dealloc> {
     operator: TransitionMap<String, D>,
 }
 
-pub fn create_transition_maps<D: Dealloc>() -> TransitionMaps<D> {
+pub fn create_transition_maps<M: Manager>(manager: M) -> TransitionMaps<M::Dealloc> {
     TransitionMaps {
         initial: create_initial_transitions(),
         id: create_id_transitions(),
         string: create_string_transactions(),
         escape_char: create_escape_char_transactions(),
         unicode_char: create_unicode_char_transactions(),
-        zero: create_zero_transactions(),
-        int: create_int_transactions(),
+        zero: create_zero_transactions(manager),
+        int: create_int_transactions(manager),
         minus: create_minus_transactions(),
         frac_begin: create_frac_begin_transactions(),
-        frac: create_frac_transactions(),
+        frac: create_frac_transactions(manager),
         exp_begin: create_exp_begin_transactions(),
         exp: create_exp_transactions(),
         big_int: create_big_int_transactions(),
@@ -418,11 +418,11 @@ pub fn create_transition_maps<D: Dealloc>() -> TransitionMaps<D> {
 fn get_next_state<T, D: Dealloc>(
     state: T,
     c: char,
-    tm: &TransitionMap<T>,
-    maps: &TransitionMaps,
+    tm: &TransitionMap<T, D>,
+    maps: &TransitionMaps<D>,
 ) -> (Vec<JsonToken<D>>, TokenizerState<D>)
 where
-    T: 'static,
+    T: 'static, D: 'static
 {
     let entry = tm.rm.get(c);
     match &entry.value {
@@ -431,15 +431,15 @@ where
     }
 }
 
-fn create_initial_transitions() -> TransitionMap<()> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+fn create_initial_transitions<M: Manager>(manager: M) -> TransitionMap<(), M::Dealloc> {
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
         def: (|_, _, _| {
             (
                 [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
                 TokenizerState::Initial,
             )
-        }) as Func,
+        }) as Func<M::Dealloc>,
         rm: merge_list(
             [
                 create_range_map(operator_chars_with_dot(), |_, c, _| {
@@ -448,7 +448,7 @@ fn create_initial_transitions() -> TransitionMap<()> {
                 from_range('1'..='9', |_, c, _| {
                     (
                         default(),
-                        TokenizerState::ParseInt(start_number(Sign::Positive, c)),
+                        TokenizerState::ParseInt(start_number(manager, Sign::Positive, c)),
                     )
                 }),
                 from_one('"', |_, _, _| {
@@ -474,7 +474,7 @@ fn create_initial_transitions() -> TransitionMap<()> {
     }
 }
 
-fn create_id_transitions() -> TransitionMap<String> {
+fn create_id_transitions<D: Dealloc>() -> TransitionMap<String, D> {
     TransitionMap {
         def: |s, c, maps| {
             transfer_state([JsonToken::Id(s)].cast(), TokenizerState::Initial, c, maps)
@@ -486,7 +486,7 @@ fn create_id_transitions() -> TransitionMap<String> {
     }
 }
 
-fn create_string_transactions() -> TransitionMap<String> {
+fn create_string_transactions<D: Dealloc>() -> TransitionMap<String, D> {
     TransitionMap {
         def: |mut s, c, _| {
             s.push(c);
@@ -557,7 +557,7 @@ fn create_escape_char_transactions<D: Dealloc>() -> TransitionMap<String, D> {
 }
 
 fn create_unicode_char_transactions<D: Dealloc>() -> TransitionMap<ParseUnicodeCharState, D> {
-    type Func = fn(
+    type Func<D> = fn(
         state: ParseUnicodeCharState,
         c: char,
         maps: &TransitionMaps<D>,
@@ -575,15 +575,15 @@ fn create_unicode_char_transactions<D: Dealloc>() -> TransitionMap<ParseUnicodeC
             [
                 from_range(
                     '0'..='9',
-                    (|state, c, _| state.push(c as u32 - '0' as u32)) as Func,
+                    (|state, c, _| state.push(c as u32 - '0' as u32)) as Func<D>,
                 ),
                 from_range(
                     'a'..='f',
-                    (|state, c, _| state.push(c as u32 - ('a' as u32 - 10))) as Func,
+                    (|state, c, _| state.push(c as u32 - ('a' as u32 - 10))) as Func<D>,
                 ),
                 from_range(
                     'A'..='F',
-                    (|state, c, _| state.push(c as u32 - ('A' as u32 - 10))) as Func,
+                    (|state, c, _| state.push(c as u32 - ('A' as u32 - 10))) as Func<D>,
                 ),
             ]
             .cast(),
@@ -591,10 +591,10 @@ fn create_unicode_char_transactions<D: Dealloc>() -> TransitionMap<ParseUnicodeC
     }
 }
 
-fn create_zero_transactions<M: Manager>(m: M) -> TransitionMap<Sign, M::Dealloc> {
-    type Func = fn(s: Sign, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+fn create_zero_transactions<M: Manager>(manager: M) -> TransitionMap<Sign, M::Dealloc> {
+    type Func<D> = fn(s: Sign, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<M::Dealloc>,
         rm: merge_list(
             [
                 from_one(
@@ -602,27 +602,28 @@ fn create_zero_transactions<M: Manager>(m: M) -> TransitionMap<Sign, M::Dealloc>
                     (|s, _, _| {
                         (
                             default(),
-                            TokenizerState::ParseFracBegin(zero(m)),
+                            TokenizerState::ParseFracBegin(zero(manager)),
                         )
-                    }) as Func,
+                    }) as Func<M::Dealloc>,
                 ),
                 create_range_map(set(['e', 'E']), |s, _, _| {
                     (
                         default(),
                         TokenizerState::ParseExpBegin(ExpState {
-                            b: zero(m),
+                            b: zero(manager),
                             fe: 0,
                             es: Sign::Positive,
                             e: 0,
                         }),
                     )
                 }),
-                from_one('n', |s, _, _| {
+                from_one('n', (|s, _, _| {
                     (
                         default(),
-                        TokenizerState::ParseBigInt(zero(m)),
+                        TokenizerState::ParseBigInt(zero(manager)),
                     )
-                }),
+                }) as Func<M::Dealloc>
+            ),
                 create_range_map(terminal_for_number(), |_, c, maps| {
                     transfer_state(
                         [JsonToken::Number(default())].cast(),
@@ -637,16 +638,16 @@ fn create_zero_transactions<M: Manager>(m: M) -> TransitionMap<Sign, M::Dealloc>
     }
 }
 
-fn create_int_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> {
-    type Func =
-        fn(s: JsBigintMutRef<D>, c: char, maps: &TransitionMaps) -> (Vec<JsonToken<D>>, TokenizerState<D>);
+fn create_int_transactions<M: Manager>(manager: M) -> TransitionMap<JsBigintMutRef<M::Dealloc>, M::Dealloc> {
+    type Func<D> =
+        fn(s: JsBigintMutRef<D>, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<M::Dealloc>,
         rm: merge_list(
             [
                 from_range(
                     '0'..='9',
-                    (|s, c, _| (default(), TokenizerState::ParseInt(s.add_digit(c)))) as Func,
+                    (|s, c, _| (default(), TokenizerState::ParseInt(s.add_digit(manager, c)))) as Func<M::Dealloc>,
                 ),
                 from_one('.', |s, _, _| {
                     (default(), TokenizerState::ParseFracBegin(s))
@@ -665,10 +666,10 @@ fn create_int_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> 
 }
 
 fn create_frac_begin_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> {
-    type Func =
-        fn(s: IntegerState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> =
+        fn(s: JsBigintMutRef<D>, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<D>,
         rm: from_range(
             '0'..='9',
             (|s, c, _| {
@@ -681,16 +682,16 @@ fn create_frac_begin_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<
     }
 }
 
-fn create_frac_transactions<D: Dealloc>() -> TransitionMap<FloatState<D>, D> {
-    type Func =
-        fn(s: FloatState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+fn create_frac_transactions<M: Manager>(manager: M) -> TransitionMap<FloatState<M::Dealloc>, M::Dealloc> {
+    type Func<D> =
+        fn(s: FloatState<D>, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<M::Dealloc>,
         rm: merge_list(
             [
                 from_range(
                     '0'..='9',
-                    (|s, c, _| (default(), TokenizerState::ParseFrac(s.add_digit(c)))) as Func,
+                    (|s, c, _| (default(), TokenizerState::ParseFrac(s.add_digit(manager, c)))) as Func<M::Dealloc>,
                 ),
                 create_range_map(set(['e', 'E']), |s, _, _| {
                     (default(), TokenizerState::ParseExpBegin(s.into_exp_state()))
@@ -704,19 +705,19 @@ fn create_frac_transactions<D: Dealloc>() -> TransitionMap<FloatState<D>, D> {
     }
 }
 
-fn create_minus_transactions<D: Dealloc>() -> TransitionMap<(), D> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+fn create_minus_transactions<M: Manager>(manager: M) -> TransitionMap<(), M::Dealloc> {
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<M::Dealloc>,
         rm: merge(
             from_one(
                 '0',
-                (|_, _, _| (default(), TokenizerState::ParseZero(Sign::Negative))) as Func,
+                (|_, _, _| (default(), TokenizerState::ParseZero(Sign::Negative))) as Func<M::Dealloc>,
             ),
             from_range('1'..='9', |_, c, _| {
                 (
                     default(),
-                    TokenizerState::ParseInt(start_number(Sign::Negative, c)),
+                    TokenizerState::ParseInt(start_number(manager,  js_bigint::Sign::Negative, c)),
                 )
             }),
         ),
@@ -724,14 +725,14 @@ fn create_minus_transactions<D: Dealloc>() -> TransitionMap<(), D> {
 }
 
 fn create_exp_begin_transactions<D: Dealloc>() -> TransitionMap<ExpState<D>, D> {
-    type Func = fn(s: ExpState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: ExpState<D>, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<D>,
         rm: merge_list(
             [
                 from_range(
                     '0'..='9',
-                    (|s, c, _| (default(), TokenizerState::ParseExp(s.add_digit(c)))) as Func,
+                    (|s, c, _| (default(), TokenizerState::ParseExp(s.add_digit(c)))) as Func<D>,
                 ),
                 from_one('+', |s, _, _| (default(), TokenizerState::ParseExpSign(s))),
                 from_one('-', |mut s, _, _| {
@@ -750,13 +751,13 @@ fn create_exp_begin_transactions<D: Dealloc>() -> TransitionMap<ExpState<D>, D> 
 }
 
 fn create_exp_transactions<D: Dealloc>() -> TransitionMap<ExpState<D>, D> {
-    type Func = fn(s: ExpState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: ExpState<D>, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<D>,
         rm: merge(
             from_range(
                 '0'..='9',
-                (|s, c, _| (default(), TokenizerState::ParseExp(s.add_digit(c)))) as Func,
+                (|s, c, _| (default(), TokenizerState::ParseExp(s.add_digit(c)))) as Func<D>,
             ),
             create_range_map(terminal_for_number(), |s, c, maps| {
                 transfer_state([s.into_token()].cast(), TokenizerState::Initial, c, maps)
@@ -766,10 +767,10 @@ fn create_exp_transactions<D: Dealloc>() -> TransitionMap<ExpState<D>, D> {
 }
 
 fn create_big_int_transactions<D: Dealloc>() -> TransitionMap<JsBigintMutRef<D>, D> {
-    type Func =
-        fn(s: IntegerState, c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> =
+        fn(s: JsBigintMutRef<D>, c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func,
+        def: (|_, c, maps| tokenize_invalid_number(c, maps)) as Func<D>,
         rm: create_range_map(terminal_for_number(), |s, c, maps| {
             transfer_state([s.into_token()].cast(), TokenizerState::Initial, c, maps)
         }),
@@ -786,7 +787,7 @@ fn tokenize_invalid_number<D: Dealloc>(c: char, maps: &TransitionMaps<D>) -> (Ve
 }
 
 fn create_new_line_transactions<D: Dealloc>() -> TransitionMap<(), D> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
         def: (|_, c, maps| {
             transfer_state(
@@ -795,7 +796,7 @@ fn create_new_line_transactions<D: Dealloc>() -> TransitionMap<(), D> {
                 c,
                 maps,
             )
-        }) as Func,
+        }) as Func<D>,
         rm: create_range_map(set(WHITE_SPACE_CHARS), |_, _, _| {
             (default(), TokenizerState::ParseNewLine)
         }),
@@ -803,14 +804,14 @@ fn create_new_line_transactions<D: Dealloc>() -> TransitionMap<(), D> {
 }
 
 fn create_comment_start_transactions<D: Dealloc>() -> TransitionMap<(), D> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
         def: (|_, _, _| {
             (
                 [JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)].cast(),
                 TokenizerState::Initial,
             )
-        }) as Func,
+        }) as Func<D>,
         rm: merge(
             from_one('/', |_, _, _| {
                 (default(), TokenizerState::ParseSinglelineComment)
@@ -823,9 +824,9 @@ fn create_comment_start_transactions<D: Dealloc>() -> TransitionMap<(), D> {
 }
 
 fn create_singleline_comment_transactions<D: Dealloc>() -> TransitionMap<(), D> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, _, _| (default(), TokenizerState::ParseSinglelineComment)) as Func,
+        def: (|_, _, _| (default(), TokenizerState::ParseSinglelineComment)) as Func<D>,
         rm: create_range_map(set(WHITE_SPACE_CHARS), |_, _, _| {
             (default(), TokenizerState::ParseNewLine)
         }),
@@ -833,9 +834,9 @@ fn create_singleline_comment_transactions<D: Dealloc>() -> TransitionMap<(), D> 
 }
 
 fn create_multiline_comment_transactions<D: Dealloc>() -> TransitionMap<(), D> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, _, _| (default(), TokenizerState::ParseMultilineComment)) as Func,
+        def: (|_, _, _| (default(), TokenizerState::ParseMultilineComment)) as Func<D>,
         rm: from_one('*', |_, _, _| {
             (default(), TokenizerState::ParseMultilineCommentAsterix)
         }),
@@ -843,9 +844,9 @@ fn create_multiline_comment_transactions<D: Dealloc>() -> TransitionMap<(), D> {
 }
 
 fn create_multiline_comment_asterix_transactions<D: Dealloc>() -> TransitionMap<(), D> {
-    type Func = fn(s: (), c: char, maps: &TransitionMaps) -> (Vec<JsonToken>, TokenizerState);
+    type Func<D> = fn(s: (), c: char, maps: &TransitionMaps<D>) -> (Vec<JsonToken<D>>, TokenizerState<D>);
     TransitionMap {
-        def: (|_, _, _| (default(), TokenizerState::ParseMultilineComment)) as Func,
+        def: (|_, _, _| (default(), TokenizerState::ParseMultilineComment)) as Func<D>,
         rm: merge(
             from_one('/', |_, _, _| (default(), TokenizerState::Initial)),
             from_one('*', |_, _, _| {
@@ -879,32 +880,34 @@ fn create_operator_transactions<D: Dealloc>() -> TransitionMap<String, D> {
     }
 }
 
-pub fn tokenize<D: Dealloc>(input: String) -> Vec<JsonToken<D>> {
-    TokenizerStateIterator::new(input.chars()).collect()
+pub fn tokenize<M: Manager>(manager: M, input: String) -> Vec<JsonToken<M::Dealloc>> {
+    TokenizerStateIterator::new(manager, input.chars()).collect()
 }
 
-pub struct TokenizerStateIterator<T: Iterator<Item = char>, D: Dealloc> {
+pub struct TokenizerStateIterator<T: Iterator<Item = char>, M: Manager> {
+    manager: M,
     chars: T,
-    cache: VecDeque<JsonToken<D>>,
-    state: TokenizerState<D>,
-    maps: TransitionMaps<D>,
+    cache: VecDeque<JsonToken<M::Dealloc>>,
+    state: TokenizerState<M::Dealloc>,
+    maps: TransitionMaps<M::Dealloc>,
     end: bool,
 }
 
-impl<T: Iterator<Item = char>, D: Dealloc> TokenizerStateIterator<T, D> {
-    pub fn new(chars: T) -> Self {
+impl<T: Iterator<Item = char>, M: Manager> TokenizerStateIterator<T, M> {
+    pub fn new(manager: M, chars: T) -> Self {
         Self {
+            manager,
             chars,
             cache: default(),
             state: default(),
-            maps: create_transition_maps(),
+            maps: create_transition_maps(manager),
             end: false,
         }
     }
 }
 
-impl<T: Iterator<Item = char>, D: Dealloc> Iterator for TokenizerStateIterator<T, D> {
-    type Item = JsonToken<D>;
+impl<T: Iterator<Item = char>, M: Manager> Iterator for TokenizerStateIterator<T, M> {
+    type Item = JsonToken<M::Dealloc>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -925,503 +928,504 @@ impl<T: Iterator<Item = char>, D: Dealloc> Iterator for TokenizerStateIterator<T
     }
 }
 
-#[cfg(test)]
-mod test {
-    use wasm_bindgen_test::wasm_bindgen_test;
-
-    use crate::{
-        big_numbers::{
-            big_float::BigFloat,
-            big_int::{BigInt, Sign},
-            big_uint::BigUint,
-        },
-        common::cast::Cast,
-        tokenizer::bigfloat_to_f64,
-    };
-
-    use super::{tokenize, ErrorType, JsonToken};
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_empty() {
-        let result = tokenize(String::from(""));
-        assert_eq!(result.len(), 0);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_ops() {
-        let result = tokenize(String::from("{"));
-        assert_eq!(&result, &[JsonToken::ObjectBegin]);
-
-        let result = tokenize(String::from("}"));
-        assert_eq!(&result, &[JsonToken::ObjectEnd]);
-
-        let result = tokenize(String::from("["));
-        assert_eq!(&result, &[JsonToken::ArrayBegin]);
-
-        let result = tokenize(String::from("]"));
-        assert_eq!(&result, &[JsonToken::ArrayEnd]);
-
-        let result = tokenize(String::from(":"));
-        assert_eq!(&result, &[JsonToken::Colon]);
-
-        let result = tokenize(String::from(","));
-        assert_eq!(&result, &[JsonToken::Comma]);
-
-        let result = tokenize(String::from("="));
-        assert_eq!(&result, &[JsonToken::Equals]);
-
-        let result = tokenize(String::from("."));
-        assert_eq!(&result, &[JsonToken::Dot]);
-
-        let result = tokenize(String::from(";"));
-        assert_eq!(&result, &[JsonToken::Semicolon]);
-
-        let result = tokenize(String::from("()"));
-        assert_eq!(
-            &result,
-            &[JsonToken::OpeningParenthesis, JsonToken::ClosingParenthesis]
-        );
-
-        let result = tokenize(String::from("[{ :, }]"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ArrayBegin,
-                JsonToken::ObjectBegin,
-                JsonToken::Colon,
-                JsonToken::Comma,
-                JsonToken::ObjectEnd,
-                JsonToken::ArrayEnd
-            ]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_id() {
-        let result = tokenize(String::from("true"));
-        assert_eq!(&result, &[JsonToken::Id(String::from("true"))]);
-
-        let result = tokenize(String::from("false"));
-        assert_eq!(&result, &[JsonToken::Id(String::from("false"))]);
-
-        let result = tokenize(String::from("null"));
-        assert_eq!(&result, &[JsonToken::Id(String::from("null"))]);
-
-        let result = tokenize(String::from("tru tru"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Id(String::from("tru")),
-                JsonToken::Id(String::from("tru")),
-            ]
-        );
-
-        let result = tokenize(String::from("ABCxyz_0123456789$"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Id(String::from("ABCxyz_0123456789$")),]
-        );
-
-        let result = tokenize(String::from("_"));
-        assert_eq!(&result, &[JsonToken::Id(String::from("_")),]);
-
-        let result = tokenize(String::from("$"));
-        assert_eq!(&result, &[JsonToken::Id(String::from("$")),]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_whitespace() {
-        let result = tokenize(String::from(" \t\n\r"));
-        assert_eq!(&result, &[]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_string() {
-        let result = tokenize(String::from("\"\""));
-        assert_eq!(&result, &[JsonToken::String("".to_string())]);
-
-        let result = tokenize(String::from("\"value\""));
-        assert_eq!(&result, &[JsonToken::String("value".to_string())]);
-
-        let result = tokenize(String::from("\"value1\" \"value2\""));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::String("value1".to_string()),
-                JsonToken::String("value2".to_string())
-            ]
-        );
-
-        let result = tokenize(String::from("\"value"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_escaped_characters() {
-        let result = tokenize(String::from("\"\\b\\f\\n\\r\\t\""));
-        assert_eq!(
-            &result,
-            &[JsonToken::String("\u{8}\u{c}\n\r\t".to_string())]
-        );
-
-        let result = tokenize(String::from("\"\\x\""));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
-                JsonToken::String("x".to_string())
-            ]
-        );
-
-        let result = tokenize(String::from("\"\\"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_unicode() {
-        let result = tokenize(String::from("\"\\u1234\""));
-        assert_eq!(&result, &[JsonToken::String("ሴ".to_string())]);
-
-        let result = tokenize(String::from("\"\\uaBcDEeFf\""));
-        assert_eq!(&result, &[JsonToken::String("ꯍEeFf".to_string())]);
-
-        let result = tokenize(String::from("\"\\uEeFg\""));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidHex),
-                JsonToken::String("g".to_string())
-            ]
-        );
-
-        let result = tokenize(String::from("\"\\uEeF"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_integer() {
-        let result = tokenize(String::from("0"));
-        assert_eq!(&result, &[JsonToken::Number(0.0)]);
-
-        let result = tokenize(String::from("-0"));
-        assert_eq!(&result, &[JsonToken::Number(0.0)]);
-
-        let result = tokenize(String::from("0abc"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Id(String::from("abc"))
-            ]
-        );
-
-        let result = tokenize(String::from("0. 2"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Number(2.0)
-            ]
-        );
-
-        let result = tokenize(String::from("1234567890"));
-        assert_eq!(&result, &[JsonToken::Number(1234567890.0)]);
-
-        let result = tokenize(String::from("-1234567890"));
-        assert_eq!(&result, &[JsonToken::Number(-1234567890.0)]);
-
-        let result = tokenize(String::from("[0,1]"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ArrayBegin,
-                JsonToken::Number(0.0),
-                JsonToken::Comma,
-                JsonToken::Number(1.0),
-                JsonToken::ArrayEnd
-            ]
-        );
-
-        let result = tokenize(String::from("001"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Number(1.0),
-            ]
-        );
-
-        let result = tokenize(String::from("-"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
-
-        let result = tokenize(String::from("-{}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::ObjectBegin,
-                JsonToken::ObjectEnd
-            ]
-        );
-
-        let result = tokenize(String::from("9007199254740991"));
-        assert_eq!(&result, &[JsonToken::Number(9007199254740991.0)]);
-
-        let result = tokenize(String::from("9007199254740992"));
-        assert_eq!(&result, &[JsonToken::Number(9007199254740992.0)]);
-
-        let result = tokenize(String::from("9007199254740993"));
-        assert_eq!(&result, &[JsonToken::Number(9007199254740993.0)]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_big_float() {
-        let result = tokenize(String::from("340282366920938463463374607431768211456"));
-        assert_eq!(
-            &result,
-            &[JsonToken::Number(bigfloat_to_f64(BigFloat {
-                significand: BigInt {
-                    sign: Sign::Positive,
-                    value: BigUint {
-                        value: [0, 0, 1].cast()
-                    }
-                },
-                exp: 0,
-                non_zero_reminder: false
-            }))]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_float() {
-        let result = tokenize(String::from("0.01"));
-        assert_eq!(&result, &[JsonToken::Number(0.01)]);
-
-        let result = tokenize(String::from("[-12.34]"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ArrayBegin,
-                JsonToken::Number(-12.34),
-                JsonToken::ArrayEnd
-            ]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_infinity() {
-        let result = tokenize(String::from("1e1000"));
-        assert_eq!(&result, &[JsonToken::Number(f64::INFINITY)]);
-
-        let result = tokenize(String::from("-1e+1000"));
-        assert_eq!(&result, &[JsonToken::Number(f64::NEG_INFINITY)]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_exp() {
-        let result = tokenize(String::from("1e2"));
-        assert_eq!(&result, &[JsonToken::Number(1e2)]);
-
-        let result = tokenize(String::from("1E+2"));
-        assert_eq!(&result, &[JsonToken::Number(1e2)]);
-
-        let result = tokenize(String::from("0e-2"));
-        assert_eq!(&result, &[JsonToken::Number(0.0)]);
-
-        let result = tokenize(String::from("1e-2"));
-        assert_eq!(&result, &[JsonToken::Number(1e-2)]);
-
-        let result = tokenize(String::from("1.2e+2"));
-        assert_eq!(&result, &[JsonToken::Number(1.2e+2)]);
-
-        let result = tokenize(String::from("12e0000"));
-        assert_eq!(&result, &[JsonToken::Number(12.0)]);
-
-        let result = tokenize(String::from("1e"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
-
-        let result = tokenize(String::from("1e+"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
-
-        let result = tokenize(String::from("1e-"));
-        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_big_int() {
-        let result = tokenize(String::from("0n"));
-        assert_eq!(&result, &[JsonToken::BigInt(BigInt::ZERO)]);
-
-        let result = tokenize(String::from("-0n"));
-        assert_eq!(
-            &result,
-            &[JsonToken::BigInt(BigInt {
-                sign: Sign::Negative,
-                value: BigUint::ZERO
-            })]
-        );
-
-        let result = tokenize(String::from("1234567890n"));
-        assert_eq!(&result, &[JsonToken::BigInt(BigInt::from_u64(1234567890))]);
-
-        let result = tokenize(String::from("-1234567890n"));
-        assert_eq!(&result, &[JsonToken::BigInt(BigInt::from_i64(-1234567890))]);
-
-        let result = tokenize(String::from("123.456n"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Id(String::from("n"))
-            ]
-        );
-
-        let result = tokenize(String::from("123e456n"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Id(String::from("n"))
-            ]
-        );
-
-        let result = tokenize(String::from("1234567890na"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Id(String::from("a"))
-            ]
-        );
-
-        let result = tokenize(String::from("1234567890nn"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ErrorToken(ErrorType::InvalidNumber),
-                JsonToken::Id(String::from("n"))
-            ]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_errors() {
-        let result = tokenize(String::from("ᄑ"));
-        assert_eq!(
-            &result,
-            &[JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_djs() {
-        let result = tokenize(String::from("module.exports = "));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Id(String::from("module")),
-                JsonToken::Dot,
-                JsonToken::Id(String::from("exports")),
-                JsonToken::Equals,
-            ]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_singleline_comments() {
-        let result = tokenize(String::from("{//abc\n2\n}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::NewLine,
-                JsonToken::Number(2.0),
-                JsonToken::NewLine,
-                JsonToken::ObjectEnd,
-            ]
-        );
-
-        let result = tokenize(String::from("0//abc/*"));
-        assert_eq!(&result, &[JsonToken::Number(0.0),]);
-
-        let result = tokenize(String::from("0//"));
-        assert_eq!(&result, &[JsonToken::Number(0.0),]);
-
-        let result = tokenize(String::from("0/"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Number(0.0),
-                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
-            ]
-        );
-
-        let result = tokenize(String::from("0/a"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Number(0.0),
-                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
-            ]
-        );
-    }
-
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_multiline_comments() {
-        let result = tokenize(String::from("{/*abc\ndef*/2}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::Number(2.0),
-                JsonToken::ObjectEnd,
-            ]
-        );
-
-        let result = tokenize(String::from("{/*/* /**/2}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::Number(2.0),
-                JsonToken::ObjectEnd,
-            ]
-        );
-
-        let result = tokenize(String::from("{/*"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
-            ]
-        );
-
-        let result = tokenize(String::from("{/**"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
-            ]
-        );
-    }
-}
+// #[cfg(test)]
+// mod test {
+//     use wasm_bindgen_test::wasm_bindgen_test;
+
+//     use crate::{
+//         big_numbers::{
+//             big_float::BigFloat,
+//             big_int::{BigInt, Sign},
+//             big_uint::BigUint,
+//         }, common::cast::Cast, mem::local::Local, tokenizer::bigfloat_to_f64
+//     };
+
+//     use super::{tokenize, ErrorType, JsonToken};
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_empty() {
+//         let local = Local::default();
+//         let result = tokenize(&local, String::from(""));
+//         assert_eq!(result.len(), 0);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_ops() {
+//         let local = Local::default();
+
+//         let result = tokenize(&local, String::from("{"));
+//         assert_eq!(&result, &[JsonToken::<&Local>::ObjectBegin]);
+
+//         let result = tokenize(String::from("}"));
+//         assert_eq!(&result, &[JsonToken::ObjectEnd]);
+
+//         let result = tokenize(String::from("["));
+//         assert_eq!(&result, &[JsonToken::ArrayBegin]);
+
+//         let result = tokenize(String::from("]"));
+//         assert_eq!(&result, &[JsonToken::ArrayEnd]);
+
+//         let result = tokenize(String::from(":"));
+//         assert_eq!(&result, &[JsonToken::Colon]);
+
+//         let result = tokenize(String::from(","));
+//         assert_eq!(&result, &[JsonToken::Comma]);
+
+//         let result = tokenize(String::from("="));
+//         assert_eq!(&result, &[JsonToken::Equals]);
+
+//         let result = tokenize(String::from("."));
+//         assert_eq!(&result, &[JsonToken::Dot]);
+
+//         let result = tokenize(String::from(";"));
+//         assert_eq!(&result, &[JsonToken::Semicolon]);
+
+//         let result = tokenize(String::from("()"));
+//         assert_eq!(
+//             &result,
+//             &[JsonToken::OpeningParenthesis, JsonToken::ClosingParenthesis]
+//         );
+
+//         let result = tokenize(String::from("[{ :, }]"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ArrayBegin,
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::Colon,
+//                 JsonToken::Comma,
+//                 JsonToken::ObjectEnd,
+//                 JsonToken::ArrayEnd
+//             ]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_id() {
+//         let result = tokenize(String::from("true"));
+//         assert_eq!(&result, &[JsonToken::Id(String::from("true"))]);
+
+//         let result = tokenize(String::from("false"));
+//         assert_eq!(&result, &[JsonToken::Id(String::from("false"))]);
+
+//         let result = tokenize(String::from("null"));
+//         assert_eq!(&result, &[JsonToken::Id(String::from("null"))]);
+
+//         let result = tokenize(String::from("tru tru"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::Id(String::from("tru")),
+//                 JsonToken::Id(String::from("tru")),
+//             ]
+//         );
+
+//         let result = tokenize(String::from("ABCxyz_0123456789$"));
+//         assert_eq!(
+//             &result,
+//             &[JsonToken::Id(String::from("ABCxyz_0123456789$")),]
+//         );
+
+//         let result = tokenize(String::from("_"));
+//         assert_eq!(&result, &[JsonToken::Id(String::from("_")),]);
+
+//         let result = tokenize(String::from("$"));
+//         assert_eq!(&result, &[JsonToken::Id(String::from("$")),]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_whitespace() {
+//         let result = tokenize(String::from(" \t\n\r"));
+//         assert_eq!(&result, &[]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_string() {
+//         let result = tokenize(String::from("\"\""));
+//         assert_eq!(&result, &[JsonToken::String("".to_string())]);
+
+//         let result = tokenize(String::from("\"value\""));
+//         assert_eq!(&result, &[JsonToken::String("value".to_string())]);
+
+//         let result = tokenize(String::from("\"value1\" \"value2\""));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::String("value1".to_string()),
+//                 JsonToken::String("value2".to_string())
+//             ]
+//         );
+
+//         let result = tokenize(String::from("\"value"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_escaped_characters() {
+//         let result = tokenize(String::from("\"\\b\\f\\n\\r\\t\""));
+//         assert_eq!(
+//             &result,
+//             &[JsonToken::String("\u{8}\u{c}\n\r\t".to_string())]
+//         );
+
+//         let result = tokenize(String::from("\"\\x\""));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+//                 JsonToken::String("x".to_string())
+//             ]
+//         );
+
+//         let result = tokenize(String::from("\"\\"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_unicode() {
+//         let result = tokenize(String::from("\"\\u1234\""));
+//         assert_eq!(&result, &[JsonToken::String("ሴ".to_string())]);
+
+//         let result = tokenize(String::from("\"\\uaBcDEeFf\""));
+//         assert_eq!(&result, &[JsonToken::String("ꯍEeFf".to_string())]);
+
+//         let result = tokenize(String::from("\"\\uEeFg\""));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidHex),
+//                 JsonToken::String("g".to_string())
+//             ]
+//         );
+
+//         let result = tokenize(String::from("\"\\uEeF"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_integer() {
+//         let result = tokenize(String::from("0"));
+//         assert_eq!(&result, &[JsonToken::Number(0.0)]);
+
+//         let result = tokenize(String::from("-0"));
+//         assert_eq!(&result, &[JsonToken::Number(0.0)]);
+
+//         let result = tokenize(String::from("0abc"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Id(String::from("abc"))
+//             ]
+//         );
+
+//         let result = tokenize(String::from("0. 2"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Number(2.0)
+//             ]
+//         );
+
+//         let result = tokenize(String::from("1234567890"));
+//         assert_eq!(&result, &[JsonToken::Number(1234567890.0)]);
+
+//         let result = tokenize(String::from("-1234567890"));
+//         assert_eq!(&result, &[JsonToken::Number(-1234567890.0)]);
+
+//         let result = tokenize(String::from("[0,1]"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ArrayBegin,
+//                 JsonToken::Number(0.0),
+//                 JsonToken::Comma,
+//                 JsonToken::Number(1.0),
+//                 JsonToken::ArrayEnd
+//             ]
+//         );
+
+//         let result = tokenize(String::from("001"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Number(1.0),
+//             ]
+//         );
+
+//         let result = tokenize(String::from("-"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+
+//         let result = tokenize(String::from("-{}"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::ObjectEnd
+//             ]
+//         );
+
+//         let result = tokenize(String::from("9007199254740991"));
+//         assert_eq!(&result, &[JsonToken::Number(9007199254740991.0)]);
+
+//         let result = tokenize(String::from("9007199254740992"));
+//         assert_eq!(&result, &[JsonToken::Number(9007199254740992.0)]);
+
+//         let result = tokenize(String::from("9007199254740993"));
+//         assert_eq!(&result, &[JsonToken::Number(9007199254740993.0)]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_big_float() {
+//         let result = tokenize(String::from("340282366920938463463374607431768211456"));
+//         assert_eq!(
+//             &result,
+//             &[JsonToken::Number(bigfloat_to_f64(BigFloat {
+//                 significand: BigInt {
+//                     sign: Sign::Positive,
+//                     value: BigUint {
+//                         value: [0, 0, 1].cast()
+//                     }
+//                 },
+//                 exp: 0,
+//                 non_zero_reminder: false
+//             }))]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_float() {
+//         let result = tokenize(String::from("0.01"));
+//         assert_eq!(&result, &[JsonToken::Number(0.01)]);
+
+//         let result = tokenize(String::from("[-12.34]"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ArrayBegin,
+//                 JsonToken::Number(-12.34),
+//                 JsonToken::ArrayEnd
+//             ]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_infinity() {
+//         let result = tokenize(String::from("1e1000"));
+//         assert_eq!(&result, &[JsonToken::Number(f64::INFINITY)]);
+
+//         let result = tokenize(String::from("-1e+1000"));
+//         assert_eq!(&result, &[JsonToken::Number(f64::NEG_INFINITY)]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_exp() {
+//         let result = tokenize(String::from("1e2"));
+//         assert_eq!(&result, &[JsonToken::Number(1e2)]);
+
+//         let result = tokenize(String::from("1E+2"));
+//         assert_eq!(&result, &[JsonToken::Number(1e2)]);
+
+//         let result = tokenize(String::from("0e-2"));
+//         assert_eq!(&result, &[JsonToken::Number(0.0)]);
+
+//         let result = tokenize(String::from("1e-2"));
+//         assert_eq!(&result, &[JsonToken::Number(1e-2)]);
+
+//         let result = tokenize(String::from("1.2e+2"));
+//         assert_eq!(&result, &[JsonToken::Number(1.2e+2)]);
+
+//         let result = tokenize(String::from("12e0000"));
+//         assert_eq!(&result, &[JsonToken::Number(12.0)]);
+
+//         let result = tokenize(String::from("1e"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+
+//         let result = tokenize(String::from("1e+"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+
+//         let result = tokenize(String::from("1e-"));
+//         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_big_int() {
+//         let result = tokenize(String::from("0n"));
+//         assert_eq!(&result, &[JsonToken::BigInt(BigInt::ZERO)]);
+
+//         let result = tokenize(String::from("-0n"));
+//         assert_eq!(
+//             &result,
+//             &[JsonToken::BigInt(BigInt {
+//                 sign: Sign::Negative,
+//                 value: BigUint::ZERO
+//             })]
+//         );
+
+//         let result = tokenize(String::from("1234567890n"));
+//         assert_eq!(&result, &[JsonToken::BigInt(BigInt::from_u64(1234567890))]);
+
+//         let result = tokenize(String::from("-1234567890n"));
+//         assert_eq!(&result, &[JsonToken::BigInt(BigInt::from_i64(-1234567890))]);
+
+//         let result = tokenize(String::from("123.456n"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Id(String::from("n"))
+//             ]
+//         );
+
+//         let result = tokenize(String::from("123e456n"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Id(String::from("n"))
+//             ]
+//         );
+
+//         let result = tokenize(String::from("1234567890na"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Id(String::from("a"))
+//             ]
+//         );
+
+//         let result = tokenize(String::from("1234567890nn"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ErrorToken(ErrorType::InvalidNumber),
+//                 JsonToken::Id(String::from("n"))
+//             ]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_errors() {
+//         let result = tokenize(String::from("ᄑ"));
+//         assert_eq!(
+//             &result,
+//             &[JsonToken::ErrorToken(ErrorType::UnexpectedCharacter)]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_djs() {
+//         let result = tokenize(String::from("module.exports = "));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::Id(String::from("module")),
+//                 JsonToken::Dot,
+//                 JsonToken::Id(String::from("exports")),
+//                 JsonToken::Equals,
+//             ]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_singleline_comments() {
+//         let result = tokenize(String::from("{//abc\n2\n}"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::NewLine,
+//                 JsonToken::Number(2.0),
+//                 JsonToken::NewLine,
+//                 JsonToken::ObjectEnd,
+//             ]
+//         );
+
+//         let result = tokenize(String::from("0//abc/*"));
+//         assert_eq!(&result, &[JsonToken::Number(0.0),]);
+
+//         let result = tokenize(String::from("0//"));
+//         assert_eq!(&result, &[JsonToken::Number(0.0),]);
+
+//         let result = tokenize(String::from("0/"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::Number(0.0),
+//                 JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+//             ]
+//         );
+
+//         let result = tokenize(String::from("0/a"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::Number(0.0),
+//                 JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+//             ]
+//         );
+//     }
+
+//     #[test]
+//     #[wasm_bindgen_test]
+//     fn test_multiline_comments() {
+//         let result = tokenize(String::from("{/*abc\ndef*/2}"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::Number(2.0),
+//                 JsonToken::ObjectEnd,
+//             ]
+//         );
+
+//         let result = tokenize(String::from("{/*/* /**/2}"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::Number(2.0),
+//                 JsonToken::ObjectEnd,
+//             ]
+//         );
+
+//         let result = tokenize(String::from("{/*"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
+//             ]
+//         );
+
+//         let result = tokenize(String::from("{/**"));
+//         assert_eq!(
+//             &result,
+//             &[
+//                 JsonToken::ObjectBegin,
+//                 JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
+//             ]
+//         );
+//     }
+// }
