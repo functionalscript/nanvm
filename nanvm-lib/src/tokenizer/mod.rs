@@ -46,7 +46,7 @@ pub enum TokenizerState<D: Dealloc> {
     ParseEscapeChar(String),
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
-    ParseZero(Sign),
+    ParseZero(js_bigint::Sign),
     ParseInt(JsBigintMutRef<D>),
     ParseFracBegin(JsBigintMutRef<D>),
     ParseFrac(FloatState<D>),
@@ -198,7 +198,7 @@ impl<D: Dealloc> JsBigintMutRef<D> {
         ExpState {
             b: self,
             fe: 0,
-            es: Sign::Positive,
+            es: js_bigint::Sign::Positive,
             e: 0,
         }
     }
@@ -241,7 +241,7 @@ impl<D: Dealloc> FloatState<D> {
         ExpState {
             b: self.b,
             fe: self.fe,
-            es: Sign::Positive,
+            es: js_bigint::Sign::Positive,
             e: 0,
         }
     }
@@ -258,7 +258,7 @@ impl<D: Dealloc> FloatState<D> {
 pub struct ExpState<D: Dealloc> {
     b: JsBigintMutRef<D>,
     fe: i64,
-    es: Sign,
+    es: js_bigint::Sign,
     e: i64,
 }
 
@@ -271,8 +271,8 @@ impl<D: Dealloc> ExpState<D> {
     fn into_token(self) -> JsonToken<D> {
         let exp = self.fe
             + match self.es {
-                Sign::Positive => self.e,
-                Sign::Negative => -self.e,
+                js_bigint::Sign::Positive => self.e,
+                js_bigint::Sign::Negative => -self.e,
             };
         JsonToken::Number(bigfloat_to_f64(BigFloat {
             significand: self.b.to_old_bigint(),
@@ -370,7 +370,7 @@ pub struct TransitionMaps<M: Manager> {
     string: TransitionMap<String, M>,
     escape_char: TransitionMap<String, M>,
     unicode_char: TransitionMap<ParseUnicodeCharState, M>,
-    zero: TransitionMap<Sign, M>,
+    zero: TransitionMap<js_bigint::Sign, M>,
     int: TransitionMap<JsBigintMutRef<M::Dealloc>, M>,
     minus: TransitionMap<(), M>,
     frac_begin: TransitionMap<JsBigintMutRef<M::Dealloc>, M>,
@@ -587,8 +587,8 @@ fn create_unicode_char_transactions<M: Manager>() -> TransitionMap<ParseUnicodeC
     }
 }
 
-fn create_zero_transactions<M: Manager>() -> TransitionMap<Sign, M> {
-    type Func<M: Manager> = fn(m: M, s: Sign, c: char, maps: &TransitionMaps<M>) -> (Vec<JsonToken<M::Dealloc>>, TokenizerState<M::Dealloc>);
+fn create_zero_transactions<M: Manager>() -> TransitionMap<js_bigint::Sign, M> {
+    type Func<M: Manager> = fn(m: M, s: js_bigint::Sign, c: char, maps: &TransitionMaps<M>) -> (Vec<JsonToken<M::Dealloc>>, TokenizerState<M::Dealloc>);
     TransitionMap {
         def: (|_, _, c, maps| tokenize_invalid_number(c, maps)) as Func<M>,
         rm: merge_list(
@@ -598,7 +598,7 @@ fn create_zero_transactions<M: Manager>() -> TransitionMap<Sign, M> {
                     (|manager, s, _, _| {
                         (
                             default(),
-                            TokenizerState::ParseFracBegin(zero(manager)),
+                            TokenizerState::ParseFracBegin(from_u64(manager, s, 0)),
                         )
                     }) as Func<M>,
                 ),
@@ -606,9 +606,9 @@ fn create_zero_transactions<M: Manager>() -> TransitionMap<Sign, M> {
                     (
                         default(),
                         TokenizerState::ParseExpBegin(ExpState {
-                            b: zero(manager),
+                            b: from_u64(manager, s, 0),
                             fe: 0,
-                            es: Sign::Positive,
+                            es: js_bigint::Sign::Positive,
                             e: 0,
                         }),
                     )
@@ -616,7 +616,7 @@ fn create_zero_transactions<M: Manager>() -> TransitionMap<Sign, M> {
                 from_one('n', (|manager, s, _, _| {
                     (
                         default(),
-                        TokenizerState::ParseBigInt(zero(manager)),
+                        TokenizerState::ParseBigInt(from_u64(manager, s, 0)),
                     )
                 }) as Func<M>
             ),
@@ -708,7 +708,7 @@ fn create_minus_transactions<M: Manager>() -> TransitionMap<(), M> {
         rm: merge(
             from_one(
                 '0',
-                (|_, _, _, _| (default(), TokenizerState::ParseZero(Sign::Negative))) as Func<M>,
+                (|_, _, _, _| (default(), TokenizerState::ParseZero(js_bigint::Sign::Negative))) as Func<M>,
             ),
             from_range('1'..='9', |manager, _, c, _| {
                 (
@@ -733,7 +733,7 @@ fn create_exp_begin_transactions<M: Manager>() -> TransitionMap<ExpState<M::Deal
                 from_one('+', |_, s, _, _| (default(), TokenizerState::ParseExpSign(s))),
                 from_one('-', |_, mut s, _, _| {
                     (default(), {
-                        s.es = Sign::Negative;
+                        s.es = js_bigint::Sign::Negative;
                         TokenizerState::ParseExpSign(s)
                     })
                 }),
