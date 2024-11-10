@@ -25,7 +25,7 @@ impl<M: Manager> JsonState<M> {
         /*json_state:*/ JsonState<M>,
         /*import_path:*/ Option<String>,
     ) {
-        if token == JsonToken::NewLine {
+        if let JsonToken::NewLine = token {
             return match self {
                 JsonState::ParseRoot(state) => {
                     state.parse(manager, token, module_cache, context_path)

@@ -36,10 +36,10 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
     }
 }
 
-fn root_state_parse<M: Manager, I: Io>(
+fn root_state_parse<M: Manager + 'static, I: Io>(
     mut root_state: RootState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> JsonState<M> {
     match root_state.status {
         RootStatus::Initial => match token {
@@ -167,7 +167,7 @@ fn root_state_parse<M: Manager, I: Io>(
                 let read_result = context.io.read_to_string(current_path.as_str());
                 match read_result {
                     Ok(s) => {
-                        let tokens = tokenize(s);
+                        let tokens = tokenize(context.manager, s);
                         let res = parse_with_tokens(context, tokens.into_iter());
                         match res {
                             Ok(r) => {
@@ -194,7 +194,7 @@ fn root_state_parse<M: Manager, I: Io>(
     }
 }
 
-fn const_state_parse<M: Manager, I: Io>(
+fn const_state_parse<M: Manager + 'static, I: Io>(
     const_state: ConstState<M>,
     context: &mut Context<M, I>,
     token: JsonToken<M::Dealloc>,
@@ -222,7 +222,7 @@ fn const_state_parse<M: Manager, I: Io>(
     }
 }
 
-fn any_state_parse_for_module<M: Manager, I: Io>(
+fn any_state_parse_for_module<M: Manager + 'static, I: Io>(
     any_state: AnyState<M>,
     context: &mut Context<M, I>,
     token: JsonToken<M::Dealloc>,
@@ -238,7 +238,7 @@ fn any_state_parse_for_module<M: Manager, I: Io>(
     }
 }
 
-fn any_state_parse_import_value<M: Manager, I: Io>(
+fn any_state_parse_import_value<M: Manager + 'static, I: Io>(
     any_state: AnyState<M>,
     context: &mut Context<M, I>,
     token: JsonToken<M::Dealloc>,
@@ -260,7 +260,7 @@ fn any_state_parse_import_value<M: Manager, I: Io>(
             let read_result = context.io.read_to_string(current_path.as_str());
             match read_result {
                 Ok(s) => {
-                    let tokens = tokenize(s);
+                    let tokens = tokenize(context.manager, s);
                     let res = parse_with_tokens(context, tokens.into_iter());
                     match res {
                         Ok(r) => {
@@ -285,7 +285,7 @@ fn any_state_parse_import_value<M: Manager, I: Io>(
     }
 }
 
-fn any_state_parse<M: Manager, I: Io>(
+fn any_state_parse<M: Manager + 'static, I: Io>(
     any_state: AnyState<M>,
     context: &mut Context<M, I>,
     token: JsonToken<M::Dealloc>,
@@ -307,20 +307,16 @@ fn any_state_parse<M: Manager, I: Io>(
     }
 }
 
-fn json_state_push<M: Manager, I: Io>(
+fn json_state_push<M: Manager + 'static, I: Io>(
     json_state: JsonState<M>,
     context: &mut Context<M, I>,
     token: JsonToken<M::Dealloc>,
 ) -> JsonState<M> {
-    match token {
-        JsonToken::NewLine => 
-        {
-            return match json_state {
-                JsonState::ParseRoot(state) => root_state_parse(state, context, token),
-                _ => json_state,
-            }
-        },
-        _ => {}
+    if let JsonToken::NewLine = token {
+        return match json_state {
+            JsonState::ParseRoot(state) => root_state_parse(state, context, token),
+            _ => json_state,
+        };
     }
     match json_state {
         JsonState::ParseRoot(state) => root_state_parse(state, context, token),
@@ -331,21 +327,21 @@ fn json_state_push<M: Manager, I: Io>(
     }
 }
 
-pub fn parse<M: Manager, I: Io>(
+pub fn parse<M: Manager + 'static, I: Io>(
     context: &mut Context<M, I>,
 ) -> Result<ParseResult<M::Dealloc>, ParseError> {
     context.module_cache.progress.insert(context.path.clone());
     let read_result = context.io.read_to_string(context.path.as_str());
     match read_result {
         Ok(s) => {
-            let tokens = tokenize(s);
+            let tokens = tokenize(context.manager, s);
             parse_with_tokens(context, tokens.into_iter())
         }
         Err(_) => Err(ParseError::CannotReadFile),
     }
 }
 
-pub fn parse_with_tokens<M: Manager, I: Io>(
+pub fn parse_with_tokens<M: Manager + 'static, I: Io>(
     context: &mut Context<M, I>,
     iter: impl Iterator<Item = JsonToken<M::Dealloc>>,
 ) -> Result<ParseResult<M::Dealloc>, ParseError> {
@@ -949,7 +945,6 @@ pub fn parse_with_tokens<M: Manager, I: Io>(
 //         assert_eq!(result.header_len(), 1);
 //         let items = result.items();
 //         assert_eq!(items, [0x1]);
-        
 
 //         let tokens = [JsonToken::BigInt(new_bigint(manager, js::js_bigint::Sign::Negative, [2, 3]))];
 //         let result = parse_with_virtual_io(manager, tokens.into_iter());

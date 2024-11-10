@@ -9,7 +9,7 @@ use super::{
 use crate::{
     common::{cast::Cast, default::default},
     js::{any::Any, js_array::new_array, js_object::new_object},
-    mem::manager::{Dealloc, Manager},
+    mem::manager::Manager,
     tokenizer::JsonToken,
 };
 use std::collections::BTreeMap;

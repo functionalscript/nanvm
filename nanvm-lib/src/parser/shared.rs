@@ -153,7 +153,7 @@ fn try_id_to_any<M: Manager>(
 }
 
 impl<D: Dealloc> JsonToken<D> {
-    pub fn try_to_any<M: Manager>(
+    pub fn try_to_any<M: Manager<Dealloc = D>>(
         self,
         manager: M,
         consts: &BTreeMap<String, Any<M::Dealloc>>,
@@ -162,7 +162,7 @@ impl<D: Dealloc> JsonToken<D> {
             JsonToken::Number(f) => Some(Any::move_from(f)),
             JsonToken::String(s) => Some(Any::move_from(to_js_string(manager, s))),
             JsonToken::Id(s) => try_id_to_any(&s, manager, consts),
-            JsonToken::BigInt(b) => Some(Any::move_from(to_js_bigint(manager, b))),
+            JsonToken::BigInt(b) => Some(Any::move_from(b.to_ref())),
             _ => None,
         }
     }
