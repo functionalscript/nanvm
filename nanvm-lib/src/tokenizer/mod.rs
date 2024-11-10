@@ -63,8 +63,7 @@ pub enum TokenizerState<D: Dealloc> {
 }
 
 impl<D: Dealloc> TokenizerState<D>
-where
-    D: 'static {
+where {
     fn push<M: Manager<Dealloc = D>>(self, c: char, maps: &TransitionMaps<M>) -> (Vec<JsonToken<D>>, TokenizerState<D>) {
         match self {
             TokenizerState::Initial => get_next_state((), c, &maps.initial, maps),
@@ -97,7 +96,7 @@ where
         }
     }
 
-    pub fn push_mut(&mut self, c: char, tm: &TransitionMaps<D>) -> Vec<JsonToken<D>> {
+    pub fn push_mut<M: Manager<Dealloc = D>>(&mut self, c: char, tm: &TransitionMaps<M>) -> Vec<JsonToken<M::Dealloc>> {
         let tokens;
         (tokens, *self) = take(self).push(c, tm);
         tokens
@@ -411,19 +410,18 @@ pub fn create_transition_maps<M: Manager>(manager: M) -> TransitionMaps<M> {
     }
 }
 
-fn get_next_state<T, D: Dealloc>(
+fn get_next_state<T, M: Manager>(
+    manager: M,
     state: T,
     c: char,
-    tm: &TransitionMap<T, D>,
-    maps: &TransitionMaps<D>,
-) -> (Vec<JsonToken<D>>, TokenizerState<D>)
-where
-    T: 'static, D: 'static
+    tm: &TransitionMap<T, M>,
+    maps: &TransitionMaps<M>,
+) -> (Vec<JsonToken<M::Dealloc>>, TokenizerState<M::Dealloc>)
 {
     let entry = tm.rm.get(c);
     match &entry.value {
-        Some(f) => f(state, c, maps),
-        None => (tm.def)(state, c, maps),
+        Some(f) => f(manager, state, c, maps),
+        None => (tm.def)(manager, state, c, maps),
     }
 }
 
