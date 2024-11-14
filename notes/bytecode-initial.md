@@ -140,18 +140,18 @@ struct Module {
 - bigint: in a binary format
 - len: u32
 
-|any      |tag|                       |                         |
-|---------|---|-----------------------|-------------------------|
-|undefined|  0|                       |                         |
-|null     |  1|                       |                         |
-|false    |  2|                       |                         |
-|true     |  3|                       |                         |
-|number   |  4|u64                    |                         |
-|string   |  5|len, u16[len]          |                         |
-|bigint+  |  6|len, u64[len]          |                         |
-|bigint-  |  7|len, u64[len]          |                         |
-|object   |  8|len, (string, any)[len]|                         |
-|array    |  9|len, any[len]          |                         |
-|function | 10|p: len, len, u8[len]   |last constant is a return|
-|local_ref| 11|u32                    |consts[i]                |
-|arg_ref  | 12|u32                    |args[i]                  |
+|any      |tag|                       |                             |
+|---------|---|-----------------------|-----------------------------|
+|undefined|  0|                       |                             |
+|null     |  1|                       |                             |
+|false    |  2|                       |                             |
+|true     |  3|                       |                             |
+|number   |  4|u64                    |                             |
+|string   |  5|len, u16[len]          |                             |
+|bigint+  |  6|len, u64[len]          |                             |
+|bigint-  |  7|len, u64[len]          |                             |
+|object   |  8|len, (string, any)[len]|                             |
+|array    |  9|len, any[len]          |                             |
+|function | 10|p: u32, len, u8[len]   |the last constant is a return|
+|local_ref| 11|u32                    |consts[i]                    |
+|arg_ref  | 12|u32                    |args[i]                      |
