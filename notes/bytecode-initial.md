@@ -177,6 +177,6 @@ struct Module {
 |bigint-  |  7|BigUInt                |                             |
 |object   |  8|Object                 |                             |
 |array    |  9|Array<Any>             |                             |
-|function | 10|p: u32, len, u8[len]   |the last constant is a return|
-|local_ref| 11|u32                    |consts[i]                    |
-|arg_ref  | 12|u32                    |args[i]                      |
+|local_ref| 10|u32                    |consts[i]                    |
+|arg_ref  | 11|u32                    |args[i]                      |
+|function | 12|Function               |the last constant is a return|
