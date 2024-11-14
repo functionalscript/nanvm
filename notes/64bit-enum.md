@@ -67,3 +67,20 @@ const isRef = (hi, lo) => hi === 0b111
 
 const instanceofArray = (hi, lo) => hi === 0b111 & lo === 0b11
 ```
+
+|hi\lo|000      |001   |010        |011        |100   |101    |110      |111      |
+|-----|---------|------|-----------|-----------|------|-------|---------|---------|
+|00   |         |str7p0|+bigint    |-bigint    |      |       |         |number   |
+|01   |str654210|str7p1|+bigint    |-bigint    |      |       |         |boolean  |
+|10   |str3     |str8  |           |           |      |       |null     |undefined|
+|11   |str_ref  |      |+bigint_ptr|-bigint_ptr|fn_ptr|efn_ptr|objec_ptr|array_ptr|
+
+```js
+const typeofF = (hi, lo) => lo === 0b111
+    ? ['number', 'boolean', ' undefined', 'object'][hi]
+    : ['string', 'bigint', 'function', 'object'][lo >> 1]
+
+const isRef = (hi, lo) => hi === 0b11
+
+const instanceofArray = (hi, lo) => hi === 0b11 & lo === 0b111
+```
