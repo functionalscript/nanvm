@@ -189,8 +189,8 @@ struct Module {
 |array         | 09|Array<Any>             |                             |
 |function      | 0A|Function               |the last constant is a return|
 |**operators:**|   |                       |                             |
-|local_ref     | 10|u32                    |consts[i]                    |
-|arg_ref       | 11|u32                    |args[i]                      |
+|local_ref     | 0B|u32                    |consts[i]                    |
+|arg_ref       | 0C|u32                    |args[i]                      |
 
 We will extend the command set in the future.
 
