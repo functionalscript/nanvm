@@ -45,13 +45,36 @@ String:
     2^16 +
     2^0 =
     2^50 + 2^42 + 2^35 + 2^32 + 2^28 + 2^16 + 2^0 < 2^51
+```
 
-- 0:
-  - 0: string51 + constants
-  - 1: pointer51
-- 1: bigint52
+|hi\lo   |00        |01       |10        |11        |
+|--------|----------|---------|----------|----------|
+|000     |          |         |str3      |bigint    |
+|001     |          |         |str8      |bigint    |
+|010     |          |         |str7p0    |bigint    |
+|011     |          |         |str7p1    |bigint    |
+|100     |          |number   |          |          |
+|101     |          |boolean  |          |          |
+|110     |null      |undefined|str654210 |          |
+|111: ref|object_ptr|array_ptr|string_ptr|bigint_ptr|
 
-BigInt33:
+|hi\lo   |00        |01        |10        |11       |
+|--------|----------|----------|----------|---------|
+|000     |str3      |bigint    |          |         |
+|001     |str8      |bigint    |          |         |
+|010     |str7p0    |bigint    |          |         |
+|011     |str7p1    |bigint    |          |         |
+|100     |          |          |          |number   |
+|101     |          |          |          |boolean  |
+|110     |str654210 |          |null      |undefined|
+|111: ref|string_ptr|bigint_ptr|object_ptr|array_ptr|
 
-Pointers:
+```js
+const typeofF = (hi, lo) => lo === 0b11
+    ? ['number', 'boolean', ' undefined', 'object'][hi & 0b11]
+    : ['string', 'bigint', 'object']
+
+const isRef = (hi, lo) => hi === 0b111
+
+const instanceofArray = (hi, lo) => hi === 0b111 & lo === 0b11
 ```
