@@ -134,11 +134,16 @@ struct Module {
 
 ## Byte Code
 
-**Requirements:** VM parser should be very simple:
-- string: UTF16
-- number: in a binary format
-- bigint: in a binary format
-- len: u32
+This format is designed for fast and straightforward serialization and doesn't depend on a particular VM implementation.
+
+**Requirements:** 
+    - VM parser should be very simple to serialize and deserialize.
+        - string: UTF16
+        - number: in a binary format
+        - bigint: in a binary format
+        - len: u32
+    - the byte code doesn't know anything about importing modules or I/O functions.
+    - the byte code shouldn't contain syntax sugar.
 
 ```rust
 struct Array<T> {
@@ -159,6 +164,7 @@ struct Function {
     code: Code
 }
 
+//This structure is not for serialization.
 struct Module {
     import: Array<String>
     code: Code
