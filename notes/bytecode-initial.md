@@ -207,6 +207,9 @@ Source files:
 - `selfparse.f.cjs` parses `parser.f.cjs` and generates byte code.
 - `build.rs`
 - `parser.rs`
+- `bc_serializer.rs`
+- `vm_api.rs`
+- `vm.rs`
 
 Build steps:
 1. The build script `build.rs` starts `Deno` with `selfparse.f.cjs` and generates `parser.f.cjs.bc` temporary binary file.
