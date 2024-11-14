@@ -9,6 +9,7 @@ Rest = 2^(64 - 11) - 3 = 2^53 - 3, 3 values: -Inf, +Inf, NaN.
 
 Additional constants (4): undefined, null, true, false
 
+Identifiers: 
     52 letters: 26: `a..z` + 26: `A..Z`
     2 symbols: `$`, `_`
     10 digits: `0..9`
@@ -42,8 +43,8 @@ String:
     2^32 +
     2^28 +
     2^16 +
-    1 =
-    2^50 + 2^42 + 2^35 + 2^32 + 2^28 + 2^16 +1 < 2^51
+    2^0 =
+    2^50 + 2^42 + 2^35 + 2^32 + 2^28 + 2^16 + 2^0 < 2^51
 
 BigInt33:
 ```
