@@ -193,7 +193,7 @@ struct Module {
 |local_ref     | 0B|u32                    |consts[i]                    |
 |arg_ref       | 0C|u32                    |args[i]                      |
 
-We will extend the command set in the future.
+These commands covers DJS. We will extend the command set in the future.
 
 ## Architecture
 
