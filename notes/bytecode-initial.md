@@ -195,11 +195,16 @@ struct Module {
 
 ### Build Stage:
     
-1. FunctionalScript files:
-  - `parser.f.cjs` is a generic FunctionalScript parser that generates byte code.
-  - `selfparse.f.cjs` parses `parser.f.cjs` and generates byte code. 
-2. The build script `build.rs` starts `Deno` with `selfparse.f.cjs` and generates `parser.f.cjs.bc` temporary binary file.
-3. `parser.rs` includes `parser.f.cjs.bc` as an array of bytes. See https://doc.rust-lang.org/std/macro.include_bytes.html
+Source files:
+- `parser.f.cjs` is a generic FunctionalScript parser that generates byte code.
+- `selfparse.f.cjs` parses `parser.f.cjs` and generates byte code.
+- `build.rs`
+- `parser.rs`
+
+Build steps:
+1. The build script `build.rs` starts `Deno` with `selfparse.f.cjs` and generates `parser.f.cjs.bc` temporary binary file.
+2. During compiling, `parser.rs` includes `parser.f.cjs.bc` as an array of bytes. See https://doc.rust-lang.org/std/macro.include_bytes.html
+3. Test `parser.rs` by parsing `parser.f.cjs` using VM and ensure the byte code is the same.
 
 ### Run-Time
 
