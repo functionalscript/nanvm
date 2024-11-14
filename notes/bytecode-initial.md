@@ -132,37 +132,26 @@ struct Module {
 }
 ```
 
-## 64-bit Byte Code
+## Byte Code
 
-```
-0_111_1111__1111_0000 . 0000_0000__0000_0000 . 0000_0000__0000_0000 . 0000_0000__0000_0000 | -Inf
-1_111_1111__1111_0000 . 0000_0000__0000_0000 . 0000_0000__0000_0000 . 0000_0000__0000_0000 | +Inf
-0_111_1111__1111_0000 . 0000_0000__0000_0000 . 0000_0000__0000_0000 . 0000_0000__0000_0001 | NaN
+**Requirements:** VM parser should be very simple:
+- string: UTF16
+- number: in a binary format
+- bigint: in a binary format
+- len: u32
 
-Rest = 2^(64 - 11) - 3 = 2^53 - 3, 3 values: -Inf, +Inf, NaN.
-
-Additional constants (4): undefined, null, true, false
-
-    52 letters: 26: `a..z` + 26: `A..Z`
-    2 symbols: `$`, `_`
-    10 digits: `0..9`
-    total: 64 = 6 bits
-
-String:
-    String8 x6 : 8 x 6 bit = 48 bit
-
-    String7 x7 : 7 x 7 bit = 49 bit
-    String6 x7 : 6 x 7 bit = 42 bit
-    String5 x7 : 5 x 7 bit = 35 bit
-    String4 x7 : 4 x 7 bit = 28 bit
-
-    String3: 3 x 16 bit = 48 bit
-    String2: 2 x 16 bit = 32 bit
-    String1: 1 x 16 bit = 16 bit
-
-    String0.
-
-    StringU32: 32 bit, See 'array index'.
-
-BigInt33:
-```
+|any      |tag|                       |                         |
+|---------|---|-----------------------|-------------------------|
+|undefined|  0|                       |                         |
+|null     |  1|                       |                         |
+|false    |  2|                       |                         |
+|true     |  3|                       |                         |
+|number   |  4|u64                    |                         |
+|string   |  5|len, u16[len]          |                         |
+|bigint+  |  6|len, u64[len]          |                         |
+|bigint-  |  7|len, u64[len]          |                         |
+|object   |  8|len, (string, any)[len]|                         |
+|array    |  9|len, any[len]          |                         |
+|function | 10|p: len, len, u8[len]   |last constant is a return|
+|local_ref| 11|u32                    |consts[i]                |
+|arg_ref  | 12|u32                    |args[i]                  |
