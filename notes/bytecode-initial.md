@@ -155,6 +155,7 @@ struct Array<T> {
  
 type String = Array<u16>;
 
+// LSB first.
 type BigUInt = Array<u64>;
 
 type Object = Array<(String, Any)>;
