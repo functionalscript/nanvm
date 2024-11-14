@@ -82,8 +82,6 @@ const typeofFunc = (hi, lo) => lo === 0b111
 
 const isRef = (hi, lo) => hi === 0b11
 
-const instanceofString = (hi, lo) => lo === 0b000
-const instanceOfNumber = (hi, lo) => hi === 0b00 & lo === 0b111
 const instanceOfObject = (hi, lo) => hi === 0b11 & (lo >> 2) === 0b1
 const instanceOfFunction = (hi, lo) => hi === 0b11 & (lo >> 1) === 0b10
 const instanceofArray = (hi, lo) => hi === 0b11 & lo === 0b111
