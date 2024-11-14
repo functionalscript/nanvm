@@ -175,21 +175,24 @@ struct Module {
 }
 ```
 
-|any      |tag|                       |                             |
-|---------|---|-----------------------|-----------------------------|
-|undefined|  0|                       |                             |
-|null     |  1|                       |                             |
-|false    |  2|                       |                             |
-|true     |  3|                       |                             |
-|number   |  4|u64                    |                             |
-|string   |  5|String                 |                             |
-|bigint+  |  6|BigUInt                |                             |
-|bigint-  |  7|BigUInt                |                             |
-|object   |  8|Object                 |                             |
-|array    |  9|Array<Any>             |                             |
-|local_ref| 10|u32                    |consts[i]                    |
-|arg_ref  | 11|u32                    |args[i]                      |
-|function | 12|Function               |the last constant is a return|
+|any           |tag|                       |                             |
+|--------------|---|-----------------------|-----------------------------|
+|undefined     | 00|                       |                             |
+|null          | 01|                       |                             |
+|false         | 02|                       |                             |
+|true          | 03|                       |                             |
+|number        | 04|u64                    |                             |
+|string        | 05|String                 |                             |
+|bigint+       | 06|BigUInt                |                             |
+|bigint-       | 07|BigUInt                |                             |
+|object        | 08|Object                 |                             |
+|array         | 09|Array<Any>             |                             |
+|function      | 0A|Function               |the last constant is a return|
+|**operators:**|   |                       |                             |
+|local_ref     | 10|u32                    |consts[i]                    |
+|arg_ref       | 11|u32                    |args[i]                      |
+
+We will extend the command set in the future.
 
 ## Architecture
 
