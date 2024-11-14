@@ -167,7 +167,8 @@ struct Function {
     code: Code
 }
 
-// This structure is not for serialization.
+// This structure is not for serialization because
+// a serialized module should resolve all imports.
 struct Module {
     import: Array<String>
     code: Code
@@ -192,15 +193,15 @@ struct Module {
 
 ## Architecture
 
-```
-1. Build Stage:
+### Build Stage:
+    
+1. FunctionalScript files:
+  - `parser.f.cjs` is a generic FunctionalScript parser that generates byte code.
+  - `selfparse.f.cjs` parses `parser.f.cjs` and generates byte code. 
+2. The build script `build.rs` starts `Deno` with `selfparse.f.cjs` and generates `parser.f.cjs.bc` temporary binary file.
+3. `parser.rs` includes `parser.f.cjs.bc` as an array of bytes. See https://doc.rust-lang.org/std/macro.include_bytes.html
 
-| Parser             |                  | Parser             |                   | Parser     |                               |       |
-| (FunctionalScript) | -- file read --> | (FunctionalScript) | -- file write --> | (ByteCode) | --> include into programs --> | NaNVM |
-| source code files  |                  | run on Deno        |                   |            |                               |       |
+### Run-Time
 
-2. Run time:
-
-|Parser              | -- read from static memory --> |Byte code serializer| -- VM API --> | NaNVM (Rust) |
-|(embedded byte code)|                                | (Rust)             |       
-```
+1. Initialization: send a parser byte code to a deserializer that invokes `VM API`.
+2. Parse: call loaded parser in VM.
