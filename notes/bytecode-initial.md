@@ -137,13 +137,15 @@ struct Module {
 This format is designed for fast and straightforward serialization and doesn't depend on a particular VM implementation.
 
 **Requirements:** 
-    - VM parser should be very simple to serialize and deserialize.
-        - string: UTF16
-        - number: in a binary format
-        - bigint: in a binary format
-        - len: u32
-    - the byte code doesn't know anything about importing modules or I/O functions.
-    - the byte code shouldn't contain syntax sugar.
+- VM serializer/deserializer should be very simple.
+    - string: UTF16
+    - number: in a binary format
+    - bigint: in a binary format
+    - len: u32
+- the byte code doesn't know anything about importing modules or I/O functions.
+- the byte code shouldn't contain syntax sugar.
+- serialized in a byte array so we can save it into a file. One byte is one unit.
+- least-significant byte first.
 
 ```rust
 struct Array<T> {
@@ -157,6 +159,7 @@ type BigUInt = Array<u64>;
 
 type Object = Array<(String, Any)>;
 
+// This is the main structure for serialization.
 type Code = Array<u8>;
 
 struct Function {
@@ -164,7 +167,7 @@ struct Function {
     code: Code
 }
 
-//This structure is not for serialization.
+// This structure is not for serialization.
 struct Module {
     import: Array<String>
     code: Code
