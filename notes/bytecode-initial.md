@@ -194,6 +194,9 @@ struct Module {
 ## Architecture
 
 ### Build Stage:
+
+Development dependencies:
+- Deno
     
 Source files:
 - `parser.f.cjs` is a generic FunctionalScript parser that generates byte code.
@@ -207,6 +210,8 @@ Build steps:
 3. Test `parser.rs` by parsing `parser.f.cjs` using VM and ensure the byte code is the same as in the array that contains `parser.f.cjs.bs`.
 
 ### Run-Time
+
+No run-time dependencies.
 
 1. Initialization: send a parser byte code to a deserializer that invokes `VM API`.
 2. Parse: call loaded parser in VM.
