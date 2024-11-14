@@ -189,3 +189,18 @@ struct Module {
 |local_ref| 10|u32                    |consts[i]                    |
 |arg_ref  | 11|u32                    |args[i]                      |
 |function | 12|Function               |the last constant is a return|
+
+## Architecture
+
+```
+1. Build Stage:
+
+| Parser             |                  | Parser             |                   | Parser     |                               |       |
+| (FunctionalScript) | -- file read --> | (FunctionalScript) | -- file write --> | (ByteCode) | --> include into programs --> | NaNVM |
+| source code files  |                  | run on Deno        |                   |            |                               |       |
+
+2. Run time:
+
+|Parser              | -- read from static memory --> |Byte code serializer| -- VM API --> | NaNVM (Rust) |
+|(embedded byte code)|                                | (Rust)             |       
+```
