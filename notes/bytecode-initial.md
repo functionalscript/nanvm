@@ -204,7 +204,7 @@ Source files:
 Build steps:
 1. The build script `build.rs` starts `Deno` with `selfparse.f.cjs` and generates `parser.f.cjs.bc` temporary binary file.
 2. During compiling, `parser.rs` includes `parser.f.cjs.bc` as an array of bytes. See https://doc.rust-lang.org/std/macro.include_bytes.html
-3. Test `parser.rs` by parsing `parser.f.cjs` using VM and ensure the byte code is the same.
+3. Test `parser.rs` by parsing `parser.f.cjs` using VM and ensure the byte code is the same as in the array that contains `parser.f.cjs.bs`.
 
 ### Run-Time
 
