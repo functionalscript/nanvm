@@ -46,5 +46,12 @@ String:
     2^0 =
     2^50 + 2^42 + 2^35 + 2^32 + 2^28 + 2^16 + 2^0 < 2^51
 
+- 0:
+  - 0: string51 + constants
+  - 1: pointer51
+- 1: bigint52
+
 BigInt33:
+
+Pointers:
 ```
