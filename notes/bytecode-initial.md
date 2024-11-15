@@ -188,12 +188,11 @@ struct Module {
 |bigint-       | 07|BigUInt                |                             |
 |object        | 08|Object                 |                             |
 |array         | 09|Array<Any>             |                             |
-|function      | 0A|Function               |the last constant is a return|
-|**operators:**|   |                       |                             |
-|local_ref     | 0B|u32                    |consts[i]                    |
-|arg_ref       | 0C|u32                    |args[i]                      |
+|local_ref     | 0A|u32                    |consts[i]                    |
+|arg_ref       | 0B|u32                    |args[i]                      |
+|function      | 0C|Function               |the last constant is a return|
 
-These commands covers DJS. We will extend the command set in the future.
+`[0, B]` commands covers DJS.
 
 ## Architecture
 
