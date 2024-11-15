@@ -178,23 +178,24 @@ struct Module {
 
 |type|any           |tag|                       |                             |
 |----|--------------|---|-----------------------|-----------------------------|
-|JSON|false         | 00|                       |                             |
-|    |true          | 01|                       |                             |
-|    |null          | 02|                       |                             |
-|    |number        | 03|u64                    |                             |
+|JSON|null          | 00|                       |                             |
+|    |number        | 01|u64                    |                             |
+|    |false         | 02|                       |                             |
+|    |true          | 03|                       |                             |
 |    |string        | 04|String                 |                             |
 |    |object        | 05|Object                 |                             |
 |    |array         | 06|Array<Any>             |                             |
-|DJS |bigint+       | 09|BigUInt                |                             |
-|    |bigint-       | 0A|BigUInt                |                             |
-|    |local_ref     | 07|u32                    |consts[i]                    |
-|FJS |undefined     | 08|                       |                             |
-|    |arg_ref       | 09|u32                    |args[i]                      |
-|    |function      | 0A|Function               |the last constant is a return|
+|DJS |bigint+       | 07|BigUInt                |                             |
+|    |bigint-       | 08|BigUInt                |                             |
+|    |local_ref     | 09|u32                    |consts[i]                    |
+|FJS |arg_ref       | 0A|u32                    |args[i]                      |
+|    |undefined     | 0B|                       |                             |
+|    |function      | 0C|Function               |the last constant is a return|
+|    |...           |   |                       |                             |
 
 ## Architecture
 
-Because FunctionalScript is a subset of JavaScript, we can use third-party JavaScript engines to bootstrap our parser, which is written in FunctionalScript, without circular dependencies. In Rust we only need to implement a generic byte code deserializer, that reads byte code and invokes VM API functions.
+Because FunctionalScript is a subset of JavaScript, we can use third-party JavaScript engines to bootstrap our parser, which is written in FunctionalScript, without circular dependencies. In Rust, we only need to implement a generic byte code deserializer that reads byte code and invokes VM API functions.
 
 `Deno` is a good candidate because it's written on Rust and can be added as `DevDependency`: https://crates.io/crates/deno
 
