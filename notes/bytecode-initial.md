@@ -176,23 +176,21 @@ struct Module {
 }
 ```
 
-|any           |tag|                       |                             |
-|--------------|---|-----------------------|-----------------------------|
-|undefined     | 00|                       |                             |
-|null          | 01|                       |                             |
-|false         | 02|                       |                             |
-|true          | 03|                       |                             |
-|number        | 04|u64                    |                             |
-|string        | 05|String                 |                             |
-|bigint+       | 06|BigUInt                |                             |
-|bigint-       | 07|BigUInt                |                             |
-|object        | 08|Object                 |                             |
-|array         | 09|Array<Any>             |                             |
-|local_ref     | 0A|u32                    |consts[i]                    |
-|arg_ref       | 0B|u32                    |args[i]                      |
-|function      | 0C|Function               |the last constant is a return|
-
-`[0, B]` commands covers DJS.
+|type|any           |tag|                       |                             |
+|----|--------------|---|-----------------------|-----------------------------|
+|JSON|false         | 00|                       |                             |
+|    |true          | 01|                       |                             |
+|    |null          | 02|                       |                             |
+|    |number        | 03|u64                    |                             |
+|    |string        | 04|String                 |                             |
+|    |object        | 05|Object                 |                             |
+|    |array         | 06|Array<Any>             |                             |
+|DJS |bigint+       | 09|BigUInt                |                             |
+|    |bigint-       | 0A|BigUInt                |                             |
+|    |local_ref     | 07|u32                    |consts[i]                    |
+|FJS |undefined     | 08|                       |                             |
+|    |arg_ref       | 09|u32                    |args[i]                      |
+|    |function      | 0A|Function               |the last constant is a return|
 
 ## Architecture
 
