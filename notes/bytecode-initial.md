@@ -134,7 +134,7 @@ struct Module {
 
 ## Byte Code
 
-See [https://github.com/functionalscript/functionalscript/main/doc/](https://github.com/functionalscript/functionalscript/blob/main/doc/byte-code.md).
+See [https://github.com/functionalscript/functionalscript/main/doc/byte-code.md](https://github.com/functionalscript/functionalscript/blob/main/doc/byte-code.md).
 
 ## Architecture
 
