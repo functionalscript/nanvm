@@ -1064,7 +1064,7 @@ mod test {
             big_float::BigFloat,
             big_int::{BigInt, Sign},
             big_uint::BigUint,
-        }, common::cast::Cast, mem::local::Local, tokenizer::bigfloat_to_f64
+        }, common::cast::Cast, mem::{global::GLOBAL, local::Local}, tokenizer::bigfloat_to_f64
     };
 
     use super::{tokenize, ErrorType, JsonToken};
@@ -1072,8 +1072,7 @@ mod test {
     #[test]
     #[wasm_bindgen_test]
     fn test_empty() {
-        let local = Local::default();
-        let result = tokenize(&local, String::from(""));
+        let result = tokenize(GLOBAL, String::from(""));
         assert_eq!(result.len(), 0);
     }
 
