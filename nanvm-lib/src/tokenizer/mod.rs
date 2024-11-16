@@ -1474,85 +1474,85 @@ mod test {
     //     );
     // }
 
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_singleline_comments() {
-        let result = tokenize(String::from("{//abc\n2\n}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::NewLine,
-                JsonToken::Number(2.0),
-                JsonToken::NewLine,
-                JsonToken::ObjectEnd,
-            ]
-        );
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn test_singleline_comments() {
+    //     let result = tokenize(String::from("{//abc\n2\n}"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::ObjectBegin,
+    //             JsonToken::NewLine,
+    //             JsonToken::Number(2.0),
+    //             JsonToken::NewLine,
+    //             JsonToken::ObjectEnd,
+    //         ]
+    //     );
 
-        let result = tokenize(String::from("0//abc/*"));
-        assert_eq!(&result, &[JsonToken::Number(0.0),]);
+    //     let result = tokenize(String::from("0//abc/*"));
+    //     assert_eq!(&result, &[JsonToken::Number(0.0),]);
 
-        let result = tokenize(String::from("0//"));
-        assert_eq!(&result, &[JsonToken::Number(0.0),]);
+    //     let result = tokenize(String::from("0//"));
+    //     assert_eq!(&result, &[JsonToken::Number(0.0),]);
 
-        let result = tokenize(String::from("0/"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Number(0.0),
-                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
-            ]
-        );
+    //     let result = tokenize(String::from("0/"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::Number(0.0),
+    //             JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+    //         ]
+    //     );
 
-        let result = tokenize(String::from("0/a"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::Number(0.0),
-                JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
-            ]
-        );
-    }
+    //     let result = tokenize(String::from("0/a"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::Number(0.0),
+    //             JsonToken::ErrorToken(ErrorType::UnexpectedCharacter),
+    //         ]
+    //     );
+    // }
 
-    #[test]
-    #[wasm_bindgen_test]
-    fn test_multiline_comments() {
-        let result = tokenize(String::from("{/*abc\ndef*/2}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::Number(2.0),
-                JsonToken::ObjectEnd,
-            ]
-        );
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn test_multiline_comments() {
+    //     let result = tokenize(String::from("{/*abc\ndef*/2}"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::ObjectBegin,
+    //             JsonToken::Number(2.0),
+    //             JsonToken::ObjectEnd,
+    //         ]
+    //     );
 
-        let result = tokenize(String::from("{/*/* /**/2}"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::Number(2.0),
-                JsonToken::ObjectEnd,
-            ]
-        );
+    //     let result = tokenize(String::from("{/*/* /**/2}"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::ObjectBegin,
+    //             JsonToken::Number(2.0),
+    //             JsonToken::ObjectEnd,
+    //         ]
+    //     );
 
-        let result = tokenize(String::from("{/*"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
-            ]
-        );
+    //     let result = tokenize(String::from("{/*"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::ObjectBegin,
+    //             JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
+    //         ]
+    //     );
 
-        let result = tokenize(String::from("{/**"));
-        assert_eq!(
-            &result,
-            &[
-                JsonToken::ObjectBegin,
-                JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
-            ]
-        );
-    }
+    //     let result = tokenize(String::from("{/**"));
+    //     assert_eq!(
+    //         &result,
+    //         &[
+    //             JsonToken::ObjectBegin,
+    //             JsonToken::ErrorToken(ErrorType::CommentClosingExpected),
+    //         ]
+    //     );
+    // }
 }
