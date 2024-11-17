@@ -357,6 +357,13 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+pub fn equals(lhs: &JsBigint, rhs: &JsBigint) -> bool {
+    if lhs.sign() != rhs.sign() {
+        return false;
+    }
+    return cmp_vec(lhs.items(), rhs.items()) == Ordering::Equal;
+}
+
 fn to_twos_complement(value: &JsBigint) -> TwosComplement {
     TwosComplement {
         sign: value.sign(),
