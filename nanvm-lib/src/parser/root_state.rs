@@ -1,9 +1,5 @@
 use super::{
-    any_state::AnyState,
-    const_state::ConstState,
-    json_state::JsonState,
-    path::{concat, split},
-    shared::{ModuleCache, ParseError},
+    any_state::AnyState, const_state::ConstState, json_state::JsonState, shared::ParseError,
 };
 use crate::{mem::manager::Manager, tokenizer::JsonToken};
 
@@ -32,11 +28,9 @@ impl<M: Manager> RootState<M> {
         self,
         manager: M,
         token: JsonToken,
-        module_cache: &mut ModuleCache<M::Dealloc>,
-        context_path: String,
     ) -> (
-        /*any_result:*/ JsonState<M>,
-        /*import_path:*/ Option<String>,
+        /*json_state:*/ JsonState<M>,
+        /*import:*/ Option<(/*id:*/ String, /*module:*/ String)>,
     ) {
         match self.status {
             RootStatus::Initial => match token {
@@ -81,19 +75,22 @@ impl<M: Manager> RootState<M> {
                             }),
                             None,
                         ),
-                        _ => self.state.parse_for_module(
-                            manager,
-                            JsonToken::Id(s),
-                            module_cache,
-                            context_path,
-                        ),
+                        _ => {
+                            let (json_state, _module_name) =
+                                self.state.parse_for_module(manager, JsonToken::Id(s));
+                            // TODO: figure out id and use _module_name, passing Some in place of None below.
+                            (json_state, None)
+                        }
                     },
                     false => (JsonState::Error(ParseError::NewLineExpected), None),
                 },
                 _ => match self.new_line {
-                    true => self
-                        .state
-                        .parse_for_module(manager, token, module_cache, context_path),
+                    true => {
+                        let (json_state, _module_name) =
+                            self.state.parse_for_module(manager, token);
+                        // TODO: figure out id and use _module_name, passing Some in place of None below.
+                        (json_state, None)
+                    }
                     false => (JsonState::Error(ParseError::NewLineExpected), None),
                 },
             },
@@ -180,33 +177,14 @@ impl<M: Manager> RootState<M> {
                 _ => (JsonState::Error(ParseError::WrongImportStatement), None),
             },
             RootStatus::ImportIdFrom(id) => match token {
-                JsonToken::String(s) => {
-                    let import_path = concat(split(&context_path).0, s.as_str());
-                    if let Some(any) = module_cache.complete.get(&import_path) {
-                        let mut state = self.state;
-                        state.consts.insert(id, any.clone());
-                        return (
-                            JsonState::ParseRoot(RootState {
-                                status: RootStatus::Initial,
-                                state,
-                                new_line: false,
-                            }),
-                            None,
-                        );
-                    }
-                    if module_cache.progress.contains(&import_path) {
-                        return (JsonState::Error(ParseError::CircularDependency), None);
-                    }
-                    module_cache.progress.insert(import_path.clone());
-                    (
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Initial,
-                            new_line: false,
-                            ..self
-                        }),
-                        Some(import_path),
-                    )
-                }
+                JsonToken::String(module) => (
+                    JsonState::ParseRoot(RootState {
+                        status: RootStatus::Initial,
+                        new_line: false,
+                        ..self
+                    }),
+                    Some((id, module)),
+                ),
                 _ => (JsonState::Error(ParseError::WrongImportStatement), None),
             },
         }

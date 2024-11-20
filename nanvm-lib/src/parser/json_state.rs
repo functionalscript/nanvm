@@ -2,7 +2,7 @@ use super::{
     any_state::AnyState,
     const_state::ConstState,
     root_state::RootState,
-    shared::{ModuleCache, ParseError, ParseResult},
+    shared::{ParseError, ParseResult},
 };
 use crate::{mem::manager::Manager, tokenizer::JsonToken};
 
@@ -19,29 +19,24 @@ impl<M: Manager> JsonState<M> {
         self,
         manager: M,
         token: JsonToken,
-        module_cache: &mut ModuleCache<M::Dealloc>,
-        context_path: String,
     ) -> (
         /*json_state:*/ JsonState<M>,
-        /*import_path:*/ Option<String>,
+        /*import:*/ Option<(/*id:*/ String, /*module:*/ String)>,
     ) {
         if token == JsonToken::NewLine {
             return match self {
-                JsonState::ParseRoot(state) => {
-                    state.parse(manager, token, module_cache, context_path)
-                }
+                JsonState::ParseRoot(state) => state.parse(manager, token),
                 _ => (self, None),
             };
         }
         match self {
-            JsonState::ParseRoot(state) => state.parse(manager, token, module_cache, context_path),
-            JsonState::ParseConst(state) => (
-                state.parse(manager, token, module_cache, context_path),
-                None,
-            ),
+            JsonState::ParseRoot(state) => state.parse(manager, token),
+            JsonState::ParseConst(state) => (state.parse(manager, token), None),
             JsonState::Result(_) => (JsonState::Error(ParseError::UnexpectedToken), None),
             JsonState::ParseModule(state) => {
-                state.parse_for_module(manager, token, module_cache, context_path)
+                let (json_state, _module_name) = state.parse_for_module(manager, token);
+                // TODO: figure out id and use _module_name to return Some in place of None below.
+                (json_state, None)
             }
             _ => (self, None),
         }
