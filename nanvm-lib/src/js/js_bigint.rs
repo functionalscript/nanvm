@@ -126,6 +126,16 @@ pub fn is_zero(value: &JsBigint) -> bool {
     value.items().is_empty()
 }
 
+impl JsBigint {
+    pub fn cmp(&self, other: &Self) -> Ordering {
+        match self.header_len().cmp(&other.header_len()) {
+            Ordering::Equal => cmp_vec(self.items(), other.items()),
+            Ordering::Less => Ordering::Less,
+            Ordering::Greater => Ordering::Greater,
+        }
+    }
+}
+
 pub fn negative<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     if is_zero(value) {
         return zero(m);
@@ -594,7 +604,7 @@ fn shr_on_big<M: Manager>(m: M, sign: Sign) -> JsBigintMutRef<M::Dealloc> {
 
 #[cfg(test)]
 mod test {
-    use std::ops::Deref;
+    use std::{cmp::Ordering, ops::Deref};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -742,6 +752,37 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert!(o.items().is_empty());
         }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_cmp() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Positive, 1);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.cmp(b), Ordering::Equal);
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Positive, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.cmp(b), Ordering::Less);
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Negative, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.cmp(b), Ordering::Greater);
+
+        let a_ref = new_bigint(Global(), Sign::Positive, [1, 2]);
+        let b_ref = new_bigint(Global(), Sign::Positive, [2, 1]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.cmp(b), Ordering::Greater);
     }
 
     #[test]
