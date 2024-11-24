@@ -134,6 +134,13 @@ impl JsBigint {
             Ordering::Greater => Ordering::Greater,
         }
     }
+
+    pub fn get_last_bit(&self) -> u64 {
+        if is_zero(self) {
+            return 0;
+        }
+        self.items()[0] & 1
+    }
 }
 
 pub fn negative<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
@@ -540,7 +547,7 @@ fn cmp_vec(lhs: &[u64], rhs: &[u64]) -> Ordering {
     Ordering::Equal
 }
 
-fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+pub fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
     let mut vec = lhs.items().to_vec();
     let shift_mod = rhs & ((1 << 6) - 1);
     if shift_mod > 0 {
@@ -565,7 +572,7 @@ fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::D
     new_bigint(m, lhs.sign(), vec)
 }
 
-fn shr_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+pub fn shr_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
     let number_to_remove = (rhs / 64) as usize;
     if number_to_remove >= lhs.items().len() {
         return shr_on_big(m, lhs.sign());
