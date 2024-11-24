@@ -233,7 +233,7 @@ mod test {
         common::cast::Cast,
         js::{
             any::Any,
-            js_bigint::{self, from_u64, zero, JsBigintRef, Sign},
+            js_bigint::{self, from_u64, new_bigint, zero, JsBigintRef, Sign},
             type_::Type,
         },
         mem::global::{Global, GLOBAL},
@@ -248,7 +248,7 @@ mod test {
         type BigintRef = JsBigintRef<Global>;
 
         let res = float_zero(GLOBAL).to_bin(64);
-        let any = A::move_from(res.significand.to_ref());        
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -262,9 +262,10 @@ mod test {
             manager: GLOBAL,
             significand: zero(GLOBAL),
             exp: 10,
-            non_zero_reminder: false
-        }.to_bin(64);
-        let any = A::move_from(res.significand.to_ref());        
+            non_zero_reminder: false,
+        }
+        .to_bin(64);
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -278,9 +279,10 @@ mod test {
             manager: GLOBAL,
             significand: zero(GLOBAL),
             exp: -10,
-            non_zero_reminder: false
-        }.to_bin(64);
-        let any = A::move_from(res.significand.to_ref());        
+            non_zero_reminder: false,
+        }
+        .to_bin(64);
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -301,9 +303,10 @@ mod test {
             manager: GLOBAL,
             significand: from_u64(GLOBAL, Sign::Positive, 100),
             exp: 0,
-            non_zero_reminder: false
-        }.to_bin(7);
-        let any = A::move_from(res.significand.to_ref());        
+            non_zero_reminder: false,
+        }
+        .to_bin(7);
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -317,9 +320,10 @@ mod test {
             manager: GLOBAL,
             significand: from_u64(GLOBAL, Sign::Positive, 1),
             exp: 1,
-            non_zero_reminder: false
-        }.to_bin(64);
-        let any = A::move_from(res.significand.to_ref());        
+            non_zero_reminder: false,
+        }
+        .to_bin(64);
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -333,9 +337,10 @@ mod test {
             manager: GLOBAL,
             significand: from_u64(GLOBAL, Sign::Positive, 100),
             exp: 2,
-            non_zero_reminder: false
-        }.to_bin(64);
-        let any = A::move_from(res.significand.to_ref());        
+            non_zero_reminder: false,
+        }
+        .to_bin(64);
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -349,9 +354,10 @@ mod test {
             manager: GLOBAL,
             significand: from_u64(GLOBAL, Sign::Positive, 128),
             exp: 0,
-            non_zero_reminder: false
-        }.to_bin(9);
-        let any = A::move_from(res.significand.to_ref());        
+            non_zero_reminder: false,
+        }
+        .to_bin(9);
+        let any = A::move_from(res.significand.to_ref());
         assert_eq!(any.get_type(), Type::Bigint);
         {
             let o = any.try_move::<BigintRef>().unwrap();
@@ -362,103 +368,104 @@ mod test {
         assert_eq!(res.non_zero_reminder, false);
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_integer_rounding() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(128),
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_bin(4);
-    //     assert_eq!(
-    //         res,
-    //         BigFloat {
-    //             significand: BigInt::from_i64(8),
-    //             exp: 4,
-    //             non_zero_reminder: false
-    //         }
-    //     );
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_integer_rounding() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(129),
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_bin(4);
-    //     assert_eq!(
-    //         res,
-    //         BigFloat {
-    //             significand: BigInt::from_i64(8),
-    //             exp: 4,
-    //             non_zero_reminder: true
-    //         }
-    //     );
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 128),
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_bin(4);
+        let any = A::move_from(res.significand.to_ref());
+        assert_eq!(any.get_type(), Type::Bigint);
+        {
+            let o = any.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[8]);
+        }
+        assert_eq!(res.exp, 4);
+        assert_eq!(res.non_zero_reminder, false);
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_float() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(100),
-    //         exp: -1,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_bin(5);
-    //     assert_eq!(
-    //         res,
-    //         BigFloat {
-    //             significand: BigInt::from_i64(20),
-    //             exp: -1,
-    //             non_zero_reminder: false
-    //         }
-    //     );
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 129),
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_bin(4);
+        let any = A::move_from(res.significand.to_ref());
+        assert_eq!(any.get_type(), Type::Bigint);
+        {
+            let o = any.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[8]);
+        }
+        assert_eq!(res.exp, 4);
+        assert_eq!(res.non_zero_reminder, true);
+    }
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(100),
-    //         exp: -1,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_bin(64);
-    //     assert_eq!(
-    //         res,
-    //         BigFloat {
-    //             significand: BigInt {
-    //                 sign: Sign::Positive,
-    //                 value: BigUint {
-    //                     value: [(1 << 63) + (1 << 61)].cast()
-    //                 }
-    //             },
-    //             exp: -60,
-    //             non_zero_reminder: false
-    //         }
-    //     );
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_float() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     let a = BigFloat {
-    //         significand: BigInt {
-    //             sign: Sign::Positive,
-    //             value: BigUint {
-    //                 value: [0, 1].cast(),
-    //             },
-    //         },
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_bin(53);
-    //     assert_eq!(
-    //         res,
-    //         BigFloat {
-    //             significand: BigInt {
-    //                 sign: Sign::Positive,
-    //                 value: BigUint {
-    //                     value: [1 << 52].cast()
-    //                 }
-    //             },
-    //             exp: 12,
-    //             non_zero_reminder: false
-    //         }
-    //     );
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 100),
+            exp: -1,
+            non_zero_reminder: false,
+        }
+        .to_bin(5);
+        let any = A::move_from(res.significand.to_ref());
+        assert_eq!(any.get_type(), Type::Bigint);
+        {
+            let o = any.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[20]);
+        }
+        assert_eq!(res.exp, -1);
+        assert_eq!(res.non_zero_reminder, false);
+
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 100),
+            exp: -1,
+            non_zero_reminder: false,
+        }
+        .to_bin(64);
+        let any = A::move_from(res.significand.to_ref());
+        assert_eq!(any.get_type(), Type::Bigint);
+        {
+            let o = any.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[(1 << 63) + (1 << 61)]);
+        }
+        assert_eq!(res.exp, -60);
+        assert_eq!(res.non_zero_reminder, false);
+
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: new_bigint(GLOBAL, Sign::Positive, [0, 1]),
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_bin(53);
+        let any = A::move_from(res.significand.to_ref());
+        assert_eq!(any.get_type(), Type::Bigint);
+        {
+            let o = any.try_move::<BigintRef>().unwrap();
+            assert_eq!(o.sign(), Sign::Positive);
+            assert_eq!(o.items(), &[1 << 52]);
+        }
+        assert_eq!(res.exp, 12);
+        assert_eq!(res.non_zero_reminder, false);
+    }
 
     // #[test]
     // #[wasm_bindgen_test]
