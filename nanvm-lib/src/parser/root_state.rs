@@ -27,7 +27,7 @@ impl<M: Manager> RootState<M> {
     pub fn parse(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*json_state:*/ JsonState<M>,
         /*import:*/ Option<(/*id:*/ String, /*module:*/ String)>,

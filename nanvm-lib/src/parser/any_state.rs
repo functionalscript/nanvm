@@ -70,7 +70,7 @@ impl<M: Manager> AnyState<M> {
     pub fn parse(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*any_result:*/ AnyResult<M>,
         /*module_name:*/ Option<String>,
@@ -95,7 +95,7 @@ impl<M: Manager> AnyState<M> {
     pub fn parse_for_module(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*json_state:*/ JsonState<M>,
         /*module_name:*/ Option<String>,
@@ -142,7 +142,7 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_import_value(
         self,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*any_result:*/ AnyResult<M>,
         /*module_name:*/ Option<String>,

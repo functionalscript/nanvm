@@ -149,10 +149,10 @@ fn any_state_parse<M: Manager + 'static, I: Io>(
     }
 }
 
-fn root_state_parse<M: Manager, I: Io>(
+fn root_state_parse<M: Manager + 'static, I: Io>(
     root_state: RootState<M>,
     context: &mut Context<M, I>,
-    token: JsonToken,
+    token: JsonToken<M::Dealloc>,
 ) -> JsonState<M> {
     let (json_state, import) = root_state.parse(context.manager, token);
     match import {
@@ -175,7 +175,7 @@ fn root_state_parse<M: Manager, I: Io>(
                 let read_result = context.io.read_to_string(current_path.as_str());
                 match read_result {
                     Ok(s) => {
-                        let tokens = tokenize(s);
+                        let tokens = tokenize(context.manager, s);
                         let res = parse_with_tokens(context, tokens.into_iter());
                         match res {
                             Ok(r) => {

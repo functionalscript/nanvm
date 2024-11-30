@@ -11,7 +11,7 @@ pub struct ConstState<M: Manager> {
 }
 
 impl<M: Manager> ConstState<M> {
-    pub fn parse(self, manager: M, token: JsonToken) -> JsonState<M> {
+    pub fn parse(self, manager: M, token: JsonToken<M::Dealloc>) -> JsonState<M> {
         match token {
             JsonToken::Semicolon => todo!(),
             _ => {
