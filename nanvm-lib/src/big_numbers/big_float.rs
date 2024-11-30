@@ -643,30 +643,32 @@ mod test {
         assert_eq!(res.non_zero_reminder, true);
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_zero_to_f64() {
-    //     type A = Any<Global>;
-    //     type BigintRef = JsBigintRef<Global>;
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_zero_to_f64() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     let res = BigFloat {
-    //         manager: GLOBAL,
-    //         significand: zero(GLOBAL),
-    //         exp: 100,
-    //         non_zero_reminder: false,
-    //     }.to_f64();
-    //     assert_eq!(res, 0.0);
-    //     assert!(res.is_sign_positive());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: zero(GLOBAL),
+            sign: Sign::Positive,
+            exp: 100,
+            non_zero_reminder: false,
+        }.to_f64();
+        assert_eq!(res, 0.0);
+        assert!(res.is_sign_positive());
 
-    //     let res = BigFloat {
-    //         manager: GLOBAL,
-    //         significand: from_u64(GLOBAL, Sign::Negative, 0),
-    //         exp: 100,
-    //         non_zero_reminder: false,
-    //     }.to_f64();
-    //     assert_eq!(res, 0.0);
-    //     assert!(res.is_sign_negative());
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: zero(GLOBAL),
+            sign: Sign::Negative,
+            exp: 100,
+            non_zero_reminder: false,
+        }.to_f64();
+        assert_eq!(res, 0.0);
+        assert!(res.is_sign_negative());
+    }
 
     // #[test]
     // #[wasm_bindgen_test]
