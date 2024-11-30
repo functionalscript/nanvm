@@ -5,9 +5,14 @@ use std::{
 };
 
 use crate::{
-    big_numbers::{self, big_float::BigFloat, big_int::BigInt, big_uint::BigUint},
+    big_numbers::{
+        self,
+        big_float::BigFloat,
+        big_int::{BigInt, Sign},
+        big_uint::BigUint,
+    },
     common::{cast::Cast, default::default},
-    js::js_bigint::{self, add, equals, from_u64, mul, JsBigintMutRef},
+    js::js_bigint::{self, add, equals, from_u64, mul, negative, JsBigintMutRef},
     mem::manager::{Dealloc, Manager},
     range_map::{from_one, from_range, merge, merge_list, RangeMap, State},
 };
@@ -262,17 +267,10 @@ impl<D: Dealloc> IntState<D> {
         }
     }
 
-    fn into_old_bigint(self) -> BigInt {
-        let deref = self.b.deref();
-        let sign = match deref.sign() {
-            js_bigint::Sign::Positive => big_numbers::big_int::Sign::Positive,
-            js_bigint::Sign::Negative => big_numbers::big_int::Sign::Negative,
-        };
-        BigInt {
-            sign,
-            value: BigUint {
-                value: deref.items().to_vec(),
-            },
+    fn into_bigint_state<M: Manager<Dealloc = D>>(self, m: M) -> JsBigintMutRef<D> {
+        match self.s {
+            js_bigint::Sign::Positive => self.b,
+            js_bigint::Sign::Negative => negative(m, self.b.deref()),
         }
     }
 }
@@ -758,8 +756,11 @@ fn create_int_transactions<M: Manager + 'static>() -> TransitionMap<IntState<M::
                 create_range_map(set(['e', 'E']), |_, s, _, _| {
                     (default(), TokenizerState::ParseExpBegin(s.into_exp_state()))
                 }),
-                from_one('n', |_, s, _, _| {
-                    (default(), TokenizerState::ParseBigInt(s.b))
+                from_one('n', |m, s, _, _| {
+                    (
+                        default(),
+                        TokenizerState::ParseBigInt(s.into_bigint_state(m)),
+                    )
                 }),
                 create_range_map(terminal_for_number(), |manager, s, c, maps| {
                     transfer_state(
@@ -1368,154 +1369,155 @@ mod test {
         assert_eq!(&result, &[JsonToken::Number(9007199254740993.0)]);
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_big_float() {
-    //     let result = tokenize(
-    //         GLOBAL,
-    //         String::from("340282366920938463463374607431768211456"),
-    //     );
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::Number(bigfloat_to_f64(BigFloat {
-    //             manager: GLOBAL,
-    //             significand: new_bigint(GLOBAL, js_bigint::Sign::Positive, [0, 0, 1]),
-    //             exp: 0,
-    //             non_zero_reminder: false
-    //         }))]
-    //     );
-    // }
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_big_float() {
+        let result = tokenize(
+            GLOBAL,
+            String::from("340282366920938463463374607431768211456"),
+        );
+        assert_eq!(
+            &result,
+            &[JsonToken::Number(bigfloat_to_f64(BigFloat {
+                manager: GLOBAL,
+                significand: new_bigint(GLOBAL, js_bigint::Sign::Positive, [0, 0, 1]),
+                sign: js_bigint::Sign::Positive,
+                exp: 0,
+                non_zero_reminder: false
+            }))]
+        );
+    }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_float() {
-    //     let result = tokenize(GLOBAL, String::from("0.01"));
-    //     assert_eq!(&result, &[JsonToken::Number(0.01)]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_float() {
+        let result = tokenize(GLOBAL, String::from("0.01"));
+        assert_eq!(&result, &[JsonToken::Number(0.01)]);
 
-    //     let result = tokenize(GLOBAL, String::from("[-12.34]"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ArrayBegin,
-    //             JsonToken::Number(-12.34),
-    //             JsonToken::ArrayEnd
-    //         ]
-    //     );
-    // }
+        let result = tokenize(GLOBAL, String::from("[-12.34]"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ArrayBegin,
+                JsonToken::Number(-12.34),
+                JsonToken::ArrayEnd
+            ]
+        );
+    }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_infinity() {
-    //     let result = tokenize(GLOBAL, String::from("1e1000"));
-    //     assert_eq!(&result, &[JsonToken::Number(f64::INFINITY)]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_infinity() {
+        let result = tokenize(GLOBAL, String::from("1e1000"));
+        assert_eq!(&result, &[JsonToken::Number(f64::INFINITY)]);
 
-    //     let result = tokenize(GLOBAL, String::from("-1e+1000"));
-    //     assert_eq!(&result, &[JsonToken::Number(f64::NEG_INFINITY)]);
-    // }
+        let result = tokenize(GLOBAL, String::from("-1e+1000"));
+        assert_eq!(&result, &[JsonToken::Number(f64::NEG_INFINITY)]);
+    }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_exp() {
-    //     let result = tokenize(GLOBAL, String::from("1e2"));
-    //     assert_eq!(&result, &[JsonToken::Number(1e2)]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_exp() {
+        let result = tokenize(GLOBAL, String::from("1e2"));
+        assert_eq!(&result, &[JsonToken::Number(1e2)]);
 
-    //     let result = tokenize(GLOBAL, String::from("1E+2"));
-    //     assert_eq!(&result, &[JsonToken::Number(1e2)]);
+        let result = tokenize(GLOBAL, String::from("1E+2"));
+        assert_eq!(&result, &[JsonToken::Number(1e2)]);
 
-    //     let result = tokenize(GLOBAL, String::from("0e-2"));
-    //     assert_eq!(&result, &[JsonToken::Number(0.0)]);
+        let result = tokenize(GLOBAL, String::from("0e-2"));
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("1e-2"));
-    //     assert_eq!(&result, &[JsonToken::Number(1e-2)]);
+        let result = tokenize(GLOBAL, String::from("1e-2"));
+        assert_eq!(&result, &[JsonToken::Number(1e-2)]);
 
-    //     let result = tokenize(GLOBAL, String::from("1.2e+2"));
-    //     assert_eq!(&result, &[JsonToken::Number(1.2e+2)]);
+        let result = tokenize(GLOBAL, String::from("1.2e+2"));
+        assert_eq!(&result, &[JsonToken::Number(1.2e+2)]);
 
-    //     let result = tokenize(GLOBAL, String::from("12e0000"));
-    //     assert_eq!(&result, &[JsonToken::Number(12.0)]);
+        let result = tokenize(GLOBAL, String::from("12e0000"));
+        assert_eq!(&result, &[JsonToken::Number(12.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("1e"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+        let result = tokenize(GLOBAL, String::from("1e"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
 
-    //     let result = tokenize(GLOBAL, String::from("1e+"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+        let result = tokenize(GLOBAL, String::from("1e+"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
 
-    //     let result = tokenize(GLOBAL, String::from("1e-"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
-    // }
+        let result = tokenize(GLOBAL, String::from("1e-"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+    }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_big_int() {
-    //     let result = tokenize(GLOBAL, String::from("0n"));
-    //     assert_eq!(&result, &[JsonToken::BigInt(zero(GLOBAL))]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_big_int() {
+        let result = tokenize(GLOBAL, String::from("0n"));
+        assert_eq!(&result, &[JsonToken::BigInt(zero(GLOBAL))]);
 
-    //     let result = tokenize(GLOBAL, String::from("-0n"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::BigInt(from_u64(
-    //             GLOBAL,
-    //             js_bigint::Sign::Negative,
-    //             0
-    //         ))]
-    //     );
+        let result = tokenize(GLOBAL, String::from("-0n"));
+        assert_eq!(
+            &result,
+            &[JsonToken::BigInt(from_u64(
+                GLOBAL,
+                js_bigint::Sign::Negative,
+                0
+            ))]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("1234567890n"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::BigInt(from_u64(
-    //             GLOBAL,
-    //             js_bigint::Sign::Positive,
-    //             1234567890
-    //         ))]
-    //     );
+        let result = tokenize(GLOBAL, String::from("1234567890n"));
+        assert_eq!(
+            &result,
+            &[JsonToken::BigInt(from_u64(
+                GLOBAL,
+                js_bigint::Sign::Positive,
+                1234567890
+            ))]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("-1234567890n"));
-    //     assert_eq!(
-    //         &result,
-    //         &[JsonToken::BigInt(from_u64(
-    //             GLOBAL,
-    //             js_bigint::Sign::Negative,
-    //             1234567890
-    //         ))]
-    //     );
+        let result = tokenize(GLOBAL, String::from("-1234567890n"));
+        assert_eq!(
+            &result,
+            &[JsonToken::BigInt(from_u64(
+                GLOBAL,
+                js_bigint::Sign::Negative,
+                1234567890
+            ))]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("123.456n"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Id(String::from("n"))
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("123.456n"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("n"))
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("123e456n"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Id(String::from("n"))
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("123e456n"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("n"))
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("1234567890na"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Id(String::from("a"))
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("1234567890na"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("a"))
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("1234567890nn"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Id(String::from("n"))
-    //         ]
-    //     );
-    // }
+        let result = tokenize(GLOBAL, String::from("1234567890nn"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("n"))
+            ]
+        );
+    }
 
     #[test]
     #[wasm_bindgen_test]
