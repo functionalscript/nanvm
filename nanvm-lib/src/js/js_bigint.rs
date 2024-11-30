@@ -15,7 +15,7 @@ use crate::{
 
 use super::{bitset::BIGINT, ref_cast::RefCast};
 
-#[derive(Debug, PartialEq, Clone, Eq)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
 pub enum Sign {
     Positive = 1,
     Negative = -1,
@@ -127,7 +127,7 @@ pub fn is_zero(value: &JsBigint) -> bool {
 }
 
 impl JsBigint {
-    pub fn cmp(&self, other: &Self) -> Ordering {
+    pub fn compare(&self, other: &Self) -> Ordering {
         match self.header_len().cmp(&other.header_len()) {
             Ordering::Equal => cmp_vec(self.items(), other.items()),
             Ordering::Less => Ordering::Less,
@@ -228,7 +228,7 @@ pub fn div_mod<M: Manager>(
             let mut result: Vec<u64> = default();
             loop {
                 if cmp_vec(&a, b) == Ordering::Less {
-                    return (new_bigint(m, sign.clone(), result), new_bigint(m, sign, a));
+                    return (new_bigint(m, sign, result), new_bigint(m, sign, a));
                 }
                 let a_high_digit = a.len() - 1;
                 let b_high_digit = b.len() - 1;
@@ -771,25 +771,25 @@ mod test {
         let b_ref = from_u64(Global(), Sign::Positive, 1);
         let a = a_ref.deref();
         let b = b_ref.deref();
-        assert_eq!(a.cmp(b), Ordering::Equal);
+        assert_eq!(a.compare(b), Ordering::Equal);
 
         let a_ref = from_u64(Global(), Sign::Positive, 1);
         let b_ref = from_u64(Global(), Sign::Positive, 2);
         let a = a_ref.deref();
         let b = b_ref.deref();
-        assert_eq!(a.cmp(b), Ordering::Less);
+        assert_eq!(a.compare(b), Ordering::Less);
 
         let a_ref = from_u64(Global(), Sign::Positive, 1);
         let b_ref = from_u64(Global(), Sign::Negative, 2);
         let a = a_ref.deref();
         let b = b_ref.deref();
-        assert_eq!(a.cmp(b), Ordering::Greater);
+        assert_eq!(a.compare(b), Ordering::Greater);
 
         let a_ref = new_bigint(Global(), Sign::Positive, [1, 2]);
         let b_ref = new_bigint(Global(), Sign::Positive, [2, 1]);
         let a = a_ref.deref();
         let b = b_ref.deref();
-        assert_eq!(a.cmp(b), Ordering::Greater);
+        assert_eq!(a.compare(b), Ordering::Greater);
     }
 
     #[test]

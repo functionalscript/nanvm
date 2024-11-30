@@ -66,8 +66,8 @@ pub enum TokenizerState<D: Dealloc> {
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
     ParseZero(js_bigint::Sign),
-    ParseInt(JsBigintMutRef<D>),
-    ParseFracBegin(JsBigintMutRef<D>),
+    ParseInt(IntState<D>),
+    ParseFracBegin(IntState<D>),
     ParseFrac(FloatState<D>),
     ParseExpBegin(ExpState<D>),
     ParseExpSign(ExpState<D>),
@@ -219,13 +219,14 @@ impl BigUint {
     }
 }
 
+pub struct IntState<D: Dealloc> {
+    b: JsBigintMutRef<D>,
+    s: js_bigint::Sign,
+}
+
 impl<D: Dealloc> JsBigintMutRef<D> {
-    fn from_digit<M: Manager<Dealloc = D>>(
-        m: M,
-        sign: js_bigint::Sign,
-        c: char,
-    ) -> JsBigintMutRef<M::Dealloc> {
-        from_u64(m, sign, digit_to_number(c))
+    fn from_digit<M: Manager<Dealloc = D>>(m: M, c: char) -> JsBigintMutRef<M::Dealloc> {
+        from_u64(m, js_bigint::Sign::Positive, digit_to_number(c))
     }
 
     fn add_digit<M: Manager<Dealloc = D>>(self, m: M, c: char) -> JsBigintMutRef<M::Dealloc> {
@@ -237,17 +238,24 @@ impl<D: Dealloc> JsBigintMutRef<D> {
                 from_u64(m, js_bigint::Sign::Positive, 10).deref(),
             )
             .deref(),
-            Self::from_digit(m, self.sign(), c).deref(),
+            Self::from_digit(m, c).deref(),
         )
     }
+}
 
+impl<D: Dealloc> IntState<D> {
     fn into_float_state(self) -> FloatState<D> {
-        FloatState { b: self, fe: 0 }
+        FloatState {
+            b: self.b,
+            s: self.s,
+            fe: 0,
+        }
     }
 
     fn into_exp_state(self) -> ExpState<D> {
         ExpState {
-            b: self,
+            b: self.b,
+            s: self.s,
             fe: 0,
             es: js_bigint::Sign::Positive,
             e: 0,
@@ -255,7 +263,7 @@ impl<D: Dealloc> JsBigintMutRef<D> {
     }
 
     fn into_old_bigint(self) -> BigInt {
-        let deref = self.deref();
+        let deref = self.b.deref();
         let sign = match deref.sign() {
             js_bigint::Sign::Positive => big_numbers::big_int::Sign::Positive,
             js_bigint::Sign::Negative => big_numbers::big_int::Sign::Negative,
@@ -271,11 +279,12 @@ impl<D: Dealloc> JsBigintMutRef<D> {
 
 fn int_state_into_number_token<M: Manager>(
     manager: M,
-    state: JsBigintMutRef<M::Dealloc>,
+    state: IntState<M::Dealloc>,
 ) -> JsonToken<M::Dealloc> {
     JsonToken::Number(bigfloat_to_f64(BigFloat {
         manager,
-        significand: state,
+        significand: state.b,
+        sign: state.s,
         exp: 0,
         non_zero_reminder: false,
     }))
@@ -283,6 +292,7 @@ fn int_state_into_number_token<M: Manager>(
 
 pub struct FloatState<D: Dealloc> {
     b: JsBigintMutRef<D>,
+    s: js_bigint::Sign,
     fe: i64,
 }
 
@@ -296,6 +306,7 @@ impl<D: Dealloc> FloatState<D> {
     fn into_exp_state(self) -> ExpState<D> {
         ExpState {
             b: self.b,
+            s: self.s,
             fe: self.fe,
             es: js_bigint::Sign::Positive,
             e: 0,
@@ -310,6 +321,7 @@ fn float_state_into_token<M: Manager>(
     JsonToken::Number(bigfloat_to_f64(BigFloat {
         manager,
         significand: state.b,
+        sign: state.s,
         exp: state.fe,
         non_zero_reminder: false,
     }))
@@ -317,6 +329,7 @@ fn float_state_into_token<M: Manager>(
 
 pub struct ExpState<D: Dealloc> {
     b: JsBigintMutRef<D>,
+    s: js_bigint::Sign,
     fe: i64,
     es: js_bigint::Sign,
     e: i64,
@@ -341,6 +354,7 @@ fn exp_state_into_token<M: Manager>(
     JsonToken::Number(bigfloat_to_f64(BigFloat {
         manager,
         significand: state.b,
+        sign: state.s,
         exp,
         non_zero_reminder: false,
     }))
@@ -393,8 +407,11 @@ const fn digit_to_number(c: char) -> u64 {
     c as u64 - CP_0 as u64
 }
 
-fn start_number<M: Manager>(manager: M, s: js_bigint::Sign, c: char) -> JsBigintMutRef<M::Dealloc> {
-    JsBigintMutRef::from_digit(manager, s, c)
+fn start_number<M: Manager>(manager: M, s: js_bigint::Sign, c: char) -> IntState<M::Dealloc> {
+    IntState {
+        b: JsBigintMutRef::from_digit(manager, c),
+        s,
+    }
 }
 
 fn create_range_map<T, M: Manager>(
@@ -434,9 +451,9 @@ pub struct TransitionMaps<M: Manager> {
     escape_char: TransitionMap<String, M>,
     unicode_char: TransitionMap<ParseUnicodeCharState, M>,
     zero: TransitionMap<js_bigint::Sign, M>,
-    int: TransitionMap<JsBigintMutRef<M::Dealloc>, M>,
+    int: TransitionMap<IntState<M::Dealloc>, M>,
     minus: TransitionMap<(), M>,
-    frac_begin: TransitionMap<JsBigintMutRef<M::Dealloc>, M>,
+    frac_begin: TransitionMap<IntState<M::Dealloc>, M>,
     frac: TransitionMap<FloatState<M::Dealloc>, M>,
     exp_begin: TransitionMap<ExpState<M::Dealloc>, M>,
     exp: TransitionMap<ExpState<M::Dealloc>, M>,
@@ -674,7 +691,10 @@ fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<js_bigint::
                     (|manager, s, _, _| {
                         (
                             default(),
-                            TokenizerState::ParseFracBegin(from_u64(manager, s, 0)),
+                            TokenizerState::ParseFracBegin(IntState {
+                                b: from_u64(manager, js_bigint::Sign::Positive, 0),
+                                s,
+                            }),
                         )
                     }) as Func<M>,
                 ),
@@ -683,6 +703,7 @@ fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<js_bigint::
                         default(),
                         TokenizerState::ParseExpBegin(ExpState {
                             b: from_u64(manager, s, 0),
+                            s,
                             fe: 0,
                             es: js_bigint::Sign::Positive,
                             e: 0,
@@ -713,8 +734,8 @@ fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<js_bigint::
     }
 }
 
-fn create_int_transactions<M: Manager + 'static>() -> TransitionMap<JsBigintMutRef<M::Dealloc>, M> {
-    type Func<M> = TransitionFunc<M, JsBigintMutRef<<M as Manager>::Dealloc>>;
+fn create_int_transactions<M: Manager + 'static>() -> TransitionMap<IntState<M::Dealloc>, M> {
+    type Func<M> = TransitionFunc<M, IntState<<M as Manager>::Dealloc>>;
     TransitionMap {
         def: (|manager, _, c, maps| tokenize_invalid_number(manager, c, maps)) as Func<M>,
         rm: merge_list(
@@ -722,7 +743,13 @@ fn create_int_transactions<M: Manager + 'static>() -> TransitionMap<JsBigintMutR
                 from_range(
                     '0'..='9',
                     (|manager, s, c, _| {
-                        (default(), TokenizerState::ParseInt(s.add_digit(manager, c)))
+                        (
+                            default(),
+                            TokenizerState::ParseInt(IntState {
+                                b: s.b.add_digit(manager, c),
+                                s: s.s,
+                            }),
+                        )
                     }) as Func<M>,
                 ),
                 from_one('.', |_, s, _, _| {
@@ -732,7 +759,7 @@ fn create_int_transactions<M: Manager + 'static>() -> TransitionMap<JsBigintMutR
                     (default(), TokenizerState::ParseExpBegin(s.into_exp_state()))
                 }),
                 from_one('n', |_, s, _, _| {
-                    (default(), TokenizerState::ParseBigInt(s))
+                    (default(), TokenizerState::ParseBigInt(s.b))
                 }),
                 create_range_map(terminal_for_number(), |manager, s, c, maps| {
                     transfer_state(
@@ -749,9 +776,9 @@ fn create_int_transactions<M: Manager + 'static>() -> TransitionMap<JsBigintMutR
     }
 }
 
-fn create_frac_begin_transactions<M: Manager + 'static>(
-) -> TransitionMap<JsBigintMutRef<M::Dealloc>, M> {
-    type Func<M> = TransitionFunc<M, JsBigintMutRef<<M as Manager>::Dealloc>>;
+fn create_frac_begin_transactions<M: Manager + 'static>() -> TransitionMap<IntState<M::Dealloc>, M>
+{
+    type Func<M> = TransitionFunc<M, IntState<<M as Manager>::Dealloc>>;
     TransitionMap {
         def: (|manager, _, c, maps| tokenize_invalid_number(manager, c, maps)) as Func<M>,
         rm: from_range(
@@ -1263,83 +1290,83 @@ mod test {
         assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::MissingQuotes)]);
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_integer() {
-    //     let result = tokenize(GLOBAL, String::from("0"));
-    //     assert_eq!(&result, &[JsonToken::Number(0.0)]);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_integer() {
+        let result = tokenize(GLOBAL, String::from("0"));
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("-0"));
-    //     assert_eq!(&result, &[JsonToken::Number(0.0)]);
+        let result = tokenize(GLOBAL, String::from("-0"));
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("0abc"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Id(String::from("abc"))
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("0abc"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Id(String::from("abc"))
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("0. 2"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Number(2.0)
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("0. 2"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Number(2.0)
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("1234567890"));
-    //     assert_eq!(&result, &[JsonToken::Number(1234567890.0)]);
+        let result = tokenize(GLOBAL, String::from("1234567890"));
+        assert_eq!(&result, &[JsonToken::Number(1234567890.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("-1234567890"));
-    //     assert_eq!(&result, &[JsonToken::Number(-1234567890.0)]);
+        let result = tokenize(GLOBAL, String::from("-1234567890"));
+        assert_eq!(&result, &[JsonToken::Number(-1234567890.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("[0,1]"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ArrayBegin,
-    //             JsonToken::Number(0.0),
-    //             JsonToken::Comma,
-    //             JsonToken::Number(1.0),
-    //             JsonToken::ArrayEnd
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("[0,1]"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ArrayBegin,
+                JsonToken::Number(0.0),
+                JsonToken::Comma,
+                JsonToken::Number(1.0),
+                JsonToken::ArrayEnd
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("001"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::Number(1.0),
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("001"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::Number(1.0),
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("-"));
-    //     assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
+        let result = tokenize(GLOBAL, String::from("-"));
+        assert_eq!(&result, &[JsonToken::ErrorToken(ErrorType::InvalidNumber)]);
 
-    //     let result = tokenize(GLOBAL, String::from("-{}"));
-    //     assert_eq!(
-    //         &result,
-    //         &[
-    //             JsonToken::ErrorToken(ErrorType::InvalidNumber),
-    //             JsonToken::ObjectBegin,
-    //             JsonToken::ObjectEnd
-    //         ]
-    //     );
+        let result = tokenize(GLOBAL, String::from("-{}"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::ErrorToken(ErrorType::InvalidNumber),
+                JsonToken::ObjectBegin,
+                JsonToken::ObjectEnd
+            ]
+        );
 
-    //     let result = tokenize(GLOBAL, String::from("9007199254740991"));
-    //     assert_eq!(&result, &[JsonToken::Number(9007199254740991.0)]);
+        let result = tokenize(GLOBAL, String::from("9007199254740991"));
+        assert_eq!(&result, &[JsonToken::Number(9007199254740991.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("9007199254740992"));
-    //     assert_eq!(&result, &[JsonToken::Number(9007199254740992.0)]);
+        let result = tokenize(GLOBAL, String::from("9007199254740992"));
+        assert_eq!(&result, &[JsonToken::Number(9007199254740992.0)]);
 
-    //     let result = tokenize(GLOBAL, String::from("9007199254740993"));
-    //     assert_eq!(&result, &[JsonToken::Number(9007199254740993.0)]);
-    // }
+        let result = tokenize(GLOBAL, String::from("9007199254740993"));
+        assert_eq!(&result, &[JsonToken::Number(9007199254740993.0)]);
+    }
 
     // #[test]
     // #[wasm_bindgen_test]
