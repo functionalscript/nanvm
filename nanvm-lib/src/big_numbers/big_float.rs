@@ -858,155 +858,190 @@ mod test {
         assert!(res.is_sign_negative());
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_subnormal_to_f64() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(1),
-    //         exp: -1023,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 2.0f64.powf(-1023.0));
-    //     assert!(res.is_subnormal());
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_subnormal_to_f64() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(-1),
-    //         exp: -1023,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, -(2.0f64.powf(-1023.0)));
-    //     assert!(res.is_subnormal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: -1023,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 2.0f64.powf(-1023.0));
+        assert!(res.is_subnormal());
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(1),
-    //         exp: -1074,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 1);
-    //     assert_eq!(res, 2.0f64.powf(-1074.0));
-    //     assert!(res.is_subnormal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Negative,
+            exp: -1023,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, -(2.0f64.powf(-1023.0)));
+        assert!(res.is_subnormal());
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(1),
-    //         exp: -1075,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 0.0);
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: -1074,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 1);
+        assert_eq!(res, 2.0f64.powf(-1074.0));
+        assert!(res.is_subnormal());
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_subnormal_to_f64_rounding() {
-    //     0.0 => 0
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b100),
-    //         exp: -1075,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b10);
-    //     assert_eq!(res, 2.0f64.powf(-1073.0));
-    //     assert!(res.is_subnormal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 0.0);
+    }
 
-    //     0.0+ => 0
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b100),
-    //         exp: -1075,
-    //         non_zero_reminder: true,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b10);
-    //     assert_eq!(res, 2.0f64.powf(-1073.0));
-    //     assert!(res.is_subnormal());
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_subnormal_to_f64_rounding() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     0.1 => 0
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b101),
-    //         exp: -1075,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b10);
-    //     assert_eq!(res, 2.0f64.powf(-1073.0));
-    //     assert!(res.is_subnormal());
+        //     0.0 => 0
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b100),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
 
-    //     0.1+ => 1
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b101),
-    //         exp: -1075,
-    //         non_zero_reminder: true,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b11);
-    //     assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
-    //     assert!(res.is_subnormal());
+        //     0.0+ => 0
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b100),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: true,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
 
-    //     1.0 => 1
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b110),
-    //         exp: -1075,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b11);
-    //     assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
-    //     assert!(res.is_subnormal());
+        //     0.1 => 0
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b101),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b10);
+        assert_eq!(res, 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
 
-    //     1.0+ => 1
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b110),
-    //         exp: -1075,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b11);
-    //     assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
-    //     assert!(res.is_subnormal());
+        //     0.1+ => 1
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b101),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: true,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
 
-    //     1.1 => 2
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b111),
-    //         exp: -1075,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b100);
-    //     assert_eq!(res, 2.0f64.powf(-1072.0));
-    //     assert!(res.is_subnormal());
+        //     1.0 => 1
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b110),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
 
-    //     1.1+ => 2
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(0b111),
-    //         exp: -1075,
-    //         non_zero_reminder: true,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res.to_bits(), 0b100);
-    //     assert_eq!(res, 2.0f64.powf(-1072.0));
-    //     assert!(res.is_subnormal());
-    // }
+        //     1.0+ => 1
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b110),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: true,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b11);
+        assert_eq!(res, 1.5f64 * 2.0f64.powf(-1073.0));
+        assert!(res.is_subnormal());
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_rust_cast() {
-    //     test(18014398509481981);
-    //     test(18014398509481982);
-    //     test(18014398509481983);
-    //     test(18014398509481984);
-    //     test(18014398509481985);
+        //     1.1 => 2
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b111),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b100);
+        assert_eq!(res, 2.0f64.powf(-1072.0));
+        assert!(res.is_subnormal());
 
-    //     fn test(n: u64) {
-    //         let big_float = BigFloat {
-    //             significand: BigInt::from_u64(n),
-    //             exp: 0,
-    //             non_zero_reminder: false,
-    //         };
-    //         let f64 = big_float.to_f64();
-    //         assert_eq!(f64, n as f64);
-    //     }
-    // }
+        //     1.1+ => 2
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 0b111),
+            sign: Sign::Positive,
+            exp: -1075,
+            non_zero_reminder: true,
+        }
+        .to_f64();
+        assert_eq!(res.to_bits(), 0b100);
+        assert_eq!(res, 2.0f64.powf(-1072.0));
+        assert!(res.is_subnormal());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_rust_cast() {
+        test(18014398509481981);
+        test(18014398509481982);
+        test(18014398509481983);
+        test(18014398509481984);
+        test(18014398509481985);
+
+        fn test(n: u64) {
+            type A = Any<Global>;
+            type BigintRef = JsBigintRef<Global>;
+
+            let res = BigFloat {
+                manager: GLOBAL,
+                significand: from_u64(GLOBAL, Sign::Positive, n),
+                sign: Sign::Positive,
+                exp: 0,
+                non_zero_reminder: false,
+            }
+            .to_f64();
+            assert_eq!(res, n as f64);
+        }
+    }
 }
