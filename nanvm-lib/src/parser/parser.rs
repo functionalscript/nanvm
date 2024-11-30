@@ -36,164 +36,6 @@ impl<'a, M: Manager, I: Io> Context<'a, M, I> {
     }
 }
 
-fn root_state_parse<M: Manager + 'static, I: Io>(
-    mut root_state: RootState<M>,
-    context: &mut Context<M, I>,
-    token: JsonToken<M::Dealloc>,
-) -> JsonState<M> {
-    match root_state.status {
-        RootStatus::Initial => match token {
-            JsonToken::NewLine => JsonState::ParseRoot(RootState {
-                status: RootStatus::Initial,
-                state: root_state.state,
-                new_line: true,
-            }),
-            JsonToken::Id(s) => match root_state.new_line {
-                true => match s.as_ref() {
-                    "const" => JsonState::ParseRoot(RootState {
-                        status: RootStatus::Const,
-                        state: root_state.state.set_djs(),
-                        new_line: false,
-                    }),
-                    "export" if root_state.state.data_type.is_mjs_compatible() => {
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Export,
-                            state: root_state.state.set_mjs(),
-                            new_line: false,
-                        })
-                    }
-                    "module" if root_state.state.data_type.is_cjs_compatible() => {
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Module,
-                            state: root_state.state.set_cjs(),
-                            new_line: false,
-                        })
-                    }
-                    "import" if root_state.state.data_type.is_mjs_compatible() => {
-                        JsonState::ParseRoot(RootState {
-                            status: RootStatus::Import,
-                            state: root_state.state.set_mjs(),
-                            new_line: false,
-                        })
-                    }
-                    _ => any_state_parse_for_module(root_state.state, context, JsonToken::Id(s)),
-                },
-                false => JsonState::Error(ParseError::NewLineExpected),
-            },
-            _ => match root_state.new_line {
-                true => any_state_parse_for_module(root_state.state, context, token),
-                false => JsonState::Error(ParseError::NewLineExpected),
-            },
-        },
-        RootStatus::Export => match token {
-            JsonToken::Id(s) => match s.as_ref() {
-                "default" => JsonState::ParseModule(root_state.state),
-                _ => JsonState::Error(ParseError::WrongExportStatement),
-            },
-            _ => JsonState::Error(ParseError::WrongExportStatement),
-        },
-        RootStatus::Module => match token {
-            JsonToken::Dot => JsonState::ParseRoot(RootState {
-                status: RootStatus::ModuleDot,
-                state: root_state.state,
-                new_line: false,
-            }),
-            _ => JsonState::Error(ParseError::WrongExportStatement),
-        },
-        RootStatus::ModuleDot => match token {
-            JsonToken::Id(s) => match s.as_ref() {
-                "exports" => JsonState::ParseRoot(RootState {
-                    status: RootStatus::ModuleDotExports,
-                    state: root_state.state,
-                    new_line: false,
-                }),
-                _ => JsonState::Error(ParseError::WrongExportStatement),
-            },
-            _ => JsonState::Error(ParseError::WrongExportStatement),
-        },
-        RootStatus::ModuleDotExports => match token {
-            JsonToken::Equals => JsonState::ParseModule(root_state.state),
-            _ => JsonState::Error(ParseError::WrongExportStatement),
-        },
-        RootStatus::Const => match token {
-            JsonToken::Id(s) => JsonState::ParseRoot(RootState {
-                status: RootStatus::ConstId(s),
-                state: root_state.state,
-                new_line: false,
-            }),
-            _ => JsonState::Error(ParseError::WrongConstStatement),
-        },
-        RootStatus::ConstId(s) => match token {
-            JsonToken::Equals => JsonState::ParseConst(ConstState {
-                key: s,
-                state: root_state.state,
-            }),
-            _ => JsonState::Error(ParseError::WrongConstStatement),
-        },
-        RootStatus::Import => match token {
-            JsonToken::Id(s) => JsonState::ParseRoot(RootState {
-                status: RootStatus::ImportId(s),
-                state: root_state.state,
-                new_line: false,
-            }),
-            _ => JsonState::Error(ParseError::WrongImportStatement),
-        },
-        RootStatus::ImportId(id) => match token {
-            JsonToken::Id(s) => match s.as_ref() {
-                "from" => JsonState::ParseRoot(RootState {
-                    status: RootStatus::ImportIdFrom(id),
-                    state: root_state.state,
-                    new_line: false,
-                }),
-                _ => JsonState::Error(ParseError::WrongImportStatement),
-            },
-            _ => JsonState::Error(ParseError::WrongImportStatement),
-        },
-        RootStatus::ImportIdFrom(id) => match token {
-            JsonToken::String(s) => {
-                let current_path = concat(split(&context.path).0, s.as_str());
-                if let Some(any) = context.module_cache.complete.get(&current_path) {
-                    root_state.state.consts.insert(id, any.clone());
-                    return JsonState::ParseRoot(RootState {
-                        status: RootStatus::Initial,
-                        state: root_state.state,
-                        new_line: false,
-                    });
-                }
-                if context.module_cache.progress.contains(&current_path) {
-                    return JsonState::Error(ParseError::CircularDependency);
-                }
-                context.module_cache.progress.insert(current_path.clone());
-                let read_result = context.io.read_to_string(current_path.as_str());
-                match read_result {
-                    Ok(s) => {
-                        let tokens = tokenize(context.manager, s);
-                        let res = parse_with_tokens(context, tokens.into_iter());
-                        match res {
-                            Ok(r) => {
-                                context.module_cache.progress.remove(&current_path);
-                                context
-                                    .module_cache
-                                    .complete
-                                    .insert(current_path, r.any.clone());
-                                root_state.state.consts.insert(id, r.any);
-                                JsonState::ParseRoot(RootState {
-                                    status: RootStatus::Initial,
-                                    state: root_state.state,
-                                    new_line: false,
-                                })
-                            }
-                            Err(e) => JsonState::Error(e),
-                        }
-                    }
-                    Err(_) => JsonState::Error(ParseError::CannotReadFile),
-                }
-            }
-            _ => JsonState::Error(ParseError::WrongImportStatement),
-        },
-    }
-}
-
 fn const_state_parse<M: Manager + 'static, I: Io>(
     const_state: ConstState<M>,
     context: &mut Context<M, I>,
@@ -304,6 +146,59 @@ fn any_state_parse<M: Manager + 'static, I: Io>(
         ParsingStatus::ImportBegin => any_state.parse_import_begin(token),
         ParsingStatus::ImportValue => any_state_parse_import_value(any_state, context, token),
         ParsingStatus::ImportEnd => any_state.parse_import_end(token),
+    }
+}
+
+fn root_state_parse<M: Manager, I: Io>(
+    root_state: RootState<M>,
+    context: &mut Context<M, I>,
+    token: JsonToken,
+) -> JsonState<M> {
+    let (json_state, import) = root_state.parse(context.manager, token);
+    match import {
+        None => json_state,
+        Some((id, module)) => match json_state {
+            JsonState::ParseRoot(mut root_state) => {
+                let current_path = concat(split(&context.path).0, module.as_str());
+                if let Some(any) = context.module_cache.complete.get(&current_path) {
+                    root_state.state.consts.insert(id, any.clone());
+                    return JsonState::ParseRoot(RootState {
+                        status: RootStatus::Initial,
+                        state: root_state.state,
+                        new_line: false,
+                    });
+                }
+                if context.module_cache.progress.contains(&current_path) {
+                    return JsonState::Error(ParseError::CircularDependency);
+                }
+                context.module_cache.progress.insert(current_path.clone());
+                let read_result = context.io.read_to_string(current_path.as_str());
+                match read_result {
+                    Ok(s) => {
+                        let tokens = tokenize(s);
+                        let res = parse_with_tokens(context, tokens.into_iter());
+                        match res {
+                            Ok(r) => {
+                                context.module_cache.progress.remove(&current_path);
+                                context
+                                    .module_cache
+                                    .complete
+                                    .insert(current_path, r.any.clone());
+                                root_state.state.consts.insert(id, r.any);
+                                JsonState::ParseRoot(RootState {
+                                    status: RootStatus::Initial,
+                                    state: root_state.state,
+                                    new_line: false,
+                                })
+                            }
+                            Err(e) => JsonState::Error(e),
+                        }
+                    }
+                    Err(_) => JsonState::Error(ParseError::CannotReadFile),
+                }
+            }
+            _ => panic!("JsonState::ParseRoot expected when root_state.parse returns import"),
+        },
     }
 }
 

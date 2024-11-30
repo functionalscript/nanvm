@@ -1,9 +1,8 @@
 use super::{
     json_state::JsonState,
-    path::{concat, split},
     shared::{
-        to_js_string, DataType, JsonElement, JsonStackElement, JsonStackObject, ModuleCache,
-        ParseError, ParseResult, ParsingStatus,
+        to_js_string, DataType, JsonElement, JsonStackElement, JsonStackObject, ParseError,
+        ParseResult, ParsingStatus,
     },
 };
 use crate::{
@@ -71,12 +70,10 @@ impl<M: Manager> AnyState<M> {
     pub fn parse(
         self,
         manager: M,
-        token: JsonToken<M::Dealloc>,
-        module_cache: &mut ModuleCache<M::Dealloc>,
-        context_path: String,
+        token: JsonToken,
     ) -> (
         /*any_result:*/ AnyResult<M>,
-        /*import_path:*/ Option<String>,
+        /*module_name:*/ Option<String>,
     ) {
         match self.status {
             ParsingStatus::Initial | ParsingStatus::ObjectColon => {
@@ -90,9 +87,7 @@ impl<M: Manager> AnyState<M> {
             ParsingStatus::ObjectValue => (self.parse_object_next(manager, token), None),
             ParsingStatus::ObjectComma => (self.parse_object_comma(manager, token), None),
             ParsingStatus::ImportBegin => (self.parse_import_begin(token), None),
-            ParsingStatus::ImportValue => {
-                self.parse_import_value(token, module_cache, context_path)
-            }
+            ParsingStatus::ImportValue => self.parse_import_value(token),
             ParsingStatus::ImportEnd => (self.parse_import_end(token), None),
         }
     }
@@ -100,18 +95,16 @@ impl<M: Manager> AnyState<M> {
     pub fn parse_for_module(
         self,
         manager: M,
-        token: JsonToken<M::Dealloc>,
-        module_cache: &mut ModuleCache<M::Dealloc>,
-        context_path: String,
+        token: JsonToken,
     ) -> (
         /*json_state:*/ JsonState<M>,
-        /*import_path:*/ Option<String>,
+        /*module_name:*/ Option<String>,
     ) {
-        let (any_result, import_path) = self.parse(manager, token, module_cache, context_path);
-        match import_path {
-            Some(import_path) => {
+        let (any_result, module_name) = self.parse(manager, token);
+        match module_name {
+            Some(module_name) => {
                 if let AnyResult::Continue(state) = any_result {
-                    (JsonState::ParseModule(state), Some(import_path))
+                    (JsonState::ParseModule(state), Some(module_name))
                 } else {
                     panic!("Import path should be returned only with Continue result");
                 }
@@ -149,38 +142,19 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_import_value(
         self,
-        token: JsonToken<M::Dealloc>,
-        module_cache: &mut ModuleCache<M::Dealloc>,
-        context_path: String,
+        token: JsonToken,
     ) -> (
-        AnyResult<M>,   /*any_result*/
-        Option<String>, /*import_path*/
+        /*any_result:*/ AnyResult<M>,
+        /*module_name:*/ Option<String>,
     ) {
         match token {
-            JsonToken::String(s) => {
-                let import_path = concat(split(&context_path).0, s.as_str());
-                if let Some(any) = module_cache.complete.get(&import_path) {
-                    return (
-                        AnyResult::Continue(AnyState {
-                            status: ParsingStatus::ImportEnd,
-                            current: JsonElement::Any(any.clone()),
-                            ..self
-                        }),
-                        None,
-                    );
-                }
-                if module_cache.progress.contains(&import_path) {
-                    return (AnyResult::Error(ParseError::CircularDependency), None);
-                }
-                module_cache.progress.insert(import_path.clone());
-                (
-                    AnyResult::Continue(AnyState {
-                        status: ParsingStatus::ImportEnd,
-                        ..self
-                    }),
-                    Some(import_path),
-                )
-            }
+            JsonToken::String(s) => (
+                AnyResult::Continue(AnyState {
+                    status: ParsingStatus::ImportEnd,
+                    ..self
+                }),
+                Some(s),
+            ),
             _ => (AnyResult::Error(ParseError::WrongRequireStatement), None),
         }
     }

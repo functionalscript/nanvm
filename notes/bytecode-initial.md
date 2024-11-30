@@ -131,3 +131,39 @@ struct Module {
     }
 }
 ```
+
+## Byte Code
+
+See [https://github.com/functionalscript/functionalscript/main/doc/byte-code.md](https://github.com/functionalscript/functionalscript/blob/main/doc/byte-code.md).
+
+## Architecture
+
+Because FunctionalScript is a subset of JavaScript, we can use third-party JavaScript engines to bootstrap our parser, which is written in FunctionalScript, without circular dependencies. In Rust, we only need to implement a generic byte code deserializer that reads byte code and invokes VM API functions.
+
+`Deno` is a good candidate because it's written on Rust and can be added as `DevDependency`: https://crates.io/crates/deno.
+
+### Build Stage:
+
+Development dependencies:
+- Deno
+    
+Source files:
+- `parser.f.cjs` is a generic FunctionalScript parser that generates byte code.
+- `selfparse.f.cjs` parses `parser.f.cjs` and generates byte code.
+- `build.rs`
+- `parser.rs`
+- `bc_serializer.rs`
+- `vm_api.rs`
+- `vm.rs`
+
+Build steps:
+1. The build script `build.rs` starts `Deno` with `selfparse.f.cjs` and generates `parser.f.cjs.bc` temporary binary file.
+2. During compiling, `parser.rs` includes `parser.f.cjs.bc` as an array of bytes. See https://doc.rust-lang.org/std/macro.include_bytes.html
+3. Test `parser.rs` by parsing `parser.f.cjs` using VM and ensure the byte code is the same as in the array that contains `parser.f.cjs.bs`.
+
+### Run-Time
+
+No run-time dependencies.
+
+1. Initialization: send a parser byte code to a deserializer that invokes `VM API`.
+2. Parse: call loaded parser in VM.
