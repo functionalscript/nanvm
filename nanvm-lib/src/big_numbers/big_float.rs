@@ -655,7 +655,8 @@ mod test {
             sign: Sign::Positive,
             exp: 100,
             non_zero_reminder: false,
-        }.to_f64();
+        }
+        .to_f64();
         assert_eq!(res, 0.0);
         assert!(res.is_sign_positive());
 
@@ -665,155 +666,197 @@ mod test {
             sign: Sign::Negative,
             exp: 100,
             non_zero_reminder: false,
-        }.to_f64();
+        }
+        .to_f64();
         assert_eq!(res, 0.0);
         assert!(res.is_sign_negative());
     }
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_normal_to_f64() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(1),
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 1.0);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_normal_to_f64() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(-3),
-    //         exp: -1,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, -1.5);
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 1.0);
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(1),
-    //         exp: -1022,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 2.0f64.powf(-1022.0));
-    //     assert!(res.is_normal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 3),
+            sign: Sign::Negative,
+            exp: -1,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, -1.5);
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64(1 << 59),
-    //         exp: -1022 - 59,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 2.0f64.powf(-1022.0));
-    //     assert!(res.is_normal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: -1022,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 2.0f64.powf(-1022.0));
+        assert!(res.is_normal());
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 60) - 1),
-    //         exp: -1022 - 60,
-    //         non_zero_reminder: true,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 2.0f64.powf(-1022.0));
-    //     assert!(res.is_normal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1 << 59),
+            sign: Sign::Positive,
+            exp: -1022 - 59,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 2.0f64.powf(-1022.0));
+        assert!(res.is_normal());
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(1),
-    //         exp: 1023,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 2.0f64.powf(1023.0));
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 60) - 1),
+            sign: Sign::Positive,
+            exp: -1022 - 60,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 2.0f64.powf(-1022.0));
+        assert!(res.is_normal());
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 52) - 1),
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 4503599627370495f64);
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: 1023,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 2.0f64.powf(1023.0));
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 53) - 1),
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 9007199254740991f64);
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 52) - 1),
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 4503599627370495f64);
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_normal_to_f64_rounding() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 54) - 1), //111111111111111111111111111111111111111111111111111111
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 18014398509481984f64);
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 53) - 1),
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 9007199254740991f64);
+    }
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 54) - 2), //111111111111111111111111111111111111111111111111111110
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 18014398509481982f64);
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_normal_to_f64_rounding() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
-    //         exp: 0,
-    //         non_zero_reminder: true,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 18014398509481982f64);
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 54) - 1), //111111111111111111111111111111111111111111111111111111
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 18014398509481984f64);
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
-    //         exp: 0,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert_eq!(res, 18014398509481980f64);
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 54) - 2), //111111111111111111111111111111111111111111111111111110
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 18014398509481982f64);
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 54) - 1),
-    //         exp: 969,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert!(res.is_normal());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: true,
+        }
+        .to_f64();
+        assert_eq!(res, 18014398509481982f64);
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_u64((1 << 54) - 1),
-    //         exp: 970,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert!(res.is_infinite());
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 54) - 3), //111111111111111111111111111111111111111111111111111101
+            sign: Sign::Positive,
+            exp: 0,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert_eq!(res, 18014398509481980f64);
 
-    // #[test]
-    // #[wasm_bindgen_test]
-    // fn test_infinity_to_f64() {
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(1),
-    //         exp: 1024,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert!(res.is_infinite());
-    //     assert!(res.is_sign_positive());
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 54) - 1),
+            sign: Sign::Positive,
+            exp: 969,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert!(res.is_normal());
 
-    //     let a = BigFloat {
-    //         significand: BigInt::from_i64(-1),
-    //         exp: 1024,
-    //         non_zero_reminder: false,
-    //     };
-    //     let res = a.to_f64();
-    //     assert!(res.is_infinite());
-    //     assert!(res.is_sign_negative());
-    // }
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, (1 << 54) - 1),
+            sign: Sign::Positive,
+            exp: 970,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert!(res.is_infinite());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_infinity_to_f64() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Positive,
+            exp: 1024,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert!(res.is_infinite());
+        assert!(res.is_sign_positive());
+
+        let res = BigFloat {
+            manager: GLOBAL,
+            significand: from_u64(GLOBAL, Sign::Positive, 1),
+            sign: Sign::Negative,
+            exp: 1024,
+            non_zero_reminder: false,
+        }
+        .to_f64();
+        assert!(res.is_infinite());
+        assert!(res.is_sign_negative());
+    }
 
     // #[test]
     // #[wasm_bindgen_test]
