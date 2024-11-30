@@ -5,14 +5,9 @@ use std::{
 };
 
 use crate::{
-    big_numbers::{
-        self,
-        big_float::BigFloat,
-        big_int::{BigInt, Sign},
-        big_uint::BigUint,
-    },
+    big_numbers::big_float::BigFloat,
     common::{cast::Cast, default::default},
-    js::js_bigint::{self, add, equals, from_u64, mul, negative, JsBigintMutRef},
+    js::js_bigint::{add, equals, from_u64, mul, negative, JsBigintMutRef, Sign},
     mem::manager::{Dealloc, Manager},
     range_map::{from_one, from_range, merge, merge_list, RangeMap, State},
 };
@@ -70,7 +65,7 @@ pub enum TokenizerState<D: Dealloc> {
     ParseEscapeChar(String),
     ParseUnicodeChar(ParseUnicodeCharState),
     ParseMinus,
-    ParseZero(js_bigint::Sign),
+    ParseZero(Sign),
     ParseInt(IntState<D>),
     ParseFracBegin(IntState<D>),
     ParseFrac(FloatState<D>),
@@ -217,32 +212,20 @@ pub fn bigfloat_to_f64<M: Manager>(bf_10: BigFloat<10, M>) -> f64 {
     bf_2.to_f64()
 }
 
-impl BigUint {
-    fn add_digit(mut self, c: char) -> BigUint {
-        self = &(&self * &BigUint::from_u64(10)) + &BigUint::from_u64(digit_to_number(c));
-        self
-    }
-}
-
 pub struct IntState<D: Dealloc> {
     b: JsBigintMutRef<D>,
-    s: js_bigint::Sign,
+    s: Sign,
 }
 
 impl<D: Dealloc> JsBigintMutRef<D> {
     fn from_digit<M: Manager<Dealloc = D>>(m: M, c: char) -> JsBigintMutRef<M::Dealloc> {
-        from_u64(m, js_bigint::Sign::Positive, digit_to_number(c))
+        from_u64(m, Sign::Positive, digit_to_number(c))
     }
 
     fn add_digit<M: Manager<Dealloc = D>>(self, m: M, c: char) -> JsBigintMutRef<M::Dealloc> {
         add(
             m,
-            mul(
-                m,
-                self.deref(),
-                from_u64(m, js_bigint::Sign::Positive, 10).deref(),
-            )
-            .deref(),
+            mul(m, self.deref(), from_u64(m, Sign::Positive, 10).deref()).deref(),
             Self::from_digit(m, c).deref(),
         )
     }
@@ -262,15 +245,15 @@ impl<D: Dealloc> IntState<D> {
             b: self.b,
             s: self.s,
             fe: 0,
-            es: js_bigint::Sign::Positive,
+            es: Sign::Positive,
             e: 0,
         }
     }
 
     fn into_bigint_state<M: Manager<Dealloc = D>>(self, m: M) -> JsBigintMutRef<D> {
         match self.s {
-            js_bigint::Sign::Positive => self.b,
-            js_bigint::Sign::Negative => negative(m, self.b.deref()),
+            Sign::Positive => self.b,
+            Sign::Negative => negative(m, self.b.deref()),
         }
     }
 }
@@ -290,7 +273,7 @@ fn int_state_into_number_token<M: Manager>(
 
 pub struct FloatState<D: Dealloc> {
     b: JsBigintMutRef<D>,
-    s: js_bigint::Sign,
+    s: Sign,
     fe: i64,
 }
 
@@ -306,7 +289,7 @@ impl<D: Dealloc> FloatState<D> {
             b: self.b,
             s: self.s,
             fe: self.fe,
-            es: js_bigint::Sign::Positive,
+            es: Sign::Positive,
             e: 0,
         }
     }
@@ -327,9 +310,9 @@ fn float_state_into_token<M: Manager>(
 
 pub struct ExpState<D: Dealloc> {
     b: JsBigintMutRef<D>,
-    s: js_bigint::Sign,
+    s: Sign,
     fe: i64,
-    es: js_bigint::Sign,
+    es: Sign,
     e: i64,
 }
 
@@ -346,8 +329,8 @@ fn exp_state_into_token<M: Manager>(
 ) -> JsonToken<M::Dealloc> {
     let exp = state.fe
         + match state.es {
-            js_bigint::Sign::Positive => state.e,
-            js_bigint::Sign::Negative => -state.e,
+            Sign::Positive => state.e,
+            Sign::Negative => -state.e,
         };
     JsonToken::Number(bigfloat_to_f64(BigFloat {
         manager,
@@ -405,7 +388,7 @@ const fn digit_to_number(c: char) -> u64 {
     c as u64 - CP_0 as u64
 }
 
-fn start_number<M: Manager>(manager: M, s: js_bigint::Sign, c: char) -> IntState<M::Dealloc> {
+fn start_number<M: Manager>(manager: M, s: Sign, c: char) -> IntState<M::Dealloc> {
     IntState {
         b: JsBigintMutRef::from_digit(manager, c),
         s,
@@ -448,7 +431,7 @@ pub struct TransitionMaps<M: Manager> {
     string: TransitionMap<String, M>,
     escape_char: TransitionMap<String, M>,
     unicode_char: TransitionMap<ParseUnicodeCharState, M>,
-    zero: TransitionMap<js_bigint::Sign, M>,
+    zero: TransitionMap<Sign, M>,
     int: TransitionMap<IntState<M::Dealloc>, M>,
     minus: TransitionMap<(), M>,
     frac_begin: TransitionMap<IntState<M::Dealloc>, M>,
@@ -519,21 +502,14 @@ fn create_initial_transitions<M: Manager>() -> TransitionMap<(), M> {
                 from_range('1'..='9', |manager: M, _, c, _| {
                     (
                         default(),
-                        TokenizerState::ParseInt(start_number(
-                            manager,
-                            js_bigint::Sign::Positive,
-                            c,
-                        )),
+                        TokenizerState::ParseInt(start_number(manager, Sign::Positive, c)),
                     )
                 }),
                 from_one('"', |_, _, _, _| {
                     (default(), TokenizerState::ParseString(String::default()))
                 }),
                 from_one('0', |_, _, _, _| {
-                    (
-                        default(),
-                        TokenizerState::ParseZero(js_bigint::Sign::Positive),
-                    )
+                    (default(), TokenizerState::ParseZero(Sign::Positive))
                 }),
                 from_one('-', |_, _, _, _| (default(), TokenizerState::ParseMinus)),
                 create_range_map(id_start(), |_, _, c, _| {
@@ -678,8 +654,8 @@ fn create_unicode_char_transactions<M: Manager + 'static>(
     }
 }
 
-fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<js_bigint::Sign, M> {
-    type Func<M> = TransitionFunc<M, js_bigint::Sign>;
+fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<Sign, M> {
+    type Func<M> = TransitionFunc<M, Sign>;
     TransitionMap {
         def: (|manager, _, c, maps| tokenize_invalid_number(manager, c, maps)) as Func<M>,
         rm: merge_list(
@@ -690,7 +666,7 @@ fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<js_bigint::
                         (
                             default(),
                             TokenizerState::ParseFracBegin(IntState {
-                                b: from_u64(manager, js_bigint::Sign::Positive, 0),
+                                b: from_u64(manager, Sign::Positive, 0),
                                 s,
                             }),
                         )
@@ -703,7 +679,7 @@ fn create_zero_transactions<M: Manager + 'static>() -> TransitionMap<js_bigint::
                             b: from_u64(manager, s, 0),
                             s,
                             fe: 0,
-                            es: js_bigint::Sign::Positive,
+                            es: Sign::Positive,
                             e: 0,
                         }),
                     )
@@ -834,17 +810,12 @@ fn create_minus_transactions<M: Manager + 'static>() -> TransitionMap<(), M> {
         rm: merge(
             from_one(
                 '0',
-                (|_, _, _, _| {
-                    (
-                        default(),
-                        TokenizerState::ParseZero(js_bigint::Sign::Negative),
-                    )
-                }) as Func<M>,
+                (|_, _, _, _| (default(), TokenizerState::ParseZero(Sign::Negative))) as Func<M>,
             ),
             from_range('1'..='9', |manager, _, c, _| {
                 (
                     default(),
-                    TokenizerState::ParseInt(start_number(manager, js_bigint::Sign::Negative, c)),
+                    TokenizerState::ParseInt(start_number(manager, Sign::Negative, c)),
                 )
             }),
         ),
@@ -866,7 +837,7 @@ fn create_exp_begin_transactions<M: Manager + 'static>() -> TransitionMap<ExpSta
                 }),
                 from_one('-', |_, mut s, _, _| {
                     (default(), {
-                        s.es = js_bigint::Sign::Negative;
+                        s.es = Sign::Negative;
                         TokenizerState::ParseExpSign(s)
                     })
                 }),
@@ -1114,13 +1085,8 @@ mod test {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        big_numbers::{
-            big_float::BigFloat,
-            big_int::{BigInt, Sign},
-            big_uint::BigUint,
-        },
-        common::cast::Cast,
-        js::js_bigint::{self, from_u64, new_bigint, zero},
+        big_numbers::big_float::BigFloat,
+        js::js_bigint::{from_u64, new_bigint, zero, Sign},
         mem::global::{Global, GLOBAL},
         tokenizer::bigfloat_to_f64,
     };
@@ -1380,8 +1346,8 @@ mod test {
             &result,
             &[JsonToken::Number(bigfloat_to_f64(BigFloat {
                 manager: GLOBAL,
-                significand: new_bigint(GLOBAL, js_bigint::Sign::Positive, [0, 0, 1]),
-                sign: js_bigint::Sign::Positive,
+                significand: new_bigint(GLOBAL, Sign::Positive, [0, 0, 1]),
+                sign: Sign::Positive,
                 exp: 0,
                 non_zero_reminder: false
             }))]
@@ -1455,11 +1421,7 @@ mod test {
         let result = tokenize(GLOBAL, String::from("-0n"));
         assert_eq!(
             &result,
-            &[JsonToken::BigInt(from_u64(
-                GLOBAL,
-                js_bigint::Sign::Negative,
-                0
-            ))]
+            &[JsonToken::BigInt(from_u64(GLOBAL, Sign::Negative, 0))]
         );
 
         let result = tokenize(GLOBAL, String::from("1234567890n"));
@@ -1467,7 +1429,7 @@ mod test {
             &result,
             &[JsonToken::BigInt(from_u64(
                 GLOBAL,
-                js_bigint::Sign::Positive,
+                Sign::Positive,
                 1234567890
             ))]
         );
@@ -1477,7 +1439,7 @@ mod test {
             &result,
             &[JsonToken::BigInt(from_u64(
                 GLOBAL,
-                js_bigint::Sign::Negative,
+                Sign::Negative,
                 1234567890
             ))]
         );

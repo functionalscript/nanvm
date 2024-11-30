@@ -1,9 +1,8 @@
 use std::{cmp::Ordering, ops::Deref};
 
 use crate::{
-    common::cast::Cast,
     js::js_bigint::{
-        div_mod, from_u64, is_zero, mul, pow, pow_u64, shl, shl_on_u64, shr_on_u64, zero, JsBigint,
+        div_mod, from_u64, is_zero, mul, pow_u64, shl, shl_on_u64, shr_on_u64, zero, JsBigint,
         JsBigintMutRef, Sign,
     },
     mem::manager::Manager,
@@ -231,16 +230,13 @@ impl<M: Manager> BigFloat<2, M> {
 
 #[cfg(test)]
 mod test {
-    use std::ops::Deref;
-
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
         big_numbers::big_float::float_zero,
-        common::cast::Cast,
         js::{
             any::Any,
-            js_bigint::{self, from_u64, new_bigint, zero, JsBigintRef, Sign},
+            js_bigint::{from_u64, new_bigint, zero, JsBigintRef, Sign},
             type_::Type,
         },
         mem::global::{Global, GLOBAL},
@@ -263,7 +259,7 @@ mod test {
             assert!(o.items().is_empty());
         }
         assert_eq!(res.exp, 0);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -281,7 +277,7 @@ mod test {
             assert!(o.items().is_empty());
         }
         assert_eq!(res.exp, 0);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -299,7 +295,7 @@ mod test {
             assert!(o.items().is_empty());
         }
         assert_eq!(res.exp, 0);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
     }
 
     #[test]
@@ -324,7 +320,7 @@ mod test {
             assert_eq!(o.items(), &[100]);
         }
         assert_eq!(res.exp, 0);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -342,7 +338,7 @@ mod test {
             assert_eq!(o.items(), &[10 << 60]);
         }
         assert_eq!(res.exp, -60);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -360,7 +356,7 @@ mod test {
             assert_eq!(o.items(), &[10000 << 50]);
         }
         assert_eq!(res.exp, -50);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -378,7 +374,7 @@ mod test {
             assert_eq!(o.items(), &[256]);
         }
         assert_eq!(res.exp, -1);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
     }
 
     #[test]
@@ -403,7 +399,7 @@ mod test {
             assert_eq!(o.items(), &[8]);
         }
         assert_eq!(res.exp, 4);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -421,7 +417,7 @@ mod test {
             assert_eq!(o.items(), &[8]);
         }
         assert_eq!(res.exp, 4);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
     }
 
     #[test]
@@ -446,7 +442,7 @@ mod test {
             assert_eq!(o.items(), &[20]);
         }
         assert_eq!(res.exp, -1);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -464,7 +460,7 @@ mod test {
             assert_eq!(o.items(), &[(1 << 63) + (1 << 61)]);
         }
         assert_eq!(res.exp, -60);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -482,7 +478,7 @@ mod test {
             assert_eq!(o.items(), &[1 << 52]);
         }
         assert_eq!(res.exp, 12);
-        assert_eq!(res.non_zero_reminder, false);
+        assert!(!res.non_zero_reminder);
     }
 
     #[test]
@@ -507,7 +503,7 @@ mod test {
             assert_eq!(o.items(), &[0b11001]);
         }
         assert_eq!(res.exp, -1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -525,7 +521,7 @@ mod test {
             assert_eq!(o.items(), &[0b1100]);
         }
         assert_eq!(res.exp, 0);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -543,7 +539,7 @@ mod test {
             assert_eq!(o.items(), &[0b110]);
         }
         assert_eq!(res.exp, 1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
     }
 
     #[test]
@@ -568,7 +564,7 @@ mod test {
             assert_eq!(o.items(), &[0b100]);
         }
         assert_eq!(res.exp, 1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -586,7 +582,7 @@ mod test {
             assert_eq!(o.items(), &[0b100]);
         }
         assert_eq!(res.exp, 1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -604,7 +600,7 @@ mod test {
             assert_eq!(o.items(), &[0b101]);
         }
         assert_eq!(res.exp, 1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -622,7 +618,7 @@ mod test {
             assert_eq!(o.items(), &[0b101]);
         }
         assert_eq!(res.exp, 1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
 
         let res = BigFloat {
             manager: GLOBAL,
@@ -640,7 +636,7 @@ mod test {
             assert_eq!(o.items(), &[0b111]);
         }
         assert_eq!(res.exp, 1);
-        assert_eq!(res.non_zero_reminder, true);
+        assert!(res.non_zero_reminder);
     }
 
     #[test]

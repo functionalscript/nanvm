@@ -365,9 +365,8 @@ mod test {
     use crate::{
         common::default::default,
         js::{
-            self,
             js_array::JsArrayRef,
-            js_bigint::{from_u64, new_bigint, JsBigintRef},
+            js_bigint::{from_u64, new_bigint, JsBigintRef, Sign},
             js_object::JsObjectRef,
             js_string::JsStringRef,
             type_::Type,
@@ -907,11 +906,7 @@ mod test {
         let items = result.items();
         assert_eq!(items, [0x61, 0x62, 0x63]);
 
-        let tokens = [JsonToken::BigInt(from_u64(
-            manager,
-            js::js_bigint::Sign::Positive,
-            1,
-        ))];
+        let tokens = [JsonToken::BigInt(from_u64(manager, Sign::Positive, 1))];
         let result = parse_with_virtual_io(manager, tokens.into_iter());
         assert!(result.is_ok());
         let result = result.unwrap().any.try_move::<JsBigintRef<M::Dealloc>>();
@@ -923,7 +918,7 @@ mod test {
 
         let tokens = [JsonToken::BigInt(new_bigint(
             manager,
-            js::js_bigint::Sign::Negative,
+            Sign::Negative,
             [2, 3],
         ))];
         let result = parse_with_virtual_io(manager, tokens.into_iter());
