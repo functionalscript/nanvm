@@ -18,12 +18,12 @@ impl<M: Manager> JsonState<M> {
     pub fn push(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*json_state:*/ JsonState<M>,
         /*import:*/ Option<(/*id:*/ String, /*module:*/ String)>,
     ) {
-        if token == JsonToken::NewLine {
+        if let JsonToken::NewLine = token {
             return match self {
                 JsonState::ParseRoot(state) => state.parse(manager, token),
                 _ => (self, None),

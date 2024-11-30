@@ -15,12 +15,13 @@ use crate::{
 
 use super::{bitset::BIGINT, ref_cast::RefCast};
 
-#[derive(Debug, PartialEq, Clone, Eq)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
 pub enum Sign {
     Positive = 1,
     Negative = -1,
 }
 
+#[derive(Debug)]
 pub struct JsBigintHeader {
     len: isize,
 }
@@ -125,6 +126,23 @@ pub fn is_zero(value: &JsBigint) -> bool {
     value.items().is_empty()
 }
 
+impl JsBigint {
+    pub fn compare(&self, other: &Self) -> Ordering {
+        match self.header_len().cmp(&other.header_len()) {
+            Ordering::Equal => cmp_vec(self.items(), other.items()),
+            Ordering::Less => Ordering::Less,
+            Ordering::Greater => Ordering::Greater,
+        }
+    }
+
+    pub fn get_last_bit(&self) -> u64 {
+        if is_zero(self) {
+            return 0;
+        }
+        self.items()[0] & 1
+    }
+}
+
 pub fn negative<M: Manager>(m: M, value: &JsBigint) -> JsBigintMutRef<M::Dealloc> {
     if is_zero(value) {
         return zero(m);
@@ -210,7 +228,7 @@ pub fn div_mod<M: Manager>(
             let mut result: Vec<u64> = default();
             loop {
                 if cmp_vec(&a, b) == Ordering::Less {
-                    return (new_bigint(m, sign.clone(), result), new_bigint(m, sign, a));
+                    return (new_bigint(m, sign, result), new_bigint(m, sign, a));
                 }
                 let a_high_digit = a.len() - 1;
                 let b_high_digit = b.len() - 1;
@@ -356,6 +374,13 @@ pub fn shr<M: Manager>(m: M, lhs: &JsBigint, rhs: &JsBigint) -> JsBigintMutRef<M
     }
 }
 
+pub fn equals(lhs: &JsBigint, rhs: &JsBigint) -> bool {
+    if lhs.sign() != rhs.sign() {
+        return false;
+    }
+    return cmp_vec(lhs.items(), rhs.items()) == Ordering::Equal;
+}
+
 fn to_twos_complement(value: &JsBigint) -> TwosComplement {
     TwosComplement {
         sign: value.sign(),
@@ -449,7 +474,7 @@ fn twos_complement_zip<'a>(
 }
 
 impl JsBigint {
-    fn sign(&self) -> Sign {
+    pub fn sign(&self) -> Sign {
         if self.header.len < 0 {
             Sign::Negative
         } else {
@@ -522,7 +547,7 @@ fn cmp_vec(lhs: &[u64], rhs: &[u64]) -> Ordering {
     Ordering::Equal
 }
 
-fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+pub fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
     let mut vec = lhs.items().to_vec();
     let shift_mod = rhs & ((1 << 6) - 1);
     if shift_mod > 0 {
@@ -547,7 +572,7 @@ fn shl_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::D
     new_bigint(m, lhs.sign(), vec)
 }
 
-fn shr_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
+pub fn shr_on_u64<M: Manager>(m: M, lhs: &JsBigint, rhs: u64) -> JsBigintMutRef<M::Dealloc> {
     let number_to_remove = (rhs / 64) as usize;
     if number_to_remove >= lhs.items().len() {
         return shr_on_big(m, lhs.sign());
@@ -586,7 +611,7 @@ fn shr_on_big<M: Manager>(m: M, sign: Sign) -> JsBigintMutRef<M::Dealloc> {
 
 #[cfg(test)]
 mod test {
-    use std::ops::Deref;
+    use std::{cmp::Ordering, ops::Deref};
 
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -734,6 +759,37 @@ mod test {
             let o = res.try_move::<BigintRef>().unwrap();
             assert!(o.items().is_empty());
         }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_cmp() {
+        type A = Any<Global>;
+        type BigintRef = JsBigintRef<Global>;
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Positive, 1);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.compare(b), Ordering::Equal);
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Positive, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.compare(b), Ordering::Less);
+
+        let a_ref = from_u64(Global(), Sign::Positive, 1);
+        let b_ref = from_u64(Global(), Sign::Negative, 2);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.compare(b), Ordering::Greater);
+
+        let a_ref = new_bigint(Global(), Sign::Positive, [1, 2]);
+        let b_ref = new_bigint(Global(), Sign::Positive, [2, 1]);
+        let a = a_ref.deref();
+        let b = b_ref.deref();
+        assert_eq!(a.compare(b), Ordering::Greater);
     }
 
     #[test]

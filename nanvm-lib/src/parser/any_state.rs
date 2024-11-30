@@ -70,7 +70,7 @@ impl<M: Manager> AnyState<M> {
     pub fn parse(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*any_result:*/ AnyResult<M>,
         /*module_name:*/ Option<String>,
@@ -95,7 +95,7 @@ impl<M: Manager> AnyState<M> {
     pub fn parse_for_module(
         self,
         manager: M,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*json_state:*/ JsonState<M>,
         /*module_name:*/ Option<String>,
@@ -123,7 +123,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_import_begin(self, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_import_begin(self, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::OpeningParenthesis => AnyResult::Continue(AnyState {
                 status: ParsingStatus::ImportValue,
@@ -133,7 +133,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_import_end(self, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_import_end(self, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::ClosingParenthesis => self.end_import(),
             _ => AnyResult::Error(ParseError::WrongRequireStatement),
@@ -142,7 +142,7 @@ impl<M: Manager> AnyState<M> {
 
     fn parse_import_value(
         self,
-        token: JsonToken,
+        token: JsonToken<M::Dealloc>,
     ) -> (
         /*any_result:*/ AnyResult<M>,
         /*module_name:*/ Option<String>,
@@ -189,7 +189,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_value(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_value(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => self.begin_object(),
@@ -258,7 +258,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_array_comma(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_array_comma(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ObjectBegin => self.begin_object(),
@@ -276,7 +276,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_array_begin(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_array_begin(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::ArrayBegin => self.begin_array(),
             JsonToken::ArrayEnd => self.end_array(manager),
@@ -291,7 +291,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_array_value(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_array_value(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::ArrayEnd => self.end_array(manager),
             JsonToken::Comma => AnyResult::Continue(AnyState {
@@ -329,7 +329,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_object_begin(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_object_begin(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
             JsonToken::Id(s) if self.data_type.is_djs() => self.push_key(s),
@@ -338,7 +338,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_object_next(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_object_next(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::ObjectEnd => self.end_object(manager),
             JsonToken::Comma => AnyResult::Continue(AnyState {
@@ -349,7 +349,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_object_comma(self, manager: M, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_object_comma(self, manager: M, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::String(s) => self.push_key(s),
             JsonToken::ObjectEnd => self.end_object(manager),
@@ -357,7 +357,7 @@ impl<M: Manager> AnyState<M> {
         }
     }
 
-    pub fn parse_object_key(self, token: JsonToken) -> AnyResult<M> {
+    pub fn parse_object_key(self, token: JsonToken<M::Dealloc>) -> AnyResult<M> {
         match token {
             JsonToken::Colon => AnyResult::Continue(AnyState {
                 status: ParsingStatus::ObjectColon,
