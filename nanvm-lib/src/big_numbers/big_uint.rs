@@ -249,7 +249,7 @@ impl Mul for &BigUint {
         let mut value = new_resize(total_max + 1);
         let mut i: usize = 0;
         while i < total_max {
-            let mut j = if i > rhs_max { i - rhs_max } else { 0 };
+            let mut j = i.saturating_sub(rhs_max);
             let max = if i < lhs_max { i } else { lhs_max };
             while j <= max {
                 value = add_to_vec(value, i, self.value[j] as u128 * other.value[i - j] as u128);

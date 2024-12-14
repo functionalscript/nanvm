@@ -34,13 +34,13 @@ impl BlockHeader for NoHeader {
     }
 }
 
-impl<'a> Dealloc for &Arena<'a> {
+impl Dealloc for &Arena<'_> {
     type BlockHeader = NoHeader;
     #[inline(always)]
     unsafe fn dealloc(_: *mut u8, _: Layout) {}
 }
 
-impl<'a> Manager for &Arena<'a> {
+impl Manager for &Arena<'_> {
     type Dealloc = Self;
     unsafe fn alloc(self, layout: Layout) -> *mut u8 {
         let result = {
