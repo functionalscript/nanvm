@@ -361,6 +361,7 @@ fn operator_to_token<D: Dealloc>(s: String) -> Option<JsonToken<D>> {
 }
 
 const WHITE_SPACE_CHARS: [char; 4] = [' ', '\n', '\t', '\r'];
+const NEW_LINE_CHARS: [char; 2] = ['\n', '\r'];
 const OPERATOR_CHARS: [char; 10] = ['{', '}', '[', ']', ':', ',', '=', ';', '(', ')'];
 
 fn id_start() -> Vec<RangeInclusive<char>> {
@@ -961,7 +962,7 @@ fn create_singleline_comment_transactions<M: Manager>() -> TransitionMap<(), M> 
     type Func<M> = TransitionFunc<M, ()>;
     TransitionMap {
         def: (|_, _, _, _| (default(), TokenizerState::ParseSinglelineComment)) as Func<M>,
-        rm: create_range_map(set(WHITE_SPACE_CHARS), |_, _, _, _| {
+        rm: create_range_map(set(NEW_LINE_CHARS), |_, _, _, _| {
             (default(), TokenizerState::ParseNewLine)
         }),
     }
@@ -1523,6 +1524,19 @@ mod test {
 
         let result = tokenize(GLOBAL, String::from("0//abc/*"));
         assert_eq!(&result, &[JsonToken::Number(0.0),]);
+
+        let result = tokenize(GLOBAL, String::from("0//abc 1"));
+        assert_eq!(&result, &[JsonToken::Number(0.0)]);
+
+        let result = tokenize(GLOBAL, String::from("0//abc\n1"));
+        assert_eq!(
+            &result,
+            &[
+                JsonToken::Number(0.0),
+                JsonToken::NewLine,
+                JsonToken::Number(1.0)
+            ]
+        );
 
         let result = tokenize(GLOBAL, String::from("0//"));
         assert_eq!(&result, &[JsonToken::Number(0.0),]);
