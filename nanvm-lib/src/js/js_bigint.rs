@@ -184,7 +184,7 @@ fn mul_vec(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     let mut vec = new_resize(total_max + 1);
     let mut i: usize = 0;
     while i < total_max {
-        let mut j = if i > rhs_max { i - rhs_max } else { 0 };
+        let mut j = i.saturating_sub(rhs_max);
         let max = if i < lhs_max { i } else { lhs_max };
         while j <= max {
             vec = add_to_vec(vec, i, lhs[j] as u128 * rhs[i - j] as u128);
@@ -378,7 +378,7 @@ pub fn equals(lhs: &JsBigint, rhs: &JsBigint) -> bool {
     if lhs.sign() != rhs.sign() {
         return false;
     }
-    return cmp_vec(lhs.items(), rhs.items()) == Ordering::Equal;
+    cmp_vec(lhs.items(), rhs.items()) == Ordering::Equal
 }
 
 fn to_twos_complement(value: &JsBigint) -> TwosComplement {
